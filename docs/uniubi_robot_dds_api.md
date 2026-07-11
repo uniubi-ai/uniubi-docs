@@ -974,7 +974,7 @@ business_ok = (response.code == 0) AND (payload.result == true)
       {
         "name": "walking",
         "mapping": {
-          "require": ["buttonStart", "buttonY"],
+          "require": ["buttonBack", "buttonY"],
           "priority": 0,
           "minHoldTime": 0,
           "exact": true
@@ -1387,7 +1387,7 @@ TRC 是数据订阅发布通道（[§1.3.3](#133-数据订阅发布通道开放�
 ```
 构造 RemoteControl_:
   trc.controller = rawActionId
-  trc.timestamp  = now_ms
+  trc.timestamp  = monotonic_sequence
   trc.<button>   = 0 / 1
   trc.<axis>     = float in 范围（见 [§4.1](#41-trc-控制帧)）
 DDS write 到 rt/motion/trc，不等响应，立即返回
@@ -1546,7 +1546,7 @@ module uniubi {
 
       struct RemoteControl_ {
           uint64   controller;   // 鉴权字段，填 takeMotionControl 响应里的 rawActionId
-          uint64   timestamp;    // 客户端发送时刻，ms since epoch
+          uint64   timestamp;    // 客户端维护的递增相对值；同一控制会话内必须单调递增
 
           // 16 个数字按键（uint8，0 = 未按 / 1 = 按下，单帧瞬时）
           uint8    back;
@@ -1584,8 +1584,8 @@ module uniubi {
 
 | IDL 字段 | 物理映射 |
 |---|---|
-| `back` | Stand / Back / Select 键 |
-| `start` | Motion / Start 键 |
+| `back` | Stand 键；动作语义由设备能力配置决定 |
+| `start` | Motion 键；动作语义由设备能力配置决定 |
 | `lb` / `rb` | 左 / 右肩键（Left/Right Bumper） |
 | `f1` / `f2` | 功能键 1 / 2 |
 | `a` / `b` / `x` / `y` | ABXY 键 |
@@ -1611,16 +1611,25 @@ TRC 帧承担两类输入：
 
 两类输入可同时在一帧中携带。
 
-`Motion` / `Stand` 是对外手柄标准名，在 DDS 字段中对应 `start` / `back`，在 SDK 枚举中对应 `buttonStart` / `buttonBack`。实际开放动作和 `require` / `axisRequire` / `priority` / `exact` / `minHoldTime` 以 `getMotionCapabilities` 返回为准。
+下表的 posture 动作快照来自 RobotService `motionCapacity` 的 `motionTRC.motionMap.posture`。对外按键名 Stand / Motion 在 DDS 中分别对应 `back` / `start`，在 SDK 中分别对应 `buttonBack` / `buttonStart`。实际开放动作和 `require` / `axisRequire` / `priority` / `exact` / `minHoldTime` 以 `getMotionCapabilities` 返回为准。
 
 | 分类 | 用户操作 | 中文标准名 | 英文标准名 | 用户说明 | DDS 字段 / 内部动作 |
 |---|---|---|---|---|---|
 | 安全 | LB + RB | 急停 | Emergency Stop | 立刻停下并趴下 | `lb + rb`；`emergencyStop` |
-| 状态 | Motion | 运动 | Motion | 可以移动、转向、做动作 | `start`；运动状态键 / 组合键 |
-| 状态 | Stand | 站立 | Stand | 站稳不动，不走路，可承重 | `back`；`standing` |
-| 状态组合 | Motion + Y | 运动就绪 | Motion Ready | 从趴下站起来，并进入可运动状态 | `start + y`；`walking` |
-| 状态组合 | Motion + A | 趴下 | Lie Down | 趴到地上，进入安全低姿态 | `start + a`；`laying` |
-| 表演 | Motion + LB | 扭一扭 | Wiggle | 原地扭动表演 | `start + lb`；`waveBody` |
+| 姿态 | LB + Y | 双足站立 | Two-Leg Stand | 后腿站起来 | `lb + y`；`bipedStand` |
+| 姿态 | LB + A | 倒立 | Handstand | 前脚撑地倒立 | `lb + a`；`handstand` |
+| 状态 | Stand + A | 趴下 | Lie Down | 趴到地上，进入安全低姿态 | `back + a`；`laying` |
+| 状态 | Stand + Y | 行走 | Walking | 进入可移动状态 | `back + y`；`walking` |
+| 状态 | Motion | 站立 | Standing | 进入站立状态 | `start`；`standing`（priority 0） |
+| 表演 | LB + Motion | 扭一扭 | Wiggle | 原地扭动表演 | `lb + start`；`waveBody` |
+| 表演 | B | 招手 | Wave Hand | 执行招手动作 | `b`；`waveHand` |
+| 姿态 | Motion | 负重站立 | Peak Load Stand | 进入负重站立状态 | `start`；`peakLoadStand`（priority 2） |
+| 特技 | RB + 方向键上 | 前跳 | Forward Jump | 向前跳一下 | `rb + up`；`jumpForward` |
+| 特技 | RB + Y | 前空翻 | Front Flip | 向前翻一下 | `rb + y`；`jumpFrontflip` |
+| 特技 | RB + B | 侧空翻 | Side Flip | 向侧方翻转 | `rb + b` 且 `triggerR` ∈ [-1.0, 0.49]；`jumpSideflip` |
+| 特技 | RB + A | 后空翻 | Back Flip | 向后翻一下 | `rb + a` 且 `triggerR` ∈ [-1.0, 0.49]；`jumpBackflip` |
+| 特技 | 按住 RT + RB + A | 后空翻两圈 | Double Back Flip | 按住保险键后向后翻两圈 | `rb + a` 且 `triggerR` ∈ [0.5, 1.0]；`jumpDoubleBackflip` |
+| 特技 | 按住 RT + RB + B | 侧空翻两圈 | Double Side Flip | 按住保险键后向侧方翻两圈 | `rb + b` 且 `triggerR` ∈ [0.5, 1.0]；`jumpDoubleSideflip` |
 | 行走 | 左摇杆上 | 前进 | Forward | 往前走 | `stickLY` → `lineVelocityX > 0`（`walking`） |
 | 行走 | 左摇杆下 | 后退 | Backward | 往后走 | `stickLY` → `lineVelocityX < 0`（`walking`） |
 | 行走 | 左摇杆左 | 左移 | Move Left | 横着向左走 | `stickLX` → `lineVelocityY < 0`（`walking`） |
@@ -1629,18 +1638,8 @@ TRC 帧承担两类输入：
 | 转向 | 右摇杆右 | 右转 | Turn Right | 向右转身 | `stickRX` → `velocity < 0`（`walking`） |
 | 速度 | 方向键上 | 加速 | Speed Up | 走得更快 | `up`；切换 fast profile |
 | 速度 | 方向键下 | 减速 | Slow Down | 走得更慢 | `down`；切换 slow profile |
-| 姿态 | LB + Y | 双足站立 | Two-Leg Stand | 后腿站起来 | `lb + y`；`bipedStand` |
-| 姿态 | LB + A | 倒立 | Handstand | 前脚撑地倒立 | `lb + a`；`handstand` |
-| 姿态 | LB + X | 左侧站立 | Left-Side Stand | 左侧两脚站立 | `lb + x`；内部动作名以设备能力返回为准 |
-| 姿态 | LB + B | 右侧站立 | Right-Side Stand | 右侧两脚站立 | `lb + b`；内部动作名以设备能力返回为准 |
-| 特技 | RB + Y | 前空翻 | Front Flip | 向前翻一下 | `rb + y`；`jumpFrontflip` |
-| 特技 | RB + A | 后空翻 | Back Flip | 向后翻一下 | `rb + a` 且 `triggerR < 0.5`；`jumpBackflip` |
-| 特技 | RB + B | 右空翻 | Right Flip | 向右翻一下 | `rb + b` 且 `triggerR < 0.5`；`jumpSideflip` |
-| 特技 | RB + 方向键上 | 前跳 | Forward Jump | 向前跳一下 | `rb + up`；通常对应 `jumpForward`，以设备能力开放为准 |
-| 特技 | 按住 RT + RB + A | 后空翻两圈 | Double Back Flip | 按住保险键后向后翻两圈 | `triggerR >= 0.5 + rb + a`；`jumpDoubleBackflip` |
-| 特技 | 按住 RT + RB + B | 右空翻两圈 | Double Right Flip | 按住保险键后向右翻两圈 | `triggerR >= 0.5 + rb + b`；`jumpDoubleSideflip` |
 
-`exact=true` 表示除 `require` 外不能有其它按钮同时按下；`emergencyStop` 未配置 `exact`，允许与其它按钮同时出现时仍按最高优先级触发。该字段由 `getMotionCapabilities` 下发，不建议客户端按文档表格硬编码。
+`buttonStart` 同时匹配 `standing`（priority 0）和 `peakLoadStand`（priority 2）；同一帧多个动作命中时由服务端按能力配置的 priority 和当前可用动作决策。`exact=true` 表示除 `require` 外不能有其它按钮同时按下；`emergencyStop` 未配置 `exact`，允许与其它按钮同时出现时仍按最高优先级触发。上述字段由 `getMotionCapabilities` 下发，不建议客户端按文档表格硬编码。
 
 #### 帧丢弃条件
 

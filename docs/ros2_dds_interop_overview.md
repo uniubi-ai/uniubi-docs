@@ -258,7 +258,7 @@ ROS 2 service client 依赖 request header 匹配响应。原生 DDS 端必须�
 字段边界如下：
 
 - `Header.msg` 来自 `Request.idl`，包含 `client_id` / `request_id`；`System.srv` 不含该 Header 字段。
-- `System.srv` 请求和响应都包含 `device_id`；多设备场景必须填写目标设备 SN，并校验响应中的 `device_id`。
+- `System.srv` 请求和响应都包含 `device_id`。`uniubi_ros2` 示例要求填写目标设备 SN，并将其写入每个请求；robotServer 只响应目标 SN 匹配的请求，ROS 2/RMW 再通过 service request header 关联响应。示例检查响应 `code` 和业务 payload，不额外比较 `response.device_id`。
 - 原生 DDS RPC 的完整请求 / 响应规则以 `uniubi_robot_dds_api.md` 为准。
 
 跨链路定位如下：

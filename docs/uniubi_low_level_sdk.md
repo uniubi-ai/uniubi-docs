@@ -505,7 +505,7 @@ struct TRCStickFrame {
 
 | 索引名 | 值 | 含义 |
 |---|---|---|
-| `buttonBack` / `buttonStart` | 0 / 1 | Stand / Motion（物理 Back / Start） |
+| `buttonBack` / `buttonStart` | 0 / 1 | 对外按键名 Stand / Motion；动作语义由设备能力配置决定 |
 | `buttonLB` / `buttonRB` | 2 / 3 | 左 / 右肩键 |
 | `buttonF1` / `buttonF2` | 4 / 5 | 自定义功能键 |
 | `buttonA` / `buttonB` / `buttonX` / `buttonY` | 6 / 7 / 8 / 9 | 主功能键 |
@@ -520,7 +520,7 @@ struct TRCStickFrame {
 | `axesRX` / `axesRY` | 2 / 3 | 右摇杆 X / Y | -1.0 ~ 1.0 |
 | `axesLT` / `axesRT` | 4 / 5 | 左 / 右扳机 | 0.0 ~ 1.0 |
 
-高阶 TRC 文档中的 `Motion` / `Stand` 是对外标准名，在本结构中分别对应 `buttonStart` / `buttonBack`；RT 保险键对应 `axesRT`。
+对外按键名 Stand / Motion 在 SDK 中分别对应 `buttonBack` / `buttonStart`。具体动作组合以设备 `getMotionCapabilities()` 返回的 `mapping` 为准；当前标准映射见高阶 TRC 文档。RT 条件对应 `axesRT`。
 
 #### 4.4.5 `SensorObserved` —— 传感器观测（GPS + UWB）
 

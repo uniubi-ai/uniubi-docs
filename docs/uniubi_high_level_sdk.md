@@ -512,16 +512,25 @@ client->connect();
 
 **标准遥控功能映射**
 
-`Motion` / `Stand` 是对外手柄标准名，对应 SDK 枚举 `buttonStart` / `buttonBack`。下表是用户操作到 `TRCStickFrame` 的映射；`startAction()` 等 RPC 仍使用内部动作名，实际开放动作、`priority`、`exact`、`minHoldTime`、`axisRequire` 以 `getMotionCapabilities()` 返回为准。
+下表的 posture 动作快照来自 RobotService `motionCapacity` 的 `motionTRC.motionMap.posture`。对外按键名 Stand / Motion 在 SDK 中分别对应 `buttonBack` / `buttonStart`；`startAction()` 等 RPC 仍使用内部动作名。设备实际开放动作、`priority`、`exact`、`minHoldTime`、`axisRequire` 以 `getMotionCapabilities()` 返回为准。
 
 | 分类 | 用户操作 | 中文标准名 | 英文标准名 | 用户说明 | SDK 输入 / 内部动作 |
 |---|---|---|---|---|---|
 | 安全 | LB + RB | 急停 | Emergency Stop | 立刻停下并趴下 | `buttonLB + buttonRB`；`emergencyStop` |
-| 状态 | Motion | 运动 | Motion | 可以移动、转向、做动作 | `buttonStart`；运动状态键 / 组合键 |
-| 状态 | Stand | 站立 | Stand | 站稳不动，不走路，可承重 | `buttonBack`；`standing` |
-| 状态组合 | Motion + Y | 运动就绪 | Motion Ready | 从趴下站起来，并进入可运动状态 | `buttonStart + buttonY`；`walking` |
-| 状态组合 | Motion + A | 趴下 | Lie Down | 趴到地上，进入安全低姿态 | `buttonStart + buttonA`；`laying` |
-| 表演 | Motion + LB | 扭一扭 | Wiggle | 原地扭动表演 | `buttonStart + buttonLB`；`waveBody` |
+| 姿态 | LB + Y | 双足站立 | Two-Leg Stand | 后腿站起来 | `buttonLB + buttonY`；`bipedStand` |
+| 姿态 | LB + A | 倒立 | Handstand | 前脚撑地倒立 | `buttonLB + buttonA`；`handstand` |
+| 状态 | Stand + A | 趴下 | Lie Down | 趴到地上，进入安全低姿态 | `buttonBack + buttonA`；`laying` |
+| 状态 | Stand + Y | 行走 | Walking | 进入可移动状态 | `buttonBack + buttonY`；`walking` |
+| 状态 | Motion | 站立 | Standing | 进入站立状态 | `buttonStart`；`standing`（priority 0） |
+| 表演 | LB + Motion | 扭一扭 | Wiggle | 原地扭动表演 | `buttonLB + buttonStart`；`waveBody` |
+| 表演 | B | 招手 | Wave Hand | 执行招手动作 | `buttonB`；`waveHand` |
+| 姿态 | Motion | 负重站立 | Peak Load Stand | 进入负重站立状态 | `buttonStart`；`peakLoadStand`（priority 2） |
+| 特技 | RB + 方向键上 | 前跳 | Forward Jump | 向前跳一下 | `buttonRB + buttonUp`；`jumpForward` |
+| 特技 | RB + Y | 前空翻 | Front Flip | 向前翻一下 | `buttonRB + buttonY`；`jumpFrontflip` |
+| 特技 | RB + B | 侧空翻 | Side Flip | 向侧方翻转 | `buttonRB + buttonB` 且 `axesRT` ∈ [-1.0, 0.49]；`jumpSideflip` |
+| 特技 | RB + A | 后空翻 | Back Flip | 向后翻一下 | `buttonRB + buttonA` 且 `axesRT` ∈ [-1.0, 0.49]；`jumpBackflip` |
+| 特技 | 按住 RT + RB + A | 后空翻两圈 | Double Back Flip | 按住保险键后向后翻两圈 | `buttonRB + buttonA` 且 `axesRT` ∈ [0.5, 1.0]；`jumpDoubleBackflip` |
+| 特技 | 按住 RT + RB + B | 侧空翻两圈 | Double Side Flip | 按住保险键后向侧方翻两圈 | `buttonRB + buttonB` 且 `axesRT` ∈ [0.5, 1.0]；`jumpDoubleSideflip` |
 | 行走 | 左摇杆上 | 前进 | Forward | 往前走 | `axesLY` → `lineVelocityX > 0`（`walking`） |
 | 行走 | 左摇杆下 | 后退 | Backward | 往后走 | `axesLY` → `lineVelocityX < 0`（`walking`） |
 | 行走 | 左摇杆左 | 左移 | Move Left | 横着向左走 | `axesLX` → `lineVelocityY < 0`（`walking`） |
@@ -530,22 +539,12 @@ client->connect();
 | 转向 | 右摇杆右 | 右转 | Turn Right | 向右转身 | `axesRX` → `velocity < 0`（`walking`） |
 | 速度 | 方向键上 | 加速 | Speed Up | 走得更快 | `buttonUp`；切换 fast profile |
 | 速度 | 方向键下 | 减速 | Slow Down | 走得更慢 | `buttonDown`；切换 slow profile |
-| 姿态 | LB + Y | 双足站立 | Two-Leg Stand | 后腿站起来 | `buttonLB + buttonY`；`bipedStand` |
-| 姿态 | LB + A | 倒立 | Handstand | 前脚撑地倒立 | `buttonLB + buttonA`；`handstand` |
-| 姿态 | LB + X | 左侧站立 | Left-Side Stand | 左侧两脚站立 | `buttonLB + buttonX`；内部动作名以设备能力返回为准 |
-| 姿态 | LB + B | 右侧站立 | Right-Side Stand | 右侧两脚站立 | `buttonLB + buttonB`；内部动作名以设备能力返回为准 |
-| 特技 | RB + Y | 前空翻 | Front Flip | 向前翻一下 | `buttonRB + buttonY`；`jumpFrontflip` |
-| 特技 | RB + A | 后空翻 | Back Flip | 向后翻一下 | `buttonRB + buttonA` 且 `axesRT < 0.5`；`jumpBackflip` |
-| 特技 | RB + B | 右空翻 | Right Flip | 向右翻一下 | `buttonRB + buttonB` 且 `axesRT < 0.5`；`jumpSideflip` |
-| 特技 | RB + 方向键上 | 前跳 | Forward Jump | 向前跳一下 | `buttonRB + buttonUp`；通常对应 `jumpForward`，以设备能力开放为准 |
-| 特技 | 按住 RT + RB + A | 后空翻两圈 | Double Back Flip | 按住保险键后向后翻两圈 | `axesRT >= 0.5 + buttonRB + buttonA`；`jumpDoubleBackflip` |
-| 特技 | 按住 RT + RB + B | 右空翻两圈 | Double Right Flip | 按住保险键后向右翻两圈 | `axesRT >= 0.5 + buttonRB + buttonB`；`jumpDoubleSideflip` |
 
 字段语义：
 
 - 表中的 `button*` 和 `axes*` 名称直接对应 `ButtonDefine` / `AxesDefine` 枚举。
-- `Motion` / `Stand` 只是对外标准名，不是新的 SDK 枚举名。
-- RT 在 SDK 中对应 `axesRT`；`axesRT >= 0.5` 表示按住保险键，`axesRT < 0.5` 表示未按住保险键。
+- `buttonStart` 同时匹配 `standing`（priority 0）和 `peakLoadStand`（priority 2）；同一帧多个动作命中时由服务端按能力配置的 priority 和当前可用动作决策。
+- RT 在 SDK 中对应 `axesRT`；当前配置以 0.5 为单次 / 双次翻转动作的分界值。
 - `require` / `axisRequire` / `priority` / `exact` / `minHoldTime` 不建议硬编码，应通过 `getMotionCapabilities()` 读取当前设备配置。
 
 **前置条件**（任一不满足则 `setRawControlCmd` 返回 `false`）
@@ -649,7 +648,7 @@ client->stopAction();
     {
       "name": "walking",
       "mapping": {
-        "require": ["buttonStart", "buttonY"],
+        "require": ["buttonBack", "buttonY"],
         "priority": 0,
         "minHoldTime": 0,
         "exact": true
