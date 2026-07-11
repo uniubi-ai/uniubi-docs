@@ -1,0 +1,10 @@
+uniubi-docs
+Copyright 2026 UniUbi
+
+This repository is licensed under the Apache License, Version 2.0, except
+where a file or included artifact states a different license.
+
+Original UniUbi source code and documentation in this repository are made
+available under Apache-2.0. Third-party components, generated artifacts, model
+assets, training data, model weights, and precompiled binaries are not covered
+by the repository-level license unless explicitly stated.
