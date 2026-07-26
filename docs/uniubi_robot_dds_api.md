@@ -960,7 +960,7 @@ business_ok = (response.code == 0) AND (payload.result == true)
 | `actions[].mapping.axisRequire` | array<object\> | 额外轴值条件；每项含 `axis`、`min`、`max`，`axis` 为 TRC 轴字段 |
 | `actions[].mapping.priority` | integer | 同一帧多个动作命中时的优先级，数值越大优先级越高 |
 | `actions[].mapping.exact` | bool | `true` 表示除 `require` 外不能有其它按钮同时按下 |
-| `actions[].mapping.minHoldTime` | number | 最小按住时间，当前映射为 `0` |
+| `actions[].mapping.minHoldTime` | number | 最小按住时间（ms）；当前 `waveHand` / `heartSit` / `tweak` 为 `1000`，其余 posture 动作为 `0` |
 | `actions[].params`  | array<object\> | 该动作可调的运行期参数；一次性动作无此字段 |
 | `params[].name`     | string         | 参数 key，用作 `startMotionAction` / `setMotionActionParams` 的 `params` JSON 的 key |
 | `params[].min/max`  | float          | 取值范围；超出会被服务端 clamp |
@@ -1618,11 +1618,15 @@ TRC 帧承担两类输入：
 | 安全 | LB + RB | 急停 | Emergency Stop | 立刻停下并趴下 | `lb + rb`；`emergencyStop` |
 | 姿态 | LB + Y | 双足站立 | Two-Leg Stand | 后腿站起来 | `lb + y`；`bipedStand` |
 | 姿态 | LB + A | 倒立 | Handstand | 前脚撑地倒立 | `lb + a`；`handstand` |
+| 姿态 | LB + X | 左侧双足站立 | Left-Side Stand | 用左侧两脚站立 | `lb + x`；`leftSideStand` |
+| 姿态 | LB + B | 右侧双足站立 | Right-Side Stand | 用右侧两脚站立 | `lb + b`；`rightSideStand` |
 | 状态 | Stand + A | 趴下 | Lie Down | 趴到地上，进入安全低姿态 | `back + a`；`laying` |
 | 状态 | Stand + Y | 行走 | Walking | 进入可移动状态 | `back + y`；`walking` |
 | 状态 | Motion | 站立 | Standing | 进入站立状态 | `start`；`standing`（priority 0） |
 | 表演 | LB + Motion | 扭一扭 | Wiggle | 原地扭动表演 | `lb + start`；`waveBody` |
 | 表演 | B | 招手 | Wave Hand | 执行招手动作 | `b`；`waveHand` |
+| 表演 | 按住 Y 1 秒 | 坐起画心 | Heart Sit | 坐起并完成画心动作 | `y`；`heartSit`（minHoldTime 1000） |
+| 移动 | 按住 A 1 秒 | 低速微动 | Tweak | 进入低速小幅移动模式 | `a`；`tweak`（minHoldTime 1000） |
 | 姿态 | Motion | 负重站立 | Peak Load Stand | 进入负重站立状态 | `start`；`peakLoadStand`（priority 2） |
 | 特技 | RB + 方向键上 | 前跳 | Forward Jump | 向前跳一下 | `rb + up`；`jumpForward` |
 | 特技 | RB + Y | 前空翻 | Front Flip | 向前翻一下 | `rb + y`；`jumpFrontflip` |
@@ -1639,7 +1643,7 @@ TRC 帧承担两类输入：
 | 速度 | 方向键上 | 加速 | Speed Up | 走得更快 | `up`；切换 fast profile |
 | 速度 | 方向键下 | 减速 | Slow Down | 走得更慢 | `down`；切换 slow profile |
 
-`buttonStart` 同时匹配 `standing`（priority 0）和 `peakLoadStand`（priority 2）；同一帧多个动作命中时由服务端按能力配置的 priority 和当前可用动作决策。`exact=true` 表示除 `require` 外不能有其它按钮同时按下；`emergencyStop` 未配置 `exact`，允许与其它按钮同时出现时仍按最高优先级触发。上述字段由 `getMotionCapabilities` 下发，不建议客户端按文档表格硬编码。
+`buttonStart` 同时匹配 `standing`（priority 0）和 `peakLoadStand`（priority 2）；同一帧多个动作命中时由服务端按能力配置的 priority 和当前可用动作决策。`waveHand` / `heartSit` / `tweak` 的 `minHoldTime` 均为 `1000`，其余 posture 动作当前为 `0`。`exact=true` 表示除 `require` 外不能有其它按钮同时按下；`emergencyStop` 未配置 `exact`，允许与其它按钮同时出现时仍按最高优先级触发。上述字段由 `getMotionCapabilities` 下发，不建议客户端按文档表格硬编码。
 
 #### 帧丢弃条件
 

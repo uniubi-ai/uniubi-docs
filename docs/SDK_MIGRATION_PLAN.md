@@ -255,7 +255,7 @@ cmake -S . -B build
 cmake --build build -j
 ```
 
-`librobotMotionSdk.so`、`libubase.so`、`libmediaBus.so` 必须按同版本、同架构在目标架构的 `lib/<arch>/` 下成组放置。媒体帧订阅功能仅 `aarch64` 板内本地部署可用。若使用外部安装前缀，可通过 `UNIUBI_SDK_ROOT` 指定。
+`librobotMotionSdk.so`、`libmediaBus.so`、`libudbus.so`、`libubase.so` 必须按同版本、同架构在目标架构的 `lib/<arch>/` 下成组放置。媒体帧订阅功能仅 `aarch64` 板内本地部署可用。若使用外部安装前缀，可通过 `UNIUBI_SDK_ROOT` 指定。
 
 ### 5.3 Python SDK 验证
 

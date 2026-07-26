@@ -345,9 +345,38 @@ auto client = IMotionLowLevelClient::create();
 | 方法 | 状态要求 | 说明 |
 |---|---|---|
 | `bool sendControl(const MotorCtrlAction& action, const LowLevelMotionCmd* cmd = nullptr)` | `kPrepared` | 下发一帧控制；动作相关控制帧建议传 `cmd`，并同时填写 `action` 和 `acName`；`motorNum` 必须 ∈ `[1, kLowLevelMaxMotorNum]`，否则返 `kInvalidArgument` |
+| `bool sendMaxTorque(const MotorCtrlAction& action)` | `kPrepared` | 设置电机最大扭矩；使用各元素的 `header` 定位电机、`torque` 携带目标上限；`motorNum` 必须 ∈ `[1, kLowLevelMaxMotorNum]`，否则返 `kInvalidArgument` |
 | `bool getLatestObservation(LowLevelMotionObserved* obs, uint32_t timeout)` | `kPrepared` | 在指定 `timeout`（**ms**）内获取一帧运控观测量（电机/IMU/TRC/电源）；未取到返回 false |
 | `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout)` | `kConnected` / `kPrepared` 任一 | 获取一帧传感器观测（GPS + UWB），与 prepare 无关、传感器常驻采集；`timeout` 单位 **us**；无传感器硬件设备会等到超时返 false |
 | `bool getMotorLayout(MotorLayout& layout, uint32_t timeout = 5000)` | `kConnected` 后即可 | 硬件电机布局（启动后不变，SDK 内部缓存；首次走 RPC，timeout 单位 ms） |
+
+#### 4.3.1 `sendMaxTorque` —— 设置电机最大扭矩
+
+该接口复用 `MotorCtrlAction`，但每个 `MotorCtrl` 只使用 `header.limbNo` / `header.jointNo` 和 `torque`。以下假设 `maxTorqueNm` 是业务侧按当前机型校验过、长度不小于 `layout.motorNum` 的 N·m 上限数组：
+
+```cpp
+MotorLayout layout = {};
+if (!client->getMotorLayout(layout)) {
+    return false;
+}
+
+MotorCtrlAction limits = {};
+limits.motorNum = layout.motorNum;
+for (uint32_t i = 0; i < layout.motorNum; ++i) {
+    limits.motors[i].header.limbNo = layout.motors[i].limbNo;
+    limits.motors[i].header.jointNo = layout.motors[i].jointNo;
+    limits.motors[i].torque = maxTorqueNm[i];
+}
+
+if (!client->sendMaxTorque(limits)) {
+    return false;
+}
+```
+
+- 返回 `true` 只代表配置帧已提交到共享内存，不代表电机侧已经完成切换。
+- 底层默认存在约 10 ms 的扭矩切换窗口，期间不支持位置控制指令。该接口用于低频配置，不应放入高频 `sendControl()` 循环，也不要在切换窗口内继续下发位置控制帧。
+- 可通过后续 `getLatestObservation()` 返回的 `motors[i].maxTorque` 确认当前观测值。
+- 公开头、Python native binding 和 `librobotMotionSdk.so` 必须来自同一套 SDK，不能混用不匹配的头文件与运行库。
 
 ### 4.4 关键数据结构（来自 `MotionSdkProtocol.h`）
 
@@ -787,6 +816,7 @@ int main(int argc, char** argv) {
 | `emergencyStop` | `emergency_stop(timeout_ms=5000)` |
 | `createMediaBusClient` | `create_media_bus_client()`；返回 `MediaBusClient`（同一 client 复用同一实例，仅 `aarch64` 板内本地媒体帧订阅使用；Python 需先确认 `sdk.MEDIA_ENABLED == True`） |
 | `sendControl(action[, cmd])` | `send_control(action, cmd=None)`；`action` 是 `sdk.MotorCtrlAction()`，动作相关控制帧传 `sdk.LowLevelMotionCmd()` 并填写 `action/ac_name` |
+| `sendMaxTorque(action)` | `send_max_torque(action)`；使用 `action.motors[i].torque` 表示目标最大扭矩 |
 | `getLatestObservation` | `get_latest_observation(timeout_ms=5)`；返回 `LowLevelMotionObserved` 或 `None` |
 | `getSensorObservation` | `get_sensor_observation(timeout_us=5000)`；返回 `SensorObserved` 或 `None`（GPS + UWB，timeout 单位 us，默认 5000us=5ms） |
 | `getMotorLayout` | `get_motor_layout(timeout_ms=5000)`；返回 `MotorLayout` 或 `None` |
@@ -1003,11 +1033,12 @@ if __name__ == "__main__":
 2. **回调线程**：`ConnectCallback` 在 SDK 内部线程触发；回调里反调 SDK 接口要保证可重入。
 3. **状态查询**：`getState()` / `getLastError()` 线程安全；`getLastError()` 读后清零。
 4. **`setMotionEnable` 是异步**：返回 true 仅表示请求已受理，state 由 SDK 推进至 `kPrepared` / `kConnected`，调用方应通过 `getState()` 或 `ConnectCallback` 感知到位。
-5. **`sendControl` 仅在 `kPrepared` 生效**：其它状态返 false + `kNotPrepared` / `kNotConnected`；`motorNum` 必须 ∈ `[1, kLowLevelMaxMotorNum]`，否则返 `kInvalidArgument`（不做隐式 clamp）。
-6. **观测拉模式**：`getLatestObservation` 在指定 timeout 内获取运控观测量，未取到返回 false。
-7. **`getMotorLayout` 缓存**：首次走 RPC，命中后 SDK 本地缓存，硬件配置启动后不变。
-8. **lease 默认值**：`connect(observedHz, 0)` → 使用默认 60s；最终生效值由服务端确定，SDK 按真实值自动续约。
-9. **断连自动重连**：`kConnectionLost` 状态下 SDK 按内置退避策略自动重试，外部不需手动干预；如需主动放弃，调用 `disconnect()`。
+5. **`sendControl` / `sendMaxTorque` 仅在 `kPrepared` 生效**：其它状态返 false + `kNotPrepared` / `kNotConnected`；`motorNum` 必须 ∈ `[1, kLowLevelMaxMotorNum]`，否则返 `kInvalidArgument`（不做隐式 clamp）。
+6. **`sendMaxTorque` 是低频配置接口**：提交后为异步硬件切换，默认约 10 ms 内不要继续下发位置控制帧；通过后续观测确认 `maxTorque`。
+7. **观测拉模式**：`getLatestObservation` 在指定 timeout 内获取运控观测量，未取到返回 false。
+8. **`getMotorLayout` 缓存**：首次走 RPC，命中后 SDK 本地缓存，硬件配置启动后不变。
+9. **lease 默认值**：`connect(observedHz, 0)` → 使用默认 60s；最终生效值由服务端确定，SDK 按真实值自动续约。
+10. **断连自动重连**：`kConnectionLost` 状态下 SDK 按内置退避策略自动重试，外部不需手动干预；如需主动放弃，调用 `disconnect()`。
 
 ---
 

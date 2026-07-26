@@ -497,7 +497,7 @@ client->connect();
 **动作安全分级**
 
 - 推荐新手首次联调使用 `standUp()` / `lieDown()`，或 `startAction("standing")` / `startAction("laying")`。
-- `walking` / `move` / `bipedStand` / `handstand` / `waveBody` / `peakLoadStand` / `jumpFrontflip` / `jumpSideflip` / `jumpBackflip` / `jumpDoubleBackflip` / `jumpDoubleSideflip` / `damp` 属于高风险运动动作，应在空旷场地、机器人姿态稳定、具备人工接管条件时执行。
+- `walking` / `move` / `bipedStand` / `handstand` / `leftSideStand` / `rightSideStand` / `waveBody` / `waveHand` / `heartSit` / `tweak` / `peakLoadStand` / `jump*` / `damp` 属于高风险运动动作，应在空旷场地、机器人姿态稳定、具备人工接管条件时执行。
 - `emergencyStop`、音频播放/暂停/停止、音频文件增删、摄像头补光灯亮度设置、TRC 归零帧不属于高风险运动动作，但仍要求调用方持有控制权或满足对应接口前置条件。
 
 #### 4.3.1.1 `setRawControlCmd` —— 原始运动控制，模拟遥控手柄
@@ -519,11 +519,15 @@ client->connect();
 | 安全 | LB + RB | 急停 | Emergency Stop | 立刻停下并趴下 | `buttonLB + buttonRB`；`emergencyStop` |
 | 姿态 | LB + Y | 双足站立 | Two-Leg Stand | 后腿站起来 | `buttonLB + buttonY`；`bipedStand` |
 | 姿态 | LB + A | 倒立 | Handstand | 前脚撑地倒立 | `buttonLB + buttonA`；`handstand` |
+| 姿态 | LB + X | 左侧双足站立 | Left-Side Stand | 用左侧两脚站立 | `buttonLB + buttonX`；`leftSideStand` |
+| 姿态 | LB + B | 右侧双足站立 | Right-Side Stand | 用右侧两脚站立 | `buttonLB + buttonB`；`rightSideStand` |
 | 状态 | Stand + A | 趴下 | Lie Down | 趴到地上，进入安全低姿态 | `buttonBack + buttonA`；`laying` |
 | 状态 | Stand + Y | 行走 | Walking | 进入可移动状态 | `buttonBack + buttonY`；`walking` |
 | 状态 | Motion | 站立 | Standing | 进入站立状态 | `buttonStart`；`standing`（priority 0） |
 | 表演 | LB + Motion | 扭一扭 | Wiggle | 原地扭动表演 | `buttonLB + buttonStart`；`waveBody` |
 | 表演 | B | 招手 | Wave Hand | 执行招手动作 | `buttonB`；`waveHand` |
+| 表演 | 按住 Y 1 秒 | 坐起画心 | Heart Sit | 坐起并完成画心动作 | `buttonY`；`heartSit`（minHoldTime 1000） |
+| 移动 | 按住 A 1 秒 | 低速微动 | Tweak | 进入低速小幅移动模式 | `buttonA`；`tweak`（minHoldTime 1000） |
 | 姿态 | Motion | 负重站立 | Peak Load Stand | 进入负重站立状态 | `buttonStart`；`peakLoadStand`（priority 2） |
 | 特技 | RB + 方向键上 | 前跳 | Forward Jump | 向前跳一下 | `buttonRB + buttonUp`；`jumpForward` |
 | 特技 | RB + Y | 前空翻 | Front Flip | 向前翻一下 | `buttonRB + buttonY`；`jumpFrontflip` |
@@ -544,6 +548,7 @@ client->connect();
 
 - 表中的 `button*` 和 `axes*` 名称直接对应 `ButtonDefine` / `AxesDefine` 枚举。
 - `buttonStart` 同时匹配 `standing`（priority 0）和 `peakLoadStand`（priority 2）；同一帧多个动作命中时由服务端按能力配置的 priority 和当前可用动作决策。
+- `waveHand` / `heartSit` / `tweak` 的 `minHoldTime` 均为 `1000`；其余 posture 动作当前为 `0`。
 - RT 在 SDK 中对应 `axesRT`；当前配置以 0.5 为单次 / 双次翻转动作的分界值。
 - `require` / `axisRequire` / `priority` / `exact` / `minHoldTime` 不建议硬编码，应通过 `getMotionCapabilities()` 读取当前设备配置。
 
@@ -690,7 +695,7 @@ client->stopAction();
 | `actions[].mapping.axisRequire` | array<object\> | 额外轴值条件；每项含 `axis`、`min`、`max`，`axis` 为 `AxesDefine` 名称 |
 | `actions[].mapping.priority` | integer | 同一帧多个动作命中时的优先级，数值越大优先级越高 |
 | `actions[].mapping.exact` | bool | `true` 表示除 `require` 外不能有其它按钮同时按下 |
-| `actions[].mapping.minHoldTime` | number | 最小按住时间，当前映射为 `0` |
+| `actions[].mapping.minHoldTime` | number | 最小按住时间（ms）；当前 `waveHand` / `heartSit` / `tweak` 为 `1000`，其余 posture 动作为 `0` |
 | `actions[].params`  | array<object\> | 该动作可调的运行期参数（一次性动作没有此字段）|
 | `params[].name`     | string         | 参数字段名，用作 `startAction` / `setActionParams` 里 `params` JSON 的 key |
 | `params[].min/max`  | float          | 取值范围；超出会被服务端 clamp |

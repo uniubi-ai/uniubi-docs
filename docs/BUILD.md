@@ -23,7 +23,7 @@
 | CMake | ≥ 3.18 |
 | Python 开发头 | Python 3.8+ + `python3-dev`（Python 绑定需要） |
 | 运行时基础库 | 目标机预装（标准动态库搜索路径下可加载） |
-| SDK 运行库 | `librobotMotionSdk.so`、`libubase.so`、`libmediaBus.so` 按同版本、同架构成组提供；`MediaBusClient` 功能仅 `aarch64` 板内本地媒体帧订阅使用 |
+| SDK 运行库 | `librobotMotionSdk.so`、`libmediaBus.so`、`libudbus.so`、`libubase.so` 按同版本、同架构成组提供；`MediaBusClient` 功能仅 `aarch64` 板内本地媒体帧订阅使用 |
 
 ---
 
@@ -46,9 +46,9 @@ uniubi_robot_sdk/
 │   ├── Memory/                    Packet 等底层缓冲类型
 │   └── UBase/                     Delegate / Define 等基础设施头
 ├── lib/                           SDK 运行库，按目标架构分子目录
-│   ├── x86_64/   librobotMotionSdk.so  libubase.so  libmediaBus.so
-│   ├── aarch64/  librobotMotionSdk.so  libubase.so  libmediaBus.so
-│   └── i386/     librobotMotionSdk.so  libubase.so  libmediaBus.so
+│   ├── x86_64/   librobotMotionSdk.so  libmediaBus.so  libudbus.so  libubase.so
+│   ├── aarch64/  librobotMotionSdk.so  libmediaBus.so  libudbus.so  libubase.so
+│   └── i386/     librobotMotionSdk.so  libmediaBus.so  libudbus.so  libubase.so
 ├── examples/                      C++ 示例
 │   ├── CMakeLists.txt
 │   ├── example_lowlevel.cpp
@@ -87,7 +87,7 @@ cmake -S . -B build [-DUNIUBI_SDK_ROOT=$PWD]
 cmake --build build -j$(nproc)
 ```
 
-CMake 在 `lib/<arch>/` 下查找 `librobotMotionSdk.so`、`libmediaBus.so`、`libubase.so`（运行库按同版本、同架构成组提供）；`aarch64` 目标默认同时构建媒体示例。查找顺序：
+CMake 在 `lib/<arch>/` 下查找 `librobotMotionSdk.so`、`libmediaBus.so`、`libubase.so`；动态加载时还需要同目录中的 `libudbus.so`。这四个运行库按同版本、同架构成组提供；`aarch64` 目标默认同时构建媒体示例。查找顺序：
 
 1. `${UNIUBI_SDK_ROOT}/lib/<arch>`（`-D` 命令行 或环境变量）
 2. `${CMAKE_CURRENT_SOURCE_DIR}/lib/<arch>`（仓库内自带）
@@ -232,7 +232,7 @@ pip install uniubi_robot_motion_sdk-0.1.0-cp310-cp310-linux_aarch64.whl
 推荐流程：
 
 - `cibuildwheel` + GitHub Actions / 自建 CI 跑矩阵
-- 配合 `auditwheel repair` 把 `librobotMotionSdk.so` / `libubase.so` / `libmediaBus.so` 等 transitive deps 一起塞进 wheel；`aarch64` wheel 默认 `MEDIA_ENABLED=True`，`x86_64` / `i386` wheel 默认 `MEDIA_ENABLED=False`
+- 配合 `auditwheel repair` 把 `librobotMotionSdk.so` / `libmediaBus.so` / `libudbus.so` / `libubase.so` 等 transitive deps 一起塞进 wheel；`aarch64` wheel 默认 `MEDIA_ENABLED=True`，`x86_64` / `i386` wheel 默认 `MEDIA_ENABLED=False`
 - 客户端 `pip install` 一行装好，无须额外配置
 
 ---
