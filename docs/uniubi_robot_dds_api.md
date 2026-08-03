@@ -375,6 +375,7 @@ DDS wire-level topic 一览（客户端建 Writer/Reader 时使用）：
 | `rt/robotServer/Event` | 设备 → 客户端 | 事件通道 | `EventMessage_` | [§1.3.2](#132-事件通道设备主动推送) / [§4.3](#43-事件) |
 | `rt/motion/trc` | 客户端 → 设备 | 数据 pub/sub | `RemoteControl_` | TRC 实时控制帧 [§3.4](#34-实时控制帧-trc) / [§4.1](#41-trc-控制帧) |
 | `rt/motion/observed` | 设备 → 客户端 | 数据 pub/sub | `MotionObserved_` | 运控观测量 [§3.5](#35-运控观测量订阅) / [§4.2](#42-观测量) |
+| `rt/motion/odometry` | 设备 → 客户端 | 数据 pub/sub | `MotionOdometry_` | Walk 模型平面里程计 [§3.5](#walk-模型里程计rtmotionodometry) / [§4.2](#walk-模型里程计-motionodometry_) |
 | `rt/sensor/observed` | 设备 → 客户端 | 数据 pub/sub | `SensorObserved_` | 传感器观测量（GPS / UWB）[§3.5](#35-运控观测量订阅) / [§4.2](#42-观测量) |
 
 > `rq/` / `rr/` / `rt/` 是 ROS 2 命名约定下的固定前缀，客户端必须按此 wire-level 名字订阅 / 发布 —— 跟 SDK 内部使用的"逻辑 topic 名"（如 `robotServer.host.event`、`motion/trc`）不同，那些是 SDK 内部 EventBus / Publisher 包装层的命名，DDS 上不可见。
@@ -424,6 +425,7 @@ my_robot_client/
 │   ├── MotorState.idl
 │   ├── MotionObserved.idl
 │   ├── SensorObserved.idl
+│   ├── MotionOdometry.idl
 │   └── RemoteControl.idl
 └── src/
     └── main.cpp             # 应用代码
@@ -439,9 +441,10 @@ my_robot_client/
 | `MotorState.idl` | `MotorHeader`（电机寻址：limbsNo / jointNo） |
 | `MotionObserved.idl` | `IMUState` / `Vector3f` / `Quaternionf` / `MotorObserved` / `PowerObserved` / 运控观测帧 |
 | `SensorObserved.idl` | `GPSFrame` / `GEOGPoint` / `UWBRawObserved` / 传感器观测帧 |
+| `MotionOdometry.idl` | `MotionOdometry_`（Walk 模型平面里程计） |
 | `RemoteControl.idl` | `RemoteControl_`（遥控手柄帧） |
 
-> 客户端不需要全部使用，按场景挑：纯 RPC 接入只用 `Request.idl + RPCMessage.idl`；如果还要订阅事件、观测量、遥控，按需补 `EventMessage.idl` / `MotionObserved.idl` / `SensorObserved.idl` / `RemoteControl.idl` 等。
+> 客户端不需要全部使用，按场景挑：纯 RPC 接入只用 `Request.idl + RPCMessage.idl`；如果还要订阅事件、观测量、里程计或遥控，按需补 `EventMessage.idl` / `MotionObserved.idl` / `SensorObserved.idl` / `MotionOdometry.idl` / `RemoteControl.idl` 等。
 
 #### 1.4.3 CMakeLists.txt 样例
 
@@ -464,6 +467,7 @@ idlc_generate(TARGET sdk_idl
                   idl/EventMessage.idl
                   idl/MotorState.idl
                   idl/MotionObserved.idl
+                  idl/MotionOdometry.idl
                   idl/RemoteControl.idl
               FEATURES extended-types)
 
@@ -1454,6 +1458,25 @@ QoS、启停约定与运控观测量一致（同上：`BEST_EFFORT` / `KEEP_LAST
 
 > 该 topic 的设备侧发布依赖具体机型的传感器配置；无 GPS / UWB 硬件的设备不发布本 topic。
 
+#### Walk 模型里程计（`rt/motion/odometry`）
+
+Walk 模型里程计的数据链路为：Walk 模型输出本体系 `vx/vy` → motionServer 结合 IMU yaw 在控制周期内积分 → 共享内存 `motion_odometry` → robotServer → DDS `MotionOdometry_`。客户端收到的是服务端已经累计好的位姿，**不得再次对 `position` 或同一份速度做二次积分**。
+
+该通道不受 `setMotionObservedEnable` 控制，也不要求客户端持有控制权；客户端只需创建 DDS reader。设备在非 Walk 状态仍可能发布 `valid=false` 的心跳帧。
+
+| 项 | 取值 |
+|---|---|
+| Topic | `rt/motion/odometry` |
+| 载荷类型 | `uniubi::msg::dds_::MotionOdometry_` |
+| 推送频率 | 由 `motionCapacity` 中 walking 动作的 `odometry.publishFrequencyHz` 配置，缺省 `50 Hz` |
+| `RELIABILITY` | `BEST_EFFORT` |
+| `HISTORY` | `KEEP_LAST, depth=1` |
+| `DURABILITY` | `VOLATILE` |
+
+模型给出的 `velocity[0:2]` 是机器人本体系平面速度。服务端用相邻 IMU yaw 的最短角差 `Δyaw` 和中点角 `yaw + Δyaw/2` 把 `vx/vy` 旋转到当前 `epoch` 的世界系，再积分为 `position[0:2]`；`yaw` 同步累计 `Δyaw`。发布频率配置只影响 DDS 输出节奏，不影响模型推理与内部积分频率。
+
+里程计值仅在 Walk 模式有效。进入 Walk 或显式 reset 时，服务端清零累计位姿并递增 `epoch`；从 Walk 切换到任意其他动作时，服务端立即将 `position` / `yaw` 清零、递增 `epoch` 并发布 `valid=false` 的帧。进入 Walk 后首个有效观测只建立时间和 yaw 基线，因此 `valid=false`；完成一次有效积分后才为 `true`。非 Walk、IMU/速度无效、时间戳倒退或积分间隔异常时 `valid=false`，调用方不得用该帧更新定位。
+
 ### 3.6 事件接收与分发
 
 客户端收到 `EventMessage_` 后的处理流程：
@@ -1874,6 +1897,42 @@ module uniubi {
 | `uwb.azimuth` | deg | 方位角，[0, 360)，正前方 0 度、逆时针递增 |
 | `uwb.distance` | cm | 距离 |
 
+#### Walk 模型里程计 `MotionOdometry_`
+
+```idl
+module uniubi {
+  module msg {
+    module dds_ {
+      typedef float OdomVector3[3];
+
+      struct MotionOdometry_ {
+        OdomVector3 position;
+        OdomVector3 velocity;
+        float   yaw;
+        float   yawSpeed;
+        uint64  timestampUs;
+        uint32  epoch;
+        boolean valid;
+      };
+    };
+  };
+};
+```
+
+| 字段 | 量纲 / 坐标系 | 说明 |
+|---|---|---|
+| `position[0]` | m，当前 epoch 世界系 | 当前原点下累计 X 位移 |
+| `position[1]` | m，当前 epoch 世界系 | 当前原点下累计 Y 位移 |
+| `position[2]` | — | 保留字段，当前固定为 `0`，不代表高度估计 |
+| `velocity[0]` | m/s，机器人本体系 | Walk 模型预测 X 方向速度 |
+| `velocity[1]` | m/s，机器人本体系 | Walk 模型预测 Y 方向速度 |
+| `velocity[2]` | — | 保留字段，当前固定为 `0`，不代表垂直速度 |
+| `yaw` | rad，当前 epoch 世界系 | 当前原点下累计偏航角 |
+| `yawSpeed` | rad/s | 相邻有效 IMU yaw 的差分角速度 |
+| `timestampUs` | us | 设备单调时钟，非 wall clock，不能直接当 Unix 时间戳 |
+| `epoch` | — | 原点代次；进入 Walk、退出 Walk 或显式清零时递增 |
+| `valid` | — | 当前帧是否完成有效平面积分；仅 Walk 模式可能为 `true`，退出 Walk 后为 `false`；不描述保留的 Z 分量 |
+
 ---
 
 ### 4.3 事件
@@ -2132,6 +2191,7 @@ C++ 客户端可选任一 OMG DDS 实现：Eclipse Cyclone DDS C++ / RTI Connext
 | `MotorState.idl` | `MotorHeader` + 常量 `MAX_MOTOR_NUM` | — |
 | `MotionObserved.idl` | `Vector3f` / `Quaternionf` / `IMUState` / `MotorObserved` / `PowerObserved` / `MotionObserved_` | `MotorState.idl` |
 | `SensorObserved.idl` | `GPSSignalLevel` / `GEOGPoint` / `GPSFrame` / `UWBRawObserved` / `SensorObserved_` | — |
+| `MotionOdometry.idl` | `MotionOdometry_` | — |
 | `RemoteControl.idl` | `RemoteControl_` | — |
 
 直接从该目录拷贝 .idl 文件到项目，用对应 DDS 实现的 IDL 编译器生成 C++ 类型（Cyclone DDS C++ 用 `idlc -l cxx`；RTI 用 `rtiddsgen`；Fast DDS 用 `fastddsgen`）。

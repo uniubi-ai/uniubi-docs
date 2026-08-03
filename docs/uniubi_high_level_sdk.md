@@ -261,6 +261,7 @@ SDK 暴露的回调，注册时机和用途见下表。
 | `ConnectCallback` | 控制权 / 连接状态变化（建联 / 失权 / 重连等），驱动调用方状态机 | `IMotionHighLevelClient::setConnectCallback` |
 | `EventCallback` | 服务端主动推送的业务事件（音频状态、设备状态等） | `IMotionHighLevelClient::setEventCallback` |
 | `MotionObservedCallback` | 运控观测量 `LowLevelMotionObserved`（含 power），需先 `setObservedEnable` 开启 | `IMotionHighLevelClient::setMotionObservedCallback` |
+| `MotionOdometryCallback` | Walk 模型平面里程计 `MotionOdometry`；独立订阅 `rt/motion/odometry`，无需开启 observed 或申请控制权 | `IMotionHighLevelClient::setMotionOdometryCallback` |
 | `GPSCallback` | GPS 观测帧 `GPSFrame`，需先 `setObservedEnable` 开启 | `IMotionHighLevelClient::setGPSCallback` |
 | `RawAudioFrameCallback` | 接收音频原始帧 `AudioFrame`，回调参数 `(channel, frame)` | `IMediaBusClient::startRawAudioFrame` |
 | `RawVideoFrameCallback` | 接收视频原始帧 `VideoFrame`，回调参数 `(channel, frame)` | `IMediaBusClient::startRawVideoFrame` |
@@ -493,6 +494,7 @@ client->connect();
 | `bool lieDown(uint32_t timeout = 5000)` | 趴下/卧倒 |
 | `bool standUp(uint32_t timeout = 5000)` | 站立 |
 | `bool move(float vx, float vy, float vyaw, uint32_t timeout = 5000)` | 行走：`vx` 前后线速度（正前进）、`vy` 左右线速度、`vyaw` 转向角速度；持续生效直到 `stopAction` 或后续动作/参数覆盖 |
+| `bool resetMotionOdometry(std::string& out, uint32_t timeout = 5000)` | 显式清零 Walk 里程计；需持有 High Level 控制权，成功时 `out` 返回包含新 `epoch` 的 JSON |
 
 **动作安全分级**
 
@@ -1103,17 +1105,24 @@ NVIDIA 平台的视频原始帧可能是多平面且内存不连续，保存 / �
 
 ### 4.7 观测量数据面
 
-高级客户端可开启观测量上报，把运控观测（IMU + 电机 + 电源）与 GPS 帧通过回调推给调用方。整体流程：
+高级客户端可开启观测量上报，把运控观测（IMU + 电机 + 电源）与 GPS 帧通过回调推给调用方；Walk 里程计则使用独立的 `rt/motion/odometry` 数据通道，不受 `setObservedEnable` 控制。
 
-1. `connect` 之前/之后注册回调：`setMotionObservedCallback` / `setGPSCallback`；
+里程计完整数据链路为：Walk 模型输出本体系平面速度 `velocity=(vx, vy)` → motionServer 在控制周期内结合 IMU yaw 积分 → 通过共享内存送到 robotServer → robotServer 以 DDS `MotionOdometry_` 发布 → C++ / Python SDK 缓存并回调给应用。服务端已经把本体系速度旋转并积分成当前 `epoch` 世界系下的 `position[0:2]`；调用方应直接使用累计位姿，**不要再次对 `position` 或同一份速度做二次积分**。
+
+整体流程：
+
+1. `setMotionObservedCallback` / `setGPSCallback` 可在 `connect` 前后设置；`setMotionOdometryCallback` 必须在 `connect` 前设置；
 2. 调 `setObservedEnable(json, ret)` 传 JSON 开关开启服务端推送；`ret` 回带当前实际生效的开关状态；
 3. 服务端按帧推送，运控观测经 `MotionObservedCallback(LowLevelMotionObserved)`、GPS 经 `GPSCallback(GPSFrame)` 上抛；
-4. 另有 `getPowerInfo` 直接取最近一帧电源观测（按新鲜度窗口）。
+4. Walk 里程计经 `MotionOdometryCallback(MotionOdometry)` 上抛，也可用 `getMotionOdometry` 读取 SDK 最新缓存；
+5. 另有 `getPowerInfo` 直接取最近一帧电源观测（按新鲜度窗口）。
 
 | 方法 | 状态 | 说明 |
 |---|---|---|
 | `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kConnected` | 观测量上报开关，`json` 为开关字段（如 `{"motionEnable":true,"sensorEnable":true}`）；出参 `ret` 回带当前实际生效的开关 JSON。服务端 hook 不做鉴权 |
 | `void setMotionObservedCallback(MotionObservedCallback cb)` | 任意 | 注册运控观测量回调，签名 `void(const LowLevelMotionObserved&)`（含 power）|
+| `void setMotionOdometryCallback(MotionOdometryCallback cb)` | `kDisconnected` | 注册 Walk 里程计回调，签名 `void(const MotionOdometry&)`；必须在 `connect` 前注册，不申请控制权 |
+| `bool getMotionOdometry(MotionOdometry* odometry, uint32_t timeout = 5000)` | `kConnected` | 读取 DDS 数据面缓存的最新里程计，不发 RPC、不申请控制权；`timeout` 是数据新鲜度窗口（ms）|
 | `void setGPSCallback(GPSCallback cb)` | 任意 | 注册 GPS 数据回调，签名 `void(const GPSFrame&)` |
 | `bool getPowerInfo(PowerObserved* power, uint32_t timeout)` | `kConnected` | 取最近一帧电源观测；**需先 `setObservedEnable({"motionEnable":true})` 开启运控观测**（电源量随运控观测帧上报），否则窗口内无数据恒返 `false`。`timeout` 是**新鲜度窗口（微秒，us）**：仅当最近 `timeout` us 内有观测数据才返回 `true`，否则返回 `false`（`getLastError()` → `kDataNotUpdate`）|
 
@@ -1127,8 +1136,25 @@ NVIDIA 平台的视频原始帧可能是多平面且内存不连续，保存 / �
 **观测量数据类型**（字段以 `MotionSdkProtocol.h` 为准）：
 
 - `LowLevelMotionObserved`：`systemSta` / `motorNum` / `imu`（`IMUObserved`）/ `trc`（`TRCStickFrame`）/ `power`（`PowerObserved`）/ `motors[]`（`MotorObserved`）。各子结构字段语义参见低级 SDK 手册。
+- `MotionOdometry`：`position[0:2]` 是当前 `epoch` 原点下的世界系累计平面位置，`velocity[0:2]` 是机器人本体系的模型预测速度；motionServer 使用 IMU yaw 将 `vx/vy` 旋转到世界系后积分出 `x/y`。`yaw` / `yawSpeed` 分别为累计偏航角和相邻有效 IMU yaw 的差分角速度。`timestampUs` 是设备单调时钟（us，非 wall clock）。`position[2]` / `velocity[2]` 当前固定为 `0`，不得解释为高度或垂直速度。
+- 里程计值仅在 Walk 模式有效。进入 Walk 或显式调用 `resetMotionOdometry` 时会清零累计位姿并递增 `epoch`；从 Walk 切换到任意其他动作时，服务端立即将 `position` / `yaw` 清零、递增 `epoch` 并发布 `valid=false` 的帧。进入 Walk 后首个有效观测只建立积分基线，`valid=false`；完成一次有效积分后才为 `true`。非 Walk、IMU/速度无效或时间间隔异常时 `valid=false`，此时不得使用该帧更新定位。设备仍可在非 Walk 状态发布无效心跳帧。
+- 对外发布频率由 `motionCapacity` 中 walking 动作的 `odometry.publishFrequencyHz` 配置，缺省为 `50 Hz`；该配置只改变 DDS 发布节奏，不改变模型推理或 motionServer 内部积分频率。
 - `GPSFrame`：`valid`（1=有效）/ `speed`（km/h）/ `level`（信号等级，见 `GPSSignalLevel`）/ `rssi`（信号强度原始值，单位 dbm）/ `point`（`GEOGPoint`，含 `lat` / `lng`，单位 deg）。
 - `PowerObserved`：`power`（电量 %）/ `health`（健康度 %）/ `temper`（电池温度 ℃）/ `chargeCurrent`（实时电流 A）/ `chargeVoltage`（当前总电压 V）。
+
+`MotionOdometry` 的 C++ 格式：
+
+```cpp
+struct MotionOdometry {
+    float    position[3];  // [世界系累计 X, 世界系累计 Y, 保留 0]，m
+    float    velocity[3];  // [本体系预测 Vx, 本体系预测 Vy, 保留 0]，m/s
+    float    yaw;          // 当前 epoch 原点下累计偏航角，rad
+    float    yawSpeed;     // 偏航角速度，rad/s
+    uint64_t timestampUs;  // 设备单调时间戳，us
+    uint32_t epoch;        // 原点代次
+    uint8_t  valid;        // 当前帧是否完成有效积分
+};
+```
 
 ```cpp
 client->setMotionObservedCallback([](const LowLevelMotionObserved& obs) {
@@ -1136,6 +1162,11 @@ client->setMotionObservedCallback([](const LowLevelMotionObserved& obs) {
 });
 client->setGPSCallback([](const GPSFrame& gps) {
     // ✓ 轻量记录
+});
+client->setMotionOdometryCallback([](const MotionOdometry& odom) {
+    // ✓ 回调内只做轻量处理；直接使用累计 position，不要再次积分
+    printf("epoch=%u x=%.3f y=%.3f yaw=%.3f valid=%u\n",
+           odom.epoch, odom.position[0], odom.position[1], odom.yaw, odom.valid);
 });
 std::string observedState;
 client->setObservedEnable(R"({"motionEnable":true,"sensorEnable":true})", observedState);
@@ -1408,7 +1439,10 @@ int main(int argc, char** argv) {
 | `getMotorLayout` | `get_motor_layout(timeout_ms=5000)`；返回 `sdk.MotorLayout`，失败 `None` |
 | `setObservedEnable` | `set_observed_enable(params=None, timeout_ms=5000)`；`params` 接 dict（如 `{"motionEnable":True,"sensorEnable":True}`），成功返回当前实际开关 dict、失败返回 `None` |
 | `getPowerInfo` | `get_power_info(timeout_us=5000)`；`timeout_us` 是新鲜度窗口（微秒），返回 `sdk.PowerObserved` 或 `None` |
+| `resetMotionOdometry` | `reset_motion_odometry(timeout_ms=5000)`；需持有 High Level 控制权，成功返回含新 `epoch` 的 dict |
+| `getMotionOdometry` | `get_motion_odometry(timeout_ms=5000)`；读取 DDS 最新缓存，无需控制权，返回 `sdk.MotionOdometry` 或 `None` |
 | `setMotionObservedCallback` | `set_motion_observed_callback(cb)`；签名 `(obs: sdk.LowLevelMotionObserved)` |
+| `setMotionOdometryCallback` | `set_motion_odometry_callback(cb)`；须在 `connect()` 前注册，签名 `(odom: sdk.MotionOdometry)` |
 | `setGPSCallback` | `set_gps_callback(cb)`；签名 `(gps: sdk.GPSFrame)` |
 | `getCameraLightBrightness / setCameraLightBrightness` | `get_camera_light_brightness()`（返回 dict / None）/ `set_camera_light_brightness(brightness)`；`brightness` 取值 0~100 |
 | `startAudioPlay / stopAudioPlay / pauseAudioPlay` | `start_audio_play(params)` / `stop_audio_play()` / `pause_audio_play()` |
@@ -1416,6 +1450,22 @@ int main(int argc, char** argv) {
 | `createMediaBusClient` | `create_media_bus_client()`；返回 `sdk.MediaBusClient`，仅 `aarch64` 板内本地媒体帧订阅使用；Python 需先确认 `sdk.MEDIA_ENABLED == True`（见下表）|
 | `setConnectCallback` | `set_connect_callback(cb)` 或装饰器 `@client.on_connect`；签名 `(state, error)` |
 | `setEventCallback` | `set_event_callback(cb)` 或装饰器 `@client.on_event`；签名 `(topic: str, payload_json: str)` |
+
+Python 中 `sdk.MotionOdometry` 提供只读字段 `position`、`velocity`、`yaw`、`yaw_speed`、`timestamp_us`、`epoch`、`valid`。回调必须在 `connect()` 前注册；只读订阅和缓存读取不需要 `start_control()`：
+
+```python
+client = sdk.MotionHighLevelClient()
+client.set_motion_odometry_callback(
+    lambda odom: print(odom.epoch, odom.position, odom.yaw, odom.valid)
+)
+client.connect()
+
+odom = client.get_motion_odometry(timeout_ms=5000)
+if odom is not None and odom.valid:
+    use_accumulated_pose(odom.position[0], odom.position[1], odom.yaw)
+```
+
+只有需要显式清零时才申请 High Level 控制权并调用 `reset_motion_odometry()`；成功返回的新 `epoch` 应作为新的定位原点代次。
 
 **MediaBus client（`sdk.MediaBusClient` —— 对应 `IMediaBusClient`，由 `create_media_bus_client()` 工厂分配；仅 `aarch64` 板内本地部署使用）：**
 
