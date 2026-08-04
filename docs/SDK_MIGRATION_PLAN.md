@@ -283,11 +283,11 @@ ros2 interface show uniubi/msg/MotionObserved
 ```bash
 mkdir -p ~/ros2_ws/src
 cp -r uniubi_robot_msgs/ros2 ~/ros2_ws/src/uniubi
-cp -r uniubi_ros2/src/uniubi_interface_test ~/ros2_ws/src/
+cp -r uniubi_ros2/src/uniubi_motion_client ~/ros2_ws/src/
 cd ~/ros2_ws
-colcon build --packages-select uniubi uniubi_interface_test
+colcon build --packages-select uniubi uniubi_motion_client
 . install/setup.bash
-ros2 run uniubi_interface_test motion_high_level_client_test
+ros2 run uniubi_motion_client motion_high_level_client_example
 ```
 
 真实机器人运行前必须确认 DDS Domain、RMW、网卡、`device_id` 和安全动作范围。
