@@ -17,9 +17,9 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 
 | 控制模式 | 可选实现方式 | 对应入口 |
 |---|---|---|
-| High-level | C++ / Python SDK | `MotionHighLevelClient`，进入 `uniubi_robot_sdk` / `uniubi_robot_sdk_py` |
-| High-level | ROS 2 | `uniubi_motion_bridge`，进入 `uniubi_robot_msgs` → `uniubi_ros2` |
-| Low-level | C++ / Python SDK | `MotionLowLevelClient`，进入 `uniubi_robot_sdk` / `uniubi_robot_sdk_py` |
+| High-level | C++ / Python SDK | `MotionHighLevelClient` → [`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) / [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py) |
+| High-level | ROS 2 | `uniubi_motion_bridge` → [`uniubi_robot_msgs`](https://github.com/uniubi-ai/uniubi_robot_msgs) → [`uniubi_ros2`](https://github.com/uniubi-ai/uniubi_ros2) |
+| Low-level | C++ / Python SDK | `MotionLowLevelClient` → [`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) / [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py) |
 
 关节级 Low-level 控制统一使用 SDK；ROS 2 Motion Bridge 不提供等价的关节级控制入口。
 
