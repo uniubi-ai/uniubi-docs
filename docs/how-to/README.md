@@ -23,14 +23,11 @@ How-to 文档面向一个明确的开发任务：先说明目标和前置条件�
 
 | 任务 | 导读 | 适用阶段 |
 |---|---|---|
+| 准备构建和安装环境 | [构建、安装和交叉编译](../BUILD.md) | 进入 SDK 或 ROS 2 之前 |
 | SDK 通用准备 | [SDK 通用准备](sdk-first-use.md) | 已选 High-level 或 Low-level，准备使用 SDK |
 | 编写 ROS 2 业务节点 | [启动并验证 Motion bridge](ros2-motion-bridge.md) | 已选择 High-level + ROS 2 |
 | 训练、导出和回放策略 | [训练与策略回放](train-export-replay.md) | Low-level 策略开发 |
 | 没有真机，先验证 SDK 链路 | [Mock / Sim2Sim](mock-sim2sim.md) | SDK 链路验证 |
-
-## 维护者入口
-
-接口或协议变更不是普通开发入口。只有在接口维护者已确认变更必要性、兼容性和发布安排后，才使用 [维护已批准的接口变更](protocol-change.md)。
 
 ## How-to 的统一写法
 

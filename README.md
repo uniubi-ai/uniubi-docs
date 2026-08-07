@@ -32,30 +32,35 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 
 每篇导读都从一个具体任务开始，不要求你先认识全部仓库，也不要求先读完整 API。
 
-## 文档索引
+## Core Concepts
 
-| 主题 | 文档 |
-|---|---|
-| How-to 指南 | [docs/how-to/README.md](docs/how-to/README.md) |
-| 构建、安装、交叉编译 | [docs/BUILD.md](docs/BUILD.md) |
-| C++ 高级控制 SDK | [docs/uniubi_high_level_sdk.md](docs/uniubi_high_level_sdk.md) |
-| C++ 低级控制 SDK | [docs/uniubi_low_level_sdk.md](docs/uniubi_low_level_sdk.md) |
-| 媒体总线 | [docs/uniubi_media_sdk.md](docs/uniubi_media_sdk.md) |
-| DDS / ROS 2 直连接入 API | [docs/uniubi_robot_dds_api.md](docs/uniubi_robot_dds_api.md) |
-| ROS 2 与 DDS 映射 | [docs/ros2_dds_interop_overview.md](docs/ros2_dds_interop_overview.md) |
+先理解 High-level / Low-level 的定义、实现边界和仓库职责，再进入具体 How-to 或 API 文档。
+
+[进入 Core Concepts](docs/core-concepts/README.md)
+
+## How-to
+
+按具体开发任务完成环境准备、最小验证和后续操作。
+
+[进入 How-to 指南](docs/how-to/README.md)
+
+## API Reference
+
+在确定控制模式并完成最小验证后，查阅 SDK 和媒体接口的字段、生命周期与示例。
+
+[进入 API Reference](docs/api-reference/README.md)
+
+## Advanced
+
+DDS / ROS 2 直连、协议映射和特殊集成等内容只在确有需要时阅读。
+
+[进入 Advanced](docs/advanced/README.md)
 
 ## 安全说明
 
 首次实机联调按“只读 → 站立/趴下 → 低速运动 → 完整动作”的顺序进行。walking、跳跃、双足、倒立、damp 和低级力矩控制必须在空旷场地、急停可触达、有人值守的条件下验证。
 
 首次真实机器人联调建议先做只读验证，再执行站立、趴下等低风险动作。`walking`、`move`、`bipedStand`、`handstand`、`jump*`、`damp` 等动作应在空旷场地、姿态稳定、具备人工接管条件时执行。
-
-## 下一步文档
-
-- [构建、安装和交叉编译](docs/BUILD.md)
-- [C++ 高级控制 SDK](docs/uniubi_high_level_sdk.md)
-- [C++ 低级控制 SDK](docs/uniubi_low_level_sdk.md)
-- [ROS 2 与 DDS 映射](docs/ros2_dds_interop_overview.md)
 
 ## 许可证
 
