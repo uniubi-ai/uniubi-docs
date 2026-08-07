@@ -1,48 +1,64 @@
 # Uniubi Docs
 
-Uniubi 开源开发文档中心，提供按目标选择的开发路径、跨仓库索引、接口手册和协议说明。
+Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读和最小验证，再进入对应仓库。
 
-默认入口：[`docs/START_HERE.md`](docs/START_HERE.md)。如果还不确定应该使用哪个仓库或接入方式，请先从这里开始。
+## Quick Start
 
-## 仓库导航
+根 README 先帮助你判断控制模式，再引导你选择实现方式和具体仓库。不要先按语言或仓库选择入口。
 
-| 仓库 | 内容 |
-|---|---|
-| [`uniubi_robot_msgs`](https://github.com/uniubi-ai/uniubi_robot_msgs) | DDS IDL、ROS 2 msg/srv、schema 的统一源头 |
-| [`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) | C++ SDK、头文件、预编译库、C++ 示例 |
-| [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py) | Python SDK、pybind11 binding、Python 示例 |
-| [`uniubi_ros2`](https://github.com/uniubi-ai/uniubi_ros2) | ROS 2 client、Motion bridge 和 ROS 2 示例 |
-| [`uniubi_examples`](https://github.com/uniubi-ai/uniubi_examples) | 跨仓示例索引；实际示例代码随所属仓库维护 |
+### 1. 选择控制模式
 
-相关仓库：
+| 你要做什么 | 控制模式 | 先读哪篇导读 |
+|---|---|---|
+| 使用机器人内置动作能力，不单独控制每个关节 | High-level | [High-level：使用机器人内置动作](docs/how-to/high-level-control.md) |
+| 自己训练或运行控制策略，直接控制关节位置或扭矩 | Low-level | [Low-level：自定义关节控制策略](docs/how-to/low-level-control.md) |
 
-| 仓库 | 内容 |
-|---|---|
-| [`uniubi_robot_mock`](https://github.com/uniubi-ai/uniubi_robot_mock) | x86_64 RobotService mock runtime、MuJoCo / Isaac Gym simulator bridge |
-| [`uniubi_robot_description`](https://github.com/uniubi-ai/uniubi_robot_description) | URDF、MJCF、USD、mesh 和可视化资产 |
-| [`uniubi_rl_lab`](https://github.com/uniubi-ai/uniubi_rl_lab) | 强化学习环境、训练流程和 sim-to-real 检查 |
-| [`.github`](https://github.com/uniubi-ai/.github) | 组织 profile、PR 模板和社区健康文件 |
+### 2. 再选择实现方式
 
-## 文档索引
+| 控制模式 | 可选实现方式 | 对应入口 |
+|---|---|---|
+| High-level | C++ / Python SDK | `MotionHighLevelClient` → [`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) / [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py) |
+| High-level | ROS 2 | `uniubi_motion_bridge` → [`uniubi_robot_msgs`](https://github.com/uniubi-ai/uniubi_robot_msgs) → [`uniubi_ros2`](https://github.com/uniubi-ai/uniubi_ros2) |
+| Low-level | C++ / Python SDK | `MotionLowLevelClient` → [`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) / [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py) |
 
-| 主题 | 文档 |
-|---|---|
-| 开始开发、选择仓库和流程导航 | [docs/START_HERE.md](docs/START_HERE.md) |
-| 构建、安装、交叉编译 | [docs/BUILD.md](docs/BUILD.md) |
-| C++ 高级控制 SDK | [docs/uniubi_high_level_sdk.md](docs/uniubi_high_level_sdk.md) |
-| C++ 低级控制 SDK | [docs/uniubi_low_level_sdk.md](docs/uniubi_low_level_sdk.md) |
-| 媒体总线 | [docs/uniubi_media_sdk.md](docs/uniubi_media_sdk.md) |
-| DDS / ROS 2 直连接入 API | [docs/uniubi_robot_dds_api.md](docs/uniubi_robot_dds_api.md) |
-| ROS 2 与 DDS 映射 | [docs/ros2_dds_interop_overview.md](docs/ros2_dds_interop_overview.md) |
+关节级 Low-level 控制统一使用 SDK；ROS 2 Motion Bridge 不提供等价的关节级控制入口。
 
-## 开发路径
+### 3. 进入配套流程
 
-1. 先阅读 [docs/START_HERE.md](docs/START_HERE.md)，按目标、平台和是否有真机选择开发路径。
-2. SDK 用户再进入 C++ 或 Python 仓库；ROS 2 用户先构建 `uniubi_robot_msgs`，再构建 `uniubi_ros2`。
-3. 没有真机时先走 `uniubi_robot_mock` 或 `uniubi_rl_lab` 的仿真路径。
-4. 需要维护接口或分仓时，按协议文档和各仓库 README 的验证要求执行。
+确定控制模式后，再按需要进入配套流程：
+
+- [训练、导出和回放策略](docs/how-to/train-export-replay.md)：训练或部署自己的 Low-level 策略。
+- [Mock / Sim2Sim](docs/how-to/mock-sim2sim.md)：没有真机时验证 SDK 链路。
+
+每篇导读都从一个具体任务开始，不要求你先认识全部仓库，也不要求先读完整 API。
+
+## Core Concepts
+
+先理解 High-level / Low-level 的定义、实现边界和仓库职责，再进入具体 How-to 或 API 文档。
+
+[进入 Core Concepts](docs/core-concepts/README.md)
+
+## How-to
+
+按具体开发任务完成环境准备、最小验证和后续操作。
+
+[进入 How-to 指南](docs/how-to/README.md)
+
+## API Reference
+
+在确定控制模式并完成最小验证后，查阅 SDK 和媒体接口的字段、生命周期与示例。
+
+[进入 API Reference](docs/api-reference/README.md)
+
+## Advanced
+
+DDS / ROS 2 直连、协议映射和特殊集成等内容只在确有需要时阅读。
+
+[进入 Advanced](docs/advanced/README.md)
 
 ## 安全说明
+
+首次实机联调按“只读 → 站立/趴下 → 低速运动 → 完整动作”的顺序进行。walking、跳跃、双足、倒立、damp 和低级力矩控制必须在空旷场地、急停可触达、有人值守的条件下验证。
 
 首次真实机器人联调建议先做只读验证，再执行站立、趴下等低风险动作。`walking`、`move`、`bipedStand`、`handstand`、`jump*`、`damp` 等动作应在空旷场地、姿态稳定、具备人工接管条件时执行。
 
