@@ -66,25 +66,10 @@ dds_create_topic + dds_create_reader/writer
 |---|---|---|---|---|
 | `rt/motion/trc` | 客户端 → 设备 | `uniubi::msg::dds_::RemoteControl_` | `RemoteControl.idl` | TRC 实时遥控帧 |
 | `rt/motion/observed` | 设备 → 客户端 | `uniubi::msg::dds_::MotionObserved_` | `MotionObserved.idl` | 运控观测量（IMU / 电机 / 电源）|
-| `rt/motion/odometry` | 设备 → 客户端 | `uniubi::msg::dds_::MotionOdometry_` | `MotionOdometry.idl` | Walk 模型平面里程计 |
-| `rt/sensor/observed` | 设备 → 客户端 | `uniubi::msg::dds_::SensorObserved_` | `SensorObserved.idl` | 传感器观测量（GPS / UWB）|
+| `rt/sensor/observed` | 设备 → 客户端 | `uniubi::msg::dds_::SensorObserved_` | `SensorObserved.idl` | 传感器观测量（GPS / UWB / Walk 里程计）|
 | `rt/robotServer/Event` | 设备 → 客户端 | `uniubi::msg::dds_::EventMessage_` | `EventMessage.idl` | 设备主动推送事件 |
 
-> `rt/motion/odometry` 固定使用 `BEST_EFFORT` / `KEEP_LAST, depth=1` / `VOLATILE`；`position[2]` 和 `velocity[2]` 是三维兼容保留字段，当前固定为 `0`，不代表高度或垂直速度。`rt/robotServer/Event` 固定 `BEST_EFFORT` / `KEEP_LAST` / `VOLATILE`；`trc` / `observed` / `sensor` 三路的 reliability / history / durability 由具体业务约定（见 `uniubi_robot_dds_api.md` §1.3）。RPC 通道（`rq/robotServerRequest` / `rr/robotServerReply`）**不**复用本文后述的通用 RMW service header，而是自定义 `uniubi::dds_::Header{ uint64 clientId; uint64 requestId }`，按 `clientId` / `requestId` 关联请求与响应，详见 `uniubi_robot_dds_api.md`。
-
-ROS 2 消息字段使用 snake_case，对应 `uniubi/msg/MotionOdometry.msg`：
-
-```text
-float32[3] position
-float32[3] velocity
-float32 yaw
-float32 yaw_speed
-uint64 timestamp_us
-uint32 epoch
-bool valid
-```
-
-`position[0:2]` 是 motionServer 已结合 IMU yaw 积分得到的当前 `epoch` 世界系累计位姿，`velocity[0:2]` 是机器人本体系模型预测速度。里程计值仅在 Walk 模式有效，调用方直接消费 `position` / `yaw`，不要再次积分。进入 Walk 或显式 reset 时累计位姿清零且 `epoch` 递增；从 Walk 切换到任意其他动作时，`position` / `yaw` 立即清零、`epoch` 递增、`valid=false`。只有 `valid=true` 的帧可用于更新平面定位。完整字段单位、发布频率与生命周期语义见 [`uniubi_robot_dds_api.md`](uniubi_robot_dds_api.md#walk-模型里程计-motionodometry_)。
+> Walk 里程计位于 `rt/sensor/observed` 的 `odom` 字段；`position[2]` 和 `velocity[2]` 是三维兼容保留字段，当前固定为 `0`。`rt/robotServer/Event` 固定 `BEST_EFFORT` / `KEEP_LAST` / `VOLATILE`；`trc` / `observed` / `sensor` 三路的 reliability / history / durability 由具体业务约定（见 `uniubi_robot_dds_api.md` §1.3）。RPC 通道（`rq/robotServerRequest` / `rr/robotServerReply`）**不**复用本文后述的通用 RMW service header，而是自定义 `uniubi::dds_::Header{ uint64 clientId; uint64 requestId }`，按 `clientId` / `requestId` 关联请求与响应，详见 `uniubi_robot_dds_api.md`。
 
 ## 类型映射总则
 
@@ -265,22 +250,6 @@ ROS 2 service client 依赖 request header 匹配响应。原生 DDS 端必须�
 5. client 收到 response 后，用 `writer_guid + seq` 判断 response 是否属于本次请求。
 
 如果 response header 没有回填，ROS 2 client 即使收到 DDS sample，也无法把它关联到 pending request。
-
-### Uniubi `System.srv` 索引
-
-`uniubi/srv/System.srv` 是 ROS 2 示例客户端使用的 service 接口，不是原生 DDS `RPCMessage.idl` 的逐字段镜像。普通二次开发通常复用 `uniubi_ros2` 示例封装；需要扩展 RPC 时，可在示例客户端封装层补充新的调用方法。
-
-字段边界如下：
-
-- `Header.msg` 来自 `Request.idl`，包含 `client_id` / `request_id`；`System.srv` 不含该 Header 字段。
-- `System.srv` 请求和响应都包含 `device_id`。`uniubi_ros2` 示例要求填写目标设备 SN，并将其写入每个请求；robotServer 只响应目标 SN 匹配的请求，ROS 2/RMW 再通过 service request header 关联响应。示例检查响应 `code` 和业务 payload，不额外比较 `response.device_id`。
-- 原生 DDS RPC 的完整请求 / 响应规则以 `uniubi_robot_dds_api.md` 为准。
-
-跨链路定位如下：
-
-- ROS 2 示例与调用约定见 `uniubi_ros2/docs/runtime_notes.md`。
-- `System.srv` 的接口定义和 IDL 映射边界见 `uniubi_robot_msgs/docs/protocol_notes.md`。
-- 原生 DDS RPC 规则见 `uniubi_robot_dds_api.md`。
 
 ## 基础类型映射
 

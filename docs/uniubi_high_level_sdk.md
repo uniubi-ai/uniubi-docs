@@ -1,7 +1,7 @@
 # 宇泛智能机器狗高级控制 SDK 接口手册
 
 > SDK 入口类：`uniubi::RobotSdk::IMotionHighLevelClient`
-> C++ 头文件：`include/uniubi/robot_sdk/MotionHighLevelClient.h`
+> C++ 头文件：`Include/MotionHighLevelClient.h`
 
 ---
 
@@ -63,21 +63,13 @@ int main() {
 
     auto client = IMotionHighLevelClient::create();  // 板内单设备
     client->connect();                              // 进入高级模式
-    client->startControl(/*timeout=*/30000);        // 请求控制权
-    const auto controlDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
-    while (client->getState() != static_cast<int32_t>(HLState::kControlled)) {
-        if (std::chrono::steady_clock::now() >= controlDeadline) {
-            client->disconnect();
-            IMotionSdkService::instance()->shutdown();
-            return 1;
-        }
+    client->startControl(/*timeout=*/10000);        // 请求控制权
+    while (client->getState() != static_cast<int32_t>(HLState::kControlled))
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    }
 
     client->standUp();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     client->lieDown();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
 
     client->releaseControl();
     client->disconnect();
@@ -97,17 +89,12 @@ sdk.service.initial(None, "myApp")
 client = sdk.MotionHighLevelClient()             # 板内单设备
 try:
     client.connect()
-    client.start_control(timeout_ms=30000)
-    deadline = time.monotonic() + 30.0
-    while client.get_state() != sdk.HighLevelState.kControlled:
-        if time.monotonic() >= deadline:
-            raise TimeoutError("wait kControlled timeout")
-        time.sleep(0.05)
+    client.start_control(timeout_ms=10000)
+    while client.get_state() != sdk.HighLevelState.kControlled: time.sleep(0.05)
 
     client.stand_up()
-    time.sleep(5)
+    time.sleep(2)
     client.lie_down()
-    time.sleep(5)
 
     client.release_control()
 finally:
@@ -129,8 +116,8 @@ finally:
 
 | 依赖 | 来源 | 说明 |
 |---|---|---|
-| `librobotMotionSdk.so` | SDK 仓库 `lib/<arch>/` | 预编译运行库，按目标架构选 |
-| 公开头 | SDK 仓库 `include/uniubi/robot_sdk/` | `MotionSdkService.h` / `MotionHighLevelClient.h` / `MotionSdkProtocol.h` |
+| `librobotMotionSdk.so` | SDK 仓库 `Lib/<arch>/` | 预编译运行库，按目标架构选 |
+| 公开头 | SDK 仓库 `Include/` | `MotionSdkService.h` / `MotionHighLevelClient.h` / `MotionSdkProtocol.h` |
 | 编译器 | g++ ≥ 9（支持 C++14） | |
 | 运行时基础库 | 目标机预装（标准动态库路径） | 不需要客户额外装 Cyclone DDS —— 已链接进 SDK .so |
 
@@ -152,8 +139,8 @@ project(my_robot_app CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 1) 指定 SDK 安装前缀（默认 /opt/uniubi/；源码仓库可用 ~/uniubi_robot_sdk）
-set(UNIUBI_SDK_ROOT "$ENV{HOME}/uniubi_robot_sdk" CACHE PATH "Uniubi SDK install root")
+# 1) 指定 SDK 安装前缀（默认 /opt/uniubi/）
+set(UNIUBI_SDK_ROOT "/path/to/uniubi_sdk" CACHE PATH "Uniubi SDK install root")
 
 # 2) 按目标架构自动选 Lib 子目录（x86_64 / aarch64 / i386）
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
@@ -166,11 +153,11 @@ endif()
 
 # 3) 定位 SDK .so 与公开头
 find_library(SDK_LIB robotMotionSdk
-             PATHS ${UNIUBI_SDK_ROOT}/lib/${ARCH_DIR}
+             PATHS ${UNIUBI_SDK_ROOT}/Lib/${ARCH_DIR}
              NO_DEFAULT_PATH REQUIRED)
 
 add_executable(my_robot_app src/main.cpp)
-target_include_directories(my_robot_app PRIVATE ${UNIUBI_SDK_ROOT}/include)
+target_include_directories(my_robot_app PRIVATE ${UNIUBI_SDK_ROOT}/Include)
 target_link_libraries(my_robot_app PRIVATE ${SDK_LIB} pthread)
 ```
 
@@ -178,11 +165,11 @@ target_link_libraries(my_robot_app PRIVATE ${SDK_LIB} pthread)
 
 ```bash
 mkdir -p build && cd build
-cmake -DUNIUBI_SDK_ROOT=~/uniubi_robot_sdk ..
+cmake -DUNIUBI_SDK_ROOT=/path/to/uniubi_sdk ..
 make -j$(nproc)
 
 # 运行前确保 SDK .so 在动态库路径
-export LD_LIBRARY_PATH=~/uniubi_robot_sdk/lib/$(uname -m):$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/path/to/uniubi_sdk/Lib/$(uname -m):$LD_LIBRARY_PATH
 ./my_robot_app                  # 默认网卡 eth0
 ./my_robot_app wlan0            # 用 wlan0 网卡（仅远端模式）
 ```
@@ -261,8 +248,7 @@ SDK 暴露的回调，注册时机和用途见下表。
 | `ConnectCallback` | 控制权 / 连接状态变化（建联 / 失权 / 重连等），驱动调用方状态机 | `IMotionHighLevelClient::setConnectCallback` |
 | `EventCallback` | 服务端主动推送的业务事件（音频状态、设备状态等） | `IMotionHighLevelClient::setEventCallback` |
 | `MotionObservedCallback` | 运控观测量 `LowLevelMotionObserved`（含 power），需先 `setObservedEnable` 开启 | `IMotionHighLevelClient::setMotionObservedCallback` |
-| `MotionOdometryCallback` | Walk 模型平面里程计 `MotionOdometry`；独立订阅 `rt/motion/odometry`，无需开启 observed 或申请控制权 | `IMotionHighLevelClient::setMotionOdometryCallback` |
-| `GPSCallback` | GPS 观测帧 `GPSFrame`，需先 `setObservedEnable` 开启 | `IMotionHighLevelClient::setGPSCallback` |
+| `SensorObservedCallback` | 完整传感器观测 `SensorObserved`（GPS / UWB / Walk 里程计），需先开启 `sensorEnable` | `IMotionHighLevelClient::setSensorObservedCallback` |
 | `RawAudioFrameCallback` | 接收音频原始帧 `AudioFrame`，回调参数 `(channel, frame)` | `IMediaBusClient::startRawAudioFrame` |
 | `RawVideoFrameCallback` | 接收视频原始帧 `VideoFrame`，回调参数 `(channel, frame)` | `IMediaBusClient::startRawVideoFrame` |
 | `EncodedVideoFrameCallback` | 接收视频编码帧 `EncodedVideoFrame`，回调参数 `(channel, frame)` | `IMediaBusClient::startEncodedVideoFrame` |
@@ -476,7 +462,7 @@ client->connect();
 | `int32_t getLastError() const` | 任意 | 读后清零的最后失败原因 |
 | `void setConnectCallback(ConnectCallback cb)` | `kDisconnected` | 必须 connect 前注册 |
 | `void setEventCallback(EventCallback cb)` | `kDisconnected` | 必须 connect 前注册 |
-| `IMediaBusClient::Ptr createMediaBusClient()` | 任意 | 创建音视频通道客户端；仅 `aarch64` 板内本地媒体帧订阅使用，详见 §4.6 |
+| `IMediaBusClient::Ptr createMediaBusClient()` | 任意 | 创建音视频通道客户端（详见 §4.6） |
 
 ### 4.3 运控动作
 
@@ -489,84 +475,18 @@ client->connect();
 | `bool startAction(const std::string& action, const std::string& paramsJson = "", uint32_t timeout = 5000)` | `action`：动作名；`paramsJson` 字段以 `getMotionCapabilities()` 返回的 `params` 列表为准，一次性动作可传 `""` |
 | `bool stopAction(uint32_t timeout = 5000)` | 停止当前动作 |
 | `bool setActionParams(const std::string& paramsJson = "", uint32_t timeout = 5000)` | 运行期调当前动作参数（不切动作）；可调字段由当前动作的 `params` 列表决定（见 `getMotionCapabilities`），**全量重写语义**（未传字段归 0）|
-| `bool setRawControlCmd(TRCStickFrame& frame)` | 动作控制帧（按钮 + 摇杆 + 扳机），见下节 |
 | `bool damp(uint32_t timeout = 5000)` | 进入阻尼/慢沉（软卸力），关节低刚度可控下沉 |
 | `bool lieDown(uint32_t timeout = 5000)` | 趴下/卧倒 |
 | `bool standUp(uint32_t timeout = 5000)` | 站立 |
 | `bool move(float vx, float vy, float vyaw, uint32_t timeout = 5000)` | 行走：`vx` 前后线速度（正前进）、`vy` 左右线速度、`vyaw` 转向角速度；持续生效直到 `stopAction` 或后续动作/参数覆盖 |
-| `bool resetMotionOdometry(std::string& out, uint32_t timeout = 5000)` | 显式清零 Walk 里程计；需持有 High Level 控制权，成功时 `out` 返回包含新 `epoch` 的 JSON |
 
 **动作安全分级**
 
 - 推荐新手首次联调使用 `standUp()` / `lieDown()`，或 `startAction("standing")` / `startAction("laying")`。
-- `walking` / `move` / `bipedStand` / `handstand` / `leftSideStand` / `rightSideStand` / `waveBody` / `waveHand` / `heartSit` / `tweak` / `peakLoadStand` / `jump*` / `damp` 属于高风险运动动作，应在空旷场地、机器人姿态稳定、具备人工接管条件时执行。
-- `emergencyStop`、音频播放/暂停/停止、音频文件增删、摄像头补光灯亮度设置、TRC 归零帧不属于高风险运动动作，但仍要求调用方持有控制权或满足对应接口前置条件。
+- `walking` / `move` / `bipedStand` / `handstand` / `waveBody` / `peakLoadStand` / `jumpFrontflip` / `jumpSideflip` / `jumpBackflip` / `jumpDoubleBackflip` / `jumpDoubleSideflip` / `damp` 属于高风险运动动作，应在空旷场地、机器人姿态稳定、具备人工接管条件时执行。
+- `emergencyStop`、音频播放/暂停/停止、音频文件增删、摄像头补光灯亮度设置不属于高风险运动动作，但仍要求调用方持有控制权或满足对应接口前置条件。
 
-#### 4.3.1.1 `setRawControlCmd` —— 原始运动控制，模拟遥控手柄
-
-本接口采用 50Hz 帧式输入，模拟遥控手柄的连续操作。**该接口走不可靠通道，不保证每一帧都送达**。需要可靠投递的场景请使用 `startAction()` 等 RPC 接口；本接口适用于连续摇杆 / 按键这类采样型输入。
-
-接口同时承担两类输入：
-- **按键组合切换动作**：通过 `buttons[]` 设置组合按键，触发 posture 动作（见下表映射）—— 等价于 `startAction()` 的功能
-- **摇杆设置实时控制量**：通过 `axes[]` 设置摇杆量，控制当前动作的速度等运行期参数 —— 等价于 `setActionParams()` 的功能（例如 `walking` 时通过摇杆调节 `lineVelocityX / lineVelocityY / velocity`）
-
-两类输入可同时在一帧中携带。
-
-**标准遥控功能映射**
-
-下表的 posture 动作快照来自 RobotService `motionCapacity` 的 `motionTRC.motionMap.posture`。对外按键名 Stand / Motion 在 SDK 中分别对应 `buttonBack` / `buttonStart`；`startAction()` 等 RPC 仍使用内部动作名。设备实际开放动作、`priority`、`exact`、`minHoldTime`、`axisRequire` 以 `getMotionCapabilities()` 返回为准。
-
-| 分类 | 用户操作 | 中文标准名 | 英文标准名 | 用户说明 | SDK 输入 / 内部动作 |
-|---|---|---|---|---|---|
-| 安全 | LB + RB | 急停 | Emergency Stop | 立刻停下并趴下 | `buttonLB + buttonRB`；`emergencyStop` |
-| 姿态 | LB + Y | 双足站立 | Two-Leg Stand | 后腿站起来 | `buttonLB + buttonY`；`bipedStand` |
-| 姿态 | LB + A | 倒立 | Handstand | 前脚撑地倒立 | `buttonLB + buttonA`；`handstand` |
-| 姿态 | LB + X | 左侧双足站立 | Left-Side Stand | 用左侧两脚站立 | `buttonLB + buttonX`；`leftSideStand` |
-| 姿态 | LB + B | 右侧双足站立 | Right-Side Stand | 用右侧两脚站立 | `buttonLB + buttonB`；`rightSideStand` |
-| 状态 | Stand + A | 趴下 | Lie Down | 趴到地上，进入安全低姿态 | `buttonBack + buttonA`；`laying` |
-| 状态 | Stand + Y | 行走 | Walking | 进入可移动状态 | `buttonBack + buttonY`；`walking` |
-| 状态 | Motion | 站立 | Standing | 进入站立状态 | `buttonStart`；`standing`（priority 0） |
-| 表演 | LB + Motion | 扭一扭 | Wiggle | 原地扭动表演 | `buttonLB + buttonStart`；`waveBody` |
-| 表演 | B | 招手 | Wave Hand | 执行招手动作 | `buttonB`；`waveHand` |
-| 表演 | 按住 Y 1 秒 | 坐起画心 | Heart Sit | 坐起并完成画心动作 | `buttonY`；`heartSit`（minHoldTime 1000） |
-| 移动 | 按住 A 1 秒 | 低速微动 | Tweak | 进入低速小幅移动模式 | `buttonA`；`tweak`（minHoldTime 1000） |
-| 姿态 | Motion | 负重站立 | Peak Load Stand | 进入负重站立状态 | `buttonStart`；`peakLoadStand`（priority 2） |
-| 特技 | RB + 方向键上 | 前跳 | Forward Jump | 向前跳一下 | `buttonRB + buttonUp`；`jumpForward` |
-| 特技 | RB + Y | 前空翻 | Front Flip | 向前翻一下 | `buttonRB + buttonY`；`jumpFrontflip` |
-| 特技 | RB + B | 侧空翻 | Side Flip | 向侧方翻转 | `buttonRB + buttonB` 且 `axesRT` ∈ [-1.0, 0.49]；`jumpSideflip` |
-| 特技 | RB + A | 后空翻 | Back Flip | 向后翻一下 | `buttonRB + buttonA` 且 `axesRT` ∈ [-1.0, 0.49]；`jumpBackflip` |
-| 特技 | 按住 RT + RB + A | 后空翻两圈 | Double Back Flip | 按住保险键后向后翻两圈 | `buttonRB + buttonA` 且 `axesRT` ∈ [0.5, 1.0]；`jumpDoubleBackflip` |
-| 特技 | 按住 RT + RB + B | 侧空翻两圈 | Double Side Flip | 按住保险键后向侧方翻两圈 | `buttonRB + buttonB` 且 `axesRT` ∈ [0.5, 1.0]；`jumpDoubleSideflip` |
-| 行走 | 左摇杆上 | 前进 | Forward | 往前走 | `axesLY` → `lineVelocityX > 0`（`walking`） |
-| 行走 | 左摇杆下 | 后退 | Backward | 往后走 | `axesLY` → `lineVelocityX < 0`（`walking`） |
-| 行走 | 左摇杆左 | 左移 | Move Left | 横着向左走 | `axesLX` → `lineVelocityY < 0`（`walking`） |
-| 行走 | 左摇杆右 | 右移 | Move Right | 横着向右走 | `axesLX` → `lineVelocityY > 0`（`walking`） |
-| 转向 | 右摇杆左 | 左转 | Turn Left | 向左转身 | `axesRX` → `velocity > 0`（`walking`） |
-| 转向 | 右摇杆右 | 右转 | Turn Right | 向右转身 | `axesRX` → `velocity < 0`（`walking`） |
-| 速度 | 方向键上 | 加速 | Speed Up | 走得更快 | `buttonUp`；切换 fast profile |
-| 速度 | 方向键下 | 减速 | Slow Down | 走得更慢 | `buttonDown`；切换 slow profile |
-
-字段语义：
-
-- 表中的 `button*` 和 `axes*` 名称直接对应 `ButtonDefine` / `AxesDefine` 枚举。
-- `buttonStart` 同时匹配 `standing`（priority 0）和 `peakLoadStand`（priority 2）；同一帧多个动作命中时由服务端按能力配置的 priority 和当前可用动作决策。
-- `waveHand` / `heartSit` / `tweak` 的 `minHoldTime` 均为 `1000`；其余 posture 动作当前为 `0`。
-- RT 在 SDK 中对应 `axesRT`；当前配置以 0.5 为单次 / 双次翻转动作的分界值。
-- `require` / `axisRequire` / `priority` / `exact` / `minHoldTime` 不建议硬编码，应通过 `getMotionCapabilities()` 读取当前设备配置。
-
-**前置条件**（任一不满足则 `setRawControlCmd` 返回 `false`）
-
-- 当前必须处于 `kControlled`（已 `startControl` 持权）
-- 服务端在 acquire 响应里下发了 `rawActionId`（未下发 → 该设备不支持 raw cmd，调用恒失败）
-- `frame.valid` 必须为非 0
-
-**使用约束**
-
-- 不可靠传输：建议同一组合以 20ms 间隔重发 3 次以提高送达概率
-- 触发后下一帧建议将组合按键清零，否则可能重复命中同一动作
-- 急停优先推荐使用 `emergencyStop()` 接口（走可靠 RPC 通道）；raw cmd 中的 `emergencyStop` 组合用于模拟遥控器急停
-
-#### 4.3.1.2 `walking` 动作参数（`startAction` / `setActionParams`）
+#### 4.3.1.1 `walking` 动作参数（`startAction` / `setActionParams`）
 
 动作的可调参数由服务端动态下发 —— 调用方应通过 `getMotionCapabilities()` 查询每个动作的 `params` 列表（字段名 / `min` / `max` / `unit`），不应硬编码。一次性动作（如 `jumpBackflip`）通常无可调参数。
 
@@ -697,7 +617,7 @@ client->stopAction();
 | `actions[].mapping.axisRequire` | array<object\> | 额外轴值条件；每项含 `axis`、`min`、`max`，`axis` 为 `AxesDefine` 名称 |
 | `actions[].mapping.priority` | integer | 同一帧多个动作命中时的优先级，数值越大优先级越高 |
 | `actions[].mapping.exact` | bool | `true` 表示除 `require` 外不能有其它按钮同时按下 |
-| `actions[].mapping.minHoldTime` | number | 最小按住时间（ms）；当前 `waveHand` / `heartSit` / `tweak` 为 `1000`，其余 posture 动作为 `0` |
+| `actions[].mapping.minHoldTime` | number | 最小按住时间，当前映射为 `0` |
 | `actions[].params`  | array<object\> | 该动作可调的运行期参数（一次性动作没有此字段）|
 | `params[].name`     | string         | 参数字段名，用作 `startAction` / `setActionParams` 里 `params` JSON 的 key |
 | `params[].min/max`  | float          | 取值范围；超出会被服务端 clamp |
@@ -825,7 +745,7 @@ client->startAudioPlay(R"({"list":[{"id":"1"}],"volume":50,"repeat":1})");
 
 #### 4.4.4 音频原始帧订阅
 
-音频原始帧已统一到 `IMediaBusClient`（见 §4.6），仅 `aarch64` 板内本地部署可订阅。通过 `client->createMediaBusClient()` 拿到通道后 `startRawAudioFrame(channel, cb)` 订阅，帧类型为 MediaBus 的 `AudioFrame`：
+音频原始帧已统一到 `IMediaBusClient`（见 §4.6），通过 `client->createMediaBusClient()` 拿到通道后 `startRawAudioFrame(channel, cb)` 订阅，帧类型为 MediaBus 的 `AudioFrame`：
 
 ```cpp
 auto media = client->createMediaBusClient();
@@ -975,7 +895,7 @@ client->setCameraLightBrightness(50);
 ```json
 {
   "network": {
-    "ether": { "enable": true, "ipv4Addr": "192.0.2.10", "ipv4Gateway": "192.0.2.1", "ipv4Mask": "255.255.255.0", "mac": "02:00:00:00:00:01", "status": 0 }
+    "ether": { "enable": true, "ipv4Addr": "192.168.51.149", "ipv4Gateway": "192.168.50.1", "ipv4Mask": "255.255.254.0", "mac": "e0:3c:1c:b8:ea:60", "status": 0 }
   }
 }
 ```
@@ -984,7 +904,7 @@ client->setCameraLightBrightness(50);
 
 ### 4.6 音视频通道（`IMediaBusClient`）
 
-音视频帧（视频原始帧 / 视频编码帧 / 音频原始帧）统一通过 `IMediaBusClient` 订阅。该能力仅支持 `aarch64` 板内本地部署；`x86_64` / `i386` 平台不要调用 `createMediaBusClient()`、`setup()` 或 `start*Frame()`。由 `client->createMediaBusClient()` 工厂分配，`setup()` 后即可订阅；**媒体订阅与控制权无关**，不需要 `startControl`。
+音视频帧（视频原始帧 / 视频编码帧 / 音频原始帧）统一通过 `IMediaBusClient` 订阅。由 `client->createMediaBusClient()` 工厂分配，`setup()` 后即可订阅；**媒体订阅与控制权无关**，不需要 `startControl`。
 
 ```cpp
 auto media = client->createMediaBusClient();
@@ -1085,7 +1005,7 @@ for (uint32_t row = 0; row < info.height; ++row) {
 }
 ```
 
-NVIDIA 平台的视频原始帧可能是多平面且内存不连续，保存 / 处理时务必按 `VideoFrameInfo.virAddr[plane]` 与 `stride[plane]` 逐平面逐行读取有效数据。完整处理逻辑见 `examples/example_media_frames.cpp`。
+NVIDIA 平台的视频原始帧可能是多平面且内存不连续，保存 / 处理时务必按 `VideoFrameInfo.virAddr[plane]` 与 `stride[plane]` 逐平面逐行读取有效数据。完整处理逻辑见 `Examples/example_media_frames.cpp`。
 
 **`EncodedVideoFrame` 编码帧格式**
 
@@ -1101,29 +1021,24 @@ NVIDIA 平台的视频原始帧可能是多平面且内存不连续，保存 / �
 | `FrameInfo.detail.video.width` / `height` | 编码图像宽高 |
 | `FrameInfo.detail.video.fpsNum` / `fpsDen` | 帧率分子 / 分母 |
 
-完整 C++ 测试程序：`examples/example_media_frames.cpp`。该示例同时订阅音频原始帧、视频原始帧、视频编码帧，并将前三类各 10 帧保存到 `/tmp/media_frame_dump`。
+完整 C++ 测试程序：`Examples/example_media_frames.cpp`。该示例同时订阅音频原始帧、视频原始帧、视频编码帧，并将前三类各 10 帧保存到 `/tmp/media_frame_dump`。
 
 ### 4.7 观测量数据面
 
-高级客户端可开启观测量上报，把运控观测（IMU + 电机 + 电源）与 GPS 帧通过回调推给调用方；Walk 里程计则使用独立的 `rt/motion/odometry` 数据通道，不受 `setObservedEnable` 控制。
+高级客户端可开启观测量上报，把运控观测（IMU + 电机 + 电源）和完整传感器观测（GPS + UWB + Walk 里程计）通过回调推给调用方。整体流程：
 
-里程计完整数据链路为：Walk 模型输出本体系平面速度 `velocity=(vx, vy)` → motionServer 在控制周期内结合 IMU yaw 积分 → 通过共享内存送到 robotServer → robotServer 以 DDS `MotionOdometry_` 发布 → C++ / Python SDK 缓存并回调给应用。服务端已经把本体系速度旋转并积分成当前 `epoch` 世界系下的 `position[0:2]`；调用方应直接使用累计位姿，**不要再次对 `position` 或同一份速度做二次积分**。
-
-整体流程：
-
-1. `setMotionObservedCallback` / `setGPSCallback` 可在 `connect` 前后设置；`setMotionOdometryCallback` 必须在 `connect` 前设置；
+1. 在 `connect` 前注册 `setMotionObservedCallback` / `setSensorObservedCallback`；
 2. 调 `setObservedEnable(json, ret)` 传 JSON 开关开启服务端推送；`ret` 回带当前实际生效的开关状态；
-3. 服务端按帧推送，运控观测经 `MotionObservedCallback(LowLevelMotionObserved)`、GPS 经 `GPSCallback(GPSFrame)` 上抛；
-4. Walk 里程计经 `MotionOdometryCallback(MotionOdometry)` 上抛，也可用 `getMotionOdometry` 读取 SDK 最新缓存；
-5. 另有 `getPowerInfo` 直接取最近一帧电源观测（按新鲜度窗口）。
+3. 服务端按帧推送，运控观测经 `MotionObservedCallback` 上抛，传感器观测经 `SensorObservedCallback` 上抛；
+4. 调用方通过 `sensor.gps` / `sensor.uwb` / `sensor.odom` 读取对应数据，也可用 `getSensorObservation` 读取完整传感器缓存；
+5. 电源观测仍通过 `getPowerInfo` 读取最近一帧缓存。
 
 | 方法 | 状态 | 说明 |
 |---|---|---|
 | `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kConnected` | 观测量上报开关，`json` 为开关字段（如 `{"motionEnable":true,"sensorEnable":true}`）；出参 `ret` 回带当前实际生效的开关 JSON。服务端 hook 不做鉴权 |
 | `void setMotionObservedCallback(MotionObservedCallback cb)` | 任意 | 注册运控观测量回调，签名 `void(const LowLevelMotionObserved&)`（含 power）|
-| `void setMotionOdometryCallback(MotionOdometryCallback cb)` | `kDisconnected` | 注册 Walk 里程计回调，签名 `void(const MotionOdometry&)`；必须在 `connect` 前注册，不申请控制权 |
-| `bool getMotionOdometry(MotionOdometry* odometry, uint32_t timeout = 5000)` | `kConnected` | 读取 DDS 数据面缓存的最新里程计，不发 RPC、不申请控制权；`timeout` 是数据新鲜度窗口（ms）|
-| `void setGPSCallback(GPSCallback cb)` | 任意 | 注册 GPS 数据回调，签名 `void(const GPSFrame&)` |
+| `void setSensorObservedCallback(SensorObservedCallback cb)` | `kDisconnected` | 注册完整传感器观测回调，签名 `void(const SensorObserved&)`；数据包含 GPS、UWB 和里程计 |
+| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout = 5000)` | `kConnected` | 读取完整传感器观测缓存，不发 RPC；`timeout` 是数据新鲜度窗口（ms）|
 | `bool getPowerInfo(PowerObserved* power, uint32_t timeout)` | `kConnected` | 取最近一帧电源观测；**需先 `setObservedEnable({"motionEnable":true})` 开启运控观测**（电源量随运控观测帧上报），否则窗口内无数据恒返 `false`。`timeout` 是**新鲜度窗口（微秒，us）**：仅当最近 `timeout` us 内有观测数据才返回 `true`，否则返回 `false`（`getLastError()` → `kDataNotUpdate`）|
 
 `setObservedEnable` 入参 JSON 开关字段：
@@ -1131,42 +1046,26 @@ NVIDIA 平台的视频原始帧可能是多平面且内存不连续，保存 / �
 | 字段 | 类型 | 含义 |
 |---|---|---|
 | `motionEnable` | bool | 开启后推送运控观测（IMU + 电机 + 电源），经 `setMotionObservedCallback` 回调上抛 |
-| `sensorEnable` | bool | 开启后推送传感器观测（GPS），经 `setGPSCallback` 回调上抛 |
+| `sensorEnable` | bool | 开启后推送传感器观测（GPS + UWB + Walk 里程计），经 `setSensorObservedCallback` 回调上抛 |
 
 **观测量数据类型**（字段以 `MotionSdkProtocol.h` 为准）：
 
 - `LowLevelMotionObserved`：`systemSta` / `motorNum` / `imu`（`IMUObserved`）/ `trc`（`TRCStickFrame`）/ `power`（`PowerObserved`）/ `motors[]`（`MotorObserved`）。各子结构字段语义参见低级 SDK 手册。
-- `MotionOdometry`：`position[0:2]` 是当前 `epoch` 原点下的世界系累计平面位置，`velocity[0:2]` 是机器人本体系的模型预测速度；motionServer 使用 IMU yaw 将 `vx/vy` 旋转到世界系后积分出 `x/y`。`yaw` / `yawSpeed` 分别为累计偏航角和相邻有效 IMU yaw 的差分角速度。`timestampUs` 是设备单调时钟（us，非 wall clock）。`position[2]` / `velocity[2]` 当前固定为 `0`，不得解释为高度或垂直速度。
-- 里程计值仅在 Walk 模式有效。进入 Walk 或显式调用 `resetMotionOdometry` 时会清零累计位姿并递增 `epoch`；从 Walk 切换到任意其他动作时，服务端立即将 `position` / `yaw` 清零、递增 `epoch` 并发布 `valid=false` 的帧。进入 Walk 后首个有效观测只建立积分基线，`valid=false`；完成一次有效积分后才为 `true`。非 Walk、IMU/速度无效或时间间隔异常时 `valid=false`，此时不得使用该帧更新定位。设备仍可在非 Walk 状态发布无效心跳帧。
-- 对外发布频率由 `motionCapacity` 中 walking 动作的 `odometry.publishFrequencyHz` 配置，缺省为 `50 Hz`；该配置只改变 DDS 发布节奏，不改变模型推理或 motionServer 内部积分频率。
-- `GPSFrame`：`valid`（1=有效）/ `speed`（km/h）/ `level`（信号等级，见 `GPSSignalLevel`）/ `rssi`（信号强度原始值，单位 dbm）/ `point`（`GEOGPoint`，含 `lat` / `lng`，单位 deg）。
+- `MotionOdometry`：`position[0:2]` 是当前 `epoch` 原点下的累计平面位置，`velocity[0:2]` 是机器人本体系模型预测速度；`yaw` / `yawSpeed` 分别为累计偏航角和偏航角速度。该里程计仅在 Walk 行走模式下可用。退出 Walk 时保留当前区间末值并将 `valid` 置为 false；再次进入 Walk 时自动建立新原点并递增 `epoch`。`position[2]` / `velocity[2]` 当前固定为 `0`，不得解释为高度或垂直速度。
+- 对外发布频率由 `motionCapacity` 中 walking 动作的 `odometry.publishFrequencyHz` 配置，缺省为 `50 Hz`；模型推理与内部积分频率不受该配置影响。
+- `SensorObserved.gps`（`GPSFrame`）：`valid`（1=有效）/ `speed`（km/h）/ `level`（信号等级，见 `GPSSignalLevel`）/ `rssi`（信号强度原始值，单位 dbm）/ `point`（`GEOGPoint`，含 `lat` / `lng`，单位 deg）。
 - `PowerObserved`：`power`（电量 %）/ `health`（健康度 %）/ `temper`（电池温度 ℃）/ `chargeCurrent`（实时电流 A）/ `chargeVoltage`（当前总电压 V）。
-
-`MotionOdometry` 的 C++ 格式：
-
-```cpp
-struct MotionOdometry {
-    float    position[3];  // [世界系累计 X, 世界系累计 Y, 保留 0]，m
-    float    velocity[3];  // [本体系预测 Vx, 本体系预测 Vy, 保留 0]，m/s
-    float    yaw;          // 当前 epoch 原点下累计偏航角，rad
-    float    yawSpeed;     // 偏航角速度，rad/s
-    uint64_t timestampUs;  // 设备单调时间戳，us
-    uint32_t epoch;        // 原点代次
-    uint8_t  valid;        // 当前帧是否完成有效积分
-};
-```
 
 ```cpp
 client->setMotionObservedCallback([](const LowLevelMotionObserved& obs) {
     // ✓ 轻量记录 / 投递业务线程；回调内严禁阻塞
 });
-client->setGPSCallback([](const GPSFrame& gps) {
-    // ✓ 轻量记录
-});
-client->setMotionOdometryCallback([](const MotionOdometry& odom) {
-    // ✓ 回调内只做轻量处理；直接使用累计 position，不要再次积分
-    printf("epoch=%u x=%.3f y=%.3f yaw=%.3f valid=%u\n",
-           odom.epoch, odom.position[0], odom.position[1], odom.yaw, odom.valid);
+client->setSensorObservedCallback([](const SensorObserved& sensor) {
+    const GPSFrame& gps = sensor.gps;
+    const MotionOdometry& odom = sensor.odom;
+    // ✓ 回调内只做轻量处理；GPS、UWB 和里程计统一从 sensor 读取
+    printf("gps=%u epoch=%u x=%.3f y=%.3f yaw=%.3f valid=%u\n",
+           gps.valid, odom.epoch, odom.position[0], odom.position[1], odom.yaw, odom.valid);
 });
 std::string observedState;
 client->setObservedEnable(R"({"motionEnable":true,"sensorEnable":true})", observedState);
@@ -1182,7 +1081,7 @@ if (client->getPowerInfo(&power, /*timeout_us=*/200000)) {
 
 ## 五、C++ 使用示例
 
-完整可运行示例：`examples/example_highlevel.cpp`（同目录有对应 `CMakeLists.txt`）
+完整可运行示例：`Examples/example_highlevel.cpp`（同目录有对应 `CMakeLists.txt`）
 
 ```cpp
 #include <chrono>
@@ -1243,35 +1142,27 @@ int main(int argc, char** argv) {
     client->querySystemStatus(sysStatus);
 
     // 取控制权
-    if (!client->startControl(30000)) {
+    if (!client->startControl(10000)) {
         client->disconnect();
         IMotionSdkService::instance()->shutdown();
         return 1;
     }
-    const auto controlDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
-    while (client->getState() != IMotionHighLevelClient::kControlled) {
-        if (std::chrono::steady_clock::now() >= controlDeadline) {
-            client->disconnect();
-            IMotionSdkService::instance()->shutdown();
-            return 1;
-        }
+    while (client->getState() != IMotionHighLevelClient::kControlled)
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    }
 
-    // 安全动作 + 音频 + 数据上报
-    client->standUp();
+    // 动作 + 音频 + 数据上报
+    client->startAction("walking", "");
     std::this_thread::sleep_for(std::chrono::seconds(5));
-    client->lieDown();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    client->stopAction();
 
     client->startAudioPlay(R"({"list":[{"id":"1"}],"volume":50,"repeat":1})");
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     client->pauseAudioPlay();
     client->stopAudioPlay();
 
     std::string observedState;
     client->setObservedEnable(R"({"motionEnable":true,"sensorEnable":true})", observedState);
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     client->setObservedEnable(R"({"motionEnable":false,"sensorEnable":false})", observedState);
 
     // 退出 —— 显式 release + disconnect + shutdown
@@ -1284,14 +1175,14 @@ int main(int argc, char** argv) {
 
 ### 5.2 媒体帧订阅示例
 
-完整可运行示例：`examples/example_media_frames.cpp`，仅 `aarch64` 板内本地部署构建和运行。
+完整可运行示例：`Examples/example_media_frames.cpp`。
 
 ```bash
 # config 省略或传 "-" 时使用 SDK 内置 MediaBus 配置
-./example_media_frames [config|-] [client_id] [device_id|-] [video_channel] [audio_channel] [seconds] [network_iface|-]
+./example_media_frames [config|-] [client_id] [device_id|-] [video_channel] [audio_channel] [stream] [seconds] [network_iface|-]
 
-# 常用：订阅 video_channel=0、audio_channel=0，运行 10 秒
-./example_media_frames - mediaFrameExample - 0 0 10 eth0
+# 常用：订阅 channel=0、audio_channel=0、主码流，运行 10 秒
+./example_media_frames - mediaFrameExample - 0 0 0 10 eth0
 ```
 
 输出内容：
@@ -1365,32 +1256,19 @@ int main(int argc, char** argv) {
 
     /// 4) 各自独立操作（每个 client 内部 deviceId 已绑定，互不串扰）
     for (auto& c : clients) {
-        if (!c->startControl(30000)) {
-            fprintf(stderr, "startControl failed\n");
-        }
+        c->startControl(10000);
     }
     for (auto& c : clients) {
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
-        while (c->getState() != IMotionHighLevelClient::kControlled &&
-               std::chrono::steady_clock::now() < deadline) {
+        while (c->getState() != IMotionHighLevelClient::kControlled)
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        }
-        if (c->getState() != IMotionHighLevelClient::kControlled) {
-            fprintf(stderr, "wait kControlled timeout\n");
-            continue;
-        }
-        c->standUp();
+        c->startAction("walking", R"({"lineVelocityX":0.3})");
     }
 
     std::this_thread::sleep_for(std::chrono::seconds(5));
 
     /// 5) 退出 —— 各 client 各自 release + disconnect
     for (auto& c : clients) {
-        c->lieDown();
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-
-    for (auto& c : clients) {
+        c->stopAction();
         c->releaseControl();
         c->disconnect();
     }
@@ -1403,10 +1281,10 @@ int main(int argc, char** argv) {
 
 ## 六、Python SDK
 
-模块：`robot_motion_sdk`，源码 `uniubi_robot_sdk_py/`
-- pybind11 binding：`uniubi_robot_sdk_py/src/MotionSdkPython.cpp`
-- Python wrapper：`uniubi_robot_sdk_py/robot_motion_sdk/__init__.py`
-- pybind11 依赖：`uniubi_robot_sdk_py/ThirdParty/pybind11/`
+模块：`robot_motion_sdk`，源码 `Python/`
+- pybind11 binding：`Python/src/MotionSdkPython.cpp`
+- Python wrapper：`Python/robot_motion_sdk/__init__.py`
+- pybind11 依赖：`Python/ThirdParty/pybind11/`
 
 ### 6.1 当前 binding 覆盖范围（已与 C++ 接口对齐）
 
@@ -1434,42 +1312,21 @@ int main(int argc, char** argv) {
 | `emergencyStop / recoveryStand` | `emergency_stop(timeout_ms=5000)` / `recovery_stand(timeout_ms=5000)` |
 | `damp / standUp / lieDown / move` | `damp()` / `stand_up()` / `lie_down()` / `move(vx, vy, vyaw, timeout_ms=5000)` |
 | `startAction / stopAction / setActionParams` | `start_action(action, params=None, ...)` / `stop_action()` / `set_action_params(params=None)`；`params` 接 Python dict，binding 内部转 JSON |
-| `setRawControlCmd` | `set_raw_control_cmd(frame)`；`frame` 是 `sdk.TRCStickFrame()`，可读写 `valid / control_id / buttons / axes`（list ↔ array 自动互转） |
 | `queryMotionState / getMotionCapabilities / querySystemStatus` | `query_motion_state()` / `get_motion_capabilities()` / `query_system_status()`；返回 Python dict（自动 json.loads） |
 | `getMotorLayout` | `get_motor_layout(timeout_ms=5000)`；返回 `sdk.MotorLayout`，失败 `None` |
 | `setObservedEnable` | `set_observed_enable(params=None, timeout_ms=5000)`；`params` 接 dict（如 `{"motionEnable":True,"sensorEnable":True}`），成功返回当前实际开关 dict、失败返回 `None` |
 | `getPowerInfo` | `get_power_info(timeout_us=5000)`；`timeout_us` 是新鲜度窗口（微秒），返回 `sdk.PowerObserved` 或 `None` |
-| `resetMotionOdometry` | `reset_motion_odometry(timeout_ms=5000)`；需持有 High Level 控制权，成功返回含新 `epoch` 的 dict |
-| `getMotionOdometry` | `get_motion_odometry(timeout_ms=5000)`；读取 DDS 最新缓存，无需控制权，返回 `sdk.MotionOdometry` 或 `None` |
+| `getSensorObservation` | `get_sensor_observation(timeout_ms=5000)`；读取完整传感器缓存，返回 `sdk.SensorObserved` 或 `None` |
 | `setMotionObservedCallback` | `set_motion_observed_callback(cb)`；签名 `(obs: sdk.LowLevelMotionObserved)` |
-| `setMotionOdometryCallback` | `set_motion_odometry_callback(cb)`；须在 `connect()` 前注册，签名 `(odom: sdk.MotionOdometry)` |
-| `setGPSCallback` | `set_gps_callback(cb)`；签名 `(gps: sdk.GPSFrame)` |
+| `setSensorObservedCallback` | `set_sensor_observed_callback(cb)`；须在 `connect()` 前注册，签名 `(sensor: sdk.SensorObserved)` |
 | `getCameraLightBrightness / setCameraLightBrightness` | `get_camera_light_brightness()`（返回 dict / None）/ `set_camera_light_brightness(brightness)`；`brightness` 取值 0~100 |
 | `startAudioPlay / stopAudioPlay / pauseAudioPlay` | `start_audio_play(params)` / `stop_audio_play()` / `pause_audio_play()` |
 | `addAudioFile / deleteAudioFile / queryAudioPlayDetail / queryAudioPlayList` | `add_audio_file(params)` / `delete_audio_file(params)` / `query_audio_play_detail()` / `query_audio_play_list(params=None)` |
-| `createMediaBusClient` | `create_media_bus_client()`；返回 `sdk.MediaBusClient`，仅 `aarch64` 板内本地媒体帧订阅使用；Python 需先确认 `sdk.MEDIA_ENABLED == True`（见下表）|
+| `createMediaBusClient` | `create_media_bus_client()`；返回 `sdk.MediaBusClient`（见下表）|
 | `setConnectCallback` | `set_connect_callback(cb)` 或装饰器 `@client.on_connect`；签名 `(state, error)` |
 | `setEventCallback` | `set_event_callback(cb)` 或装饰器 `@client.on_event`；签名 `(topic: str, payload_json: str)` |
 
-Python 中 `sdk.MotionOdometry` 提供只读字段 `position`、`velocity`、`yaw`、`yaw_speed`、`timestamp_us`、`epoch`、`valid`。回调必须在 `connect()` 前注册；只读订阅和缓存读取不需要 `start_control()`：
-
-```python
-client = sdk.MotionHighLevelClient()
-client.set_motion_odometry_callback(
-    lambda odom: print(odom.epoch, odom.position, odom.yaw, odom.valid)
-)
-client.connect()
-
-odom = client.get_motion_odometry(timeout_ms=5000)
-if odom is not None and odom.valid:
-    use_accumulated_pose(odom.position[0], odom.position[1], odom.yaw)
-```
-
-只有需要显式清零时才申请 High Level 控制权并调用 `reset_motion_odometry()`；成功返回的新 `epoch` 应作为新的定位原点代次。
-
-**MediaBus client（`sdk.MediaBusClient` —— 对应 `IMediaBusClient`，由 `create_media_bus_client()` 工厂分配；仅 `aarch64` 板内本地部署使用）：**
-
-Python native binding 通过 `UNIUBI_SDK_ENABLE_MEDIA` 控制媒体帧绑定。默认 `aarch64=ON`、`x86_64/i386=OFF`。运行时用 `sdk.MEDIA_ENABLED` 判断；为 `False` 时 `create_media_bus_client()` 会抛出 `RuntimeError("MediaBus is not available in this SDK build")`，且不会提供 `VideoFrame` / `AudioFrame` / `EncodedVideoFrame` 等媒体类型。
+**MediaBus client（`sdk.MediaBusClient` —— 对应 `IMediaBusClient`，由 `create_media_bus_client()` 工厂分配）：**
 
 | C++ 接口 | Python wrapper |
 |---|---|
@@ -1531,11 +1388,11 @@ signal.signal(signal.SIGINT, _on_signal)
 signal.signal(signal.SIGTERM, _on_signal)
 ```
 
-完整可运行示例：`uniubi_robot_sdk_py/examples/example_highlevel.py`
+完整可运行示例：`Python/examples/example_highlevel.py`
 
 ### 6.3 Python 使用示例
 
-完整可运行版本：`uniubi_robot_sdk_py/examples/example_highlevel.py`
+完整可运行版本：`Python/examples/example_highlevel.py`
 
 ```python
 import json, signal, sys, time
@@ -1582,26 +1439,23 @@ def main():
         if not client.connect(lease_ms=60000):
             return 1
 
-        if not client.start_control(timeout_ms=30000):
+        if not client.start_control(timeout_ms=10000):
             return 1
 
-        deadline = time.monotonic() + 30.0
+        deadline = time.monotonic() + 6.0
         while client.get_state() != sdk.HighLevelState.kControlled:
             if _stop or time.monotonic() > deadline:
                 return 1
             time.sleep(0.05)
 
-        client.stand_up()
+        client.start_action("walking")
         for _ in range(50):
             if _stop: break
             time.sleep(0.1)
-        client.lie_down()
-        for _ in range(50):
-            if _stop: break
-            time.sleep(0.1)
+        client.stop_action()
 
         client.start_audio_play({"list": [{"id": "1"}], "volume": 50, "repeat": 1})
-        time.sleep(5)
+        time.sleep(2)
         client.pause_audio_play()
         client.stop_audio_play()
 
@@ -1615,13 +1469,12 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-媒体帧订阅完整示例：`uniubi_robot_sdk_py/examples/example_media_frames.py`，仅 `aarch64` 板内本地部署运行。
+媒体帧订阅完整示例：`Python/examples/example_media_frames.py`。
 
 ```bash
-git clone https://github.com/uniubi-ai/uniubi_robot_sdk_py.git ~/uniubi_robot_sdk_py
-export PYTHONPATH=~/uniubi_robot_sdk_py:$PYTHONPATH
-python3 ~/uniubi_robot_sdk_py/examples/example_media_frames.py \
-    [config|-] [client_id] [device_id|-] [video_channel] [audio_channel] [seconds] [network_iface|-]
+export PYTHONPATH=$SDK_ROOT/Python:$PYTHONPATH
+python3 $SDK_ROOT/Python/examples/example_media_frames.py \
+    [config|-] [client_id] [device_id|-] [video_channel] [audio_channel] [stream] [seconds] [network_iface|-]
 ```
 
 最小用法：
@@ -1629,9 +1482,6 @@ python3 ~/uniubi_robot_sdk_py/examples/example_media_frames.py \
 ```python
 import time
 import robot_motion_sdk as sdk
-
-if not sdk.MEDIA_ENABLED:
-    raise RuntimeError("current wheel does not include MediaBus bindings")
 
 sdk.service.set_network_interface("eth0")
 sdk.service.initial(None, "mediaFramePythonExample")
@@ -1703,7 +1553,7 @@ journalctl -u robotServer -f
 | `create(sn)` 返回 nullptr | SDK 自检成远端但 deviceId 传空 | 远端模式 deviceId 必须非空（板内才允许空） |
 | `connect()` 之后 state 一直停在 `kDisconnected` | 1. 看 ConnectCallback 推过来的 error 码<br>2. `tcpdump` 是否双向有包<br>3. 机器人侧 `checkDeviceId` 配的 SN 与你传的是否一致 | `kRpcConnectFailed` → DDS 通道 / robotServer RPC 还没起；deviceId 不匹配 → 机器人 filter 静默丢弃所有请求 |
 | `startControl` 后没切 `kControlled` | 1. ConnectCallback 是否报了 error<br>2. 是否被另一台 client 抢权 | `kRpcAcquireRejected` → 控制权被别人占 / acquireMode 超时；`kSessionRevoked` → 别人接管 |
-| 动作类接口（`startAction` / `setActionParams` / `stopAction` / `setRawControlCmd`）返 false，state 显示 `kControlled` | `getLastError()` 取值 | `kSessionExpired` → lease 到期；`kSessionRevoked` → 被接管；`kActionRejected` → 服务端拒绝（按业务码处理）|
+| 动作类接口（`startAction` / `setActionParams` / `stopAction`）返 false，state 显示 `kControlled` | `getLastError()` 取值 | `kSessionExpired` → lease 到期；`kSessionRevoked` → 被接管；`kActionRejected` → 服务端拒绝（按业务码处理）|
 | **静默无响应**（任何接口都 timeout） | DDS QoS 不兼容（最常见） | 客户端 / 服务端 IDL 版本或 Cyclone DDS 版本不一致；用 `ddsperf sanity` 做最小握手验证 |
 
 ### 8.3 打开 SDK 内部日志

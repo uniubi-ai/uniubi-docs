@@ -1,7 +1,7 @@
 # 宇泛机器狗 DDS / ROS 2 直连接入 API
 
 > 适用对象：不借助本厂商 SDK，直接用 OMG DDS（推荐 Cyclone DDS 0.10.5）或 ROS 2 对接设备的开发者。
-> 与高级控制 SDK（`docs/uniubi_high_level_sdk.md`）能力对齐，是其底层协议契约的对外描述。
+> 与高级控制 SDK（`docs/motion_highlevel_sdk.md`）能力对齐，是其底层协议契约的对外描述。
 
 ---
 
@@ -251,19 +251,16 @@ module uniubi {
 
 **响应匹配（协议级强制约束）**
 
-客户端必须按以下三项同时匹配响应，任一不匹配视为响应不属于本次调用，**必须丢弃并继续等待目标响应**：
+客户端必须按以下两项同时匹配响应，任一不匹配视为响应不属于本次调用，**必须丢弃**：
 
 | 匹配项 | 规则 |
 |---|---|
 | `System_Response_.header.clientId` | == 请求.`header.clientId` |
 | `System_Response_.header.requestId` | == 请求.`header.requestId` |
-| `System_Response_.device_id` | == 请求.`device_id` |
 
 - `Header.clientId` 进程内全局唯一（启动时随机 uint64）
 - `Header.requestId` session 内单调递增，绝不重复
-- `device_id` 以本次请求配置的目标设备 SN 为准；同 Domain 存在多台设备时，非目标设备响应不能作为成功或失败结果
 - **着重注意：每次请求 `header.requestId` 单调递增**
-- 不要因为收到非目标设备响应而重新发送同一方法请求；正确行为是在本次请求超时窗口内持续等待目标设备响应，直到命中三项匹配或本地超时
 
 **QoS**
 
@@ -375,8 +372,7 @@ DDS wire-level topic 一览（客户端建 Writer/Reader 时使用）：
 | `rt/robotServer/Event` | 设备 → 客户端 | 事件通道 | `EventMessage_` | [§1.3.2](#132-事件通道设备主动推送) / [§4.3](#43-事件) |
 | `rt/motion/trc` | 客户端 → 设备 | 数据 pub/sub | `RemoteControl_` | TRC 实时控制帧 [§3.4](#34-实时控制帧-trc) / [§4.1](#41-trc-控制帧) |
 | `rt/motion/observed` | 设备 → 客户端 | 数据 pub/sub | `MotionObserved_` | 运控观测量 [§3.5](#35-运控观测量订阅) / [§4.2](#42-观测量) |
-| `rt/motion/odometry` | 设备 → 客户端 | 数据 pub/sub | `MotionOdometry_` | Walk 模型平面里程计 [§3.5](#walk-模型里程计rtmotionodometry) / [§4.2](#walk-模型里程计-motionodometry_) |
-| `rt/sensor/observed` | 设备 → 客户端 | 数据 pub/sub | `SensorObserved_` | 传感器观测量（GPS / UWB）[§3.5](#35-运控观测量订阅) / [§4.2](#42-观测量) |
+| `rt/sensor/observed` | 设备 → 客户端 | 数据 pub/sub | `SensorObserved_` | 传感器观测量（GPS / UWB / Walk 里程计）[§3.5](#35-运控观测量订阅) / [§4.2](#42-观测量) |
 
 > `rq/` / `rr/` / `rt/` 是 ROS 2 命名约定下的固定前缀，客户端必须按此 wire-level 名字订阅 / 发布 —— 跟 SDK 内部使用的"逻辑 topic 名"（如 `robotServer.host.event`、`motion/trc`）不同，那些是 SDK 内部 EventBus / Publisher 包装层的命名，DDS 上不可见。
 
@@ -418,20 +414,19 @@ ldconfig -p | grep ddscxx        # libddscxx.so.0（C++ 绑定）
 my_robot_client/
 ├── CMakeLists.txt
 ├── host_config.xml          # DDS profile，复制 §1.2 给出的样例后改 NetworkInterface 网卡名
-├── idl/                     # 从 uniubi_robot_msgs/idl/ 整目录拷贝过来
+├── idl/                     # 从 SDK 仓库 IDL/ 整目录拷贝过来
 │   ├── Request.idl
 │   ├── RPCMessage.idl
 │   ├── EventMessage.idl
 │   ├── MotorState.idl
 │   ├── MotionObserved.idl
 │   ├── SensorObserved.idl
-│   ├── MotionOdometry.idl
 │   └── RemoteControl.idl
 └── src/
     └── main.cpp             # 应用代码
 ```
 
-完整 IDL 文件由 [`uniubi_robot_msgs`](https://github.com/uniubi-ai/uniubi_robot_msgs) 仓库的 `idl/` 提供，**整目录拷出来即可**（带 `#include` 依赖关系，缺一不可）。每个文件覆盖的协议范围：
+完整 IDL 文件由 SDK 仓库 `IDL/` 提供，**整目录拷出来即可**（带 `#include` 依赖关系，缺一不可）。每个文件覆盖的协议范围：
 
 | 文件 | 内容 |
 |---|---|
@@ -441,10 +436,9 @@ my_robot_client/
 | `MotorState.idl` | `MotorHeader`（电机寻址：limbsNo / jointNo） |
 | `MotionObserved.idl` | `IMUState` / `Vector3f` / `Quaternionf` / `MotorObserved` / `PowerObserved` / 运控观测帧 |
 | `SensorObserved.idl` | `GPSFrame` / `GEOGPoint` / `UWBRawObserved` / 传感器观测帧 |
-| `MotionOdometry.idl` | `MotionOdometry_`（Walk 模型平面里程计） |
 | `RemoteControl.idl` | `RemoteControl_`（遥控手柄帧） |
 
-> 客户端不需要全部使用，按场景挑：纯 RPC 接入只用 `Request.idl + RPCMessage.idl`；如果还要订阅事件、观测量、里程计或遥控，按需补 `EventMessage.idl` / `MotionObserved.idl` / `SensorObserved.idl` / `MotionOdometry.idl` / `RemoteControl.idl` 等。
+> 客户端不需要全部使用，按场景挑：纯 RPC 接入只用 `Request.idl + RPCMessage.idl`；如果还要订阅事件、观测量、遥控，按需补 `EventMessage.idl` / `MotionObserved.idl` / `SensorObserved.idl` / `RemoteControl.idl` 等。
 
 #### 1.4.3 CMakeLists.txt 样例
 
@@ -467,7 +461,6 @@ idlc_generate(TARGET sdk_idl
                   idl/EventMessage.idl
                   idl/MotorState.idl
                   idl/MotionObserved.idl
-                  idl/MotionOdometry.idl
                   idl/RemoteControl.idl
               FEATURES extended-types)
 
@@ -617,7 +610,7 @@ business_ok = (response.code == 0) AND (payload.result == true)
 | `robotAppService` | `setMotionActionParams` | 运行期改动作子参数 | 是 |
 | `robotAppService` | `emergencyStopMotion` | 紧急制动 | 是 |
 | `robotAppService` | `setMotionObservedEnable` | 开关运控观测量 | 否 |
-| `robotAppService` | `queryMotionState` | 查询运控状态 | 否 |
+| `robotAppService` | `queryMotionState` | 查询运控状态 | 是 |
 | `robotAppService` | `getMotionCapabilities` | 查询设备支持的动作集合 | 否 |
 | `robotAppService` | `getSystemStatus` | 拉取系统状态快照 | 否 |
 | `robotAppService` | `startPlayList` | 启动 / 恢复音频播放 | 是 |
@@ -964,7 +957,7 @@ business_ok = (response.code == 0) AND (payload.result == true)
 | `actions[].mapping.axisRequire` | array<object\> | 额外轴值条件；每项含 `axis`、`min`、`max`，`axis` 为 TRC 轴字段 |
 | `actions[].mapping.priority` | integer | 同一帧多个动作命中时的优先级，数值越大优先级越高 |
 | `actions[].mapping.exact` | bool | `true` 表示除 `require` 外不能有其它按钮同时按下 |
-| `actions[].mapping.minHoldTime` | number | 最小按住时间（ms）；当前 `waveHand` / `heartSit` / `tweak` 为 `1000`，其余 posture 动作为 `0` |
+| `actions[].mapping.minHoldTime` | number | 最小按住时间，当前映射为 `0` |
 | `actions[].params`  | array<object\> | 该动作可调的运行期参数；一次性动作无此字段 |
 | `params[].name`     | string         | 参数 key，用作 `startMotionAction` / `setMotionActionParams` 的 `params` JSON 的 key |
 | `params[].min/max`  | float          | 取值范围；超出会被服务端 clamp |
@@ -1391,7 +1384,7 @@ TRC 是数据订阅发布通道（[§1.3.3](#133-数据订阅发布通道开放�
 ```
 构造 RemoteControl_:
   trc.controller = rawActionId
-  trc.timestamp  = monotonic_sequence
+  trc.timestamp  = now_ms
   trc.<button>   = 0 / 1
   trc.<axis>     = float in 范围（见 [§4.1](#41-trc-控制帧)）
 DDS write 到 rt/motion/trc，不等响应，立即返回
@@ -1446,7 +1439,7 @@ DDS write 到 rt/motion/trc，不等响应，立即返回
 
 #### 传感器观测量（`rt/sensor/observed`）
 
-传感器观测（GPS / UWB）走独立 topic `rt/sensor/observed`，与运控观测同属"设备→客户端"数据通道，载荷为 `uniubi::msg::dds_::SensorObserved_`（[§4.2](#42-观测量)）。
+传感器观测（GPS / UWB / Walk 里程计）走独立 topic `rt/sensor/observed`，与运控观测同属"设备→客户端"数据通道，载荷为 `uniubi::msg::dds_::SensorObserved_`（[§4.2](#42-观测量)）。
 
 | 项 | 取值 |
 |---|---|
@@ -1456,26 +1449,7 @@ DDS write 到 rt/motion/trc，不等响应，立即返回
 
 QoS、启停约定与运控观测量一致（同上：`BEST_EFFORT` / `KEEP_LAST` / `VOLATILE` / `ALLOW_TYPE_COERCION`；先订阅再开推送），开关同样经 [§3.3.3](#333-数据上报) 的数据上报 RPC 控制。无对应传感器硬件的设备不写入数据。
 
-> 该 topic 的设备侧发布依赖具体机型的传感器配置；无 GPS / UWB 硬件的设备不发布本 topic。
-
-#### Walk 模型里程计（`rt/motion/odometry`）
-
-Walk 模型里程计的数据链路为：Walk 模型输出本体系 `vx/vy` → motionServer 结合 IMU yaw 在控制周期内积分 → 共享内存 `motion_odometry` → robotServer → DDS `MotionOdometry_`。客户端收到的是服务端已经累计好的位姿，**不得再次对 `position` 或同一份速度做二次积分**。
-
-该通道不受 `setMotionObservedEnable` 控制，也不要求客户端持有控制权；客户端只需创建 DDS reader。设备在非 Walk 状态仍可能发布 `valid=false` 的心跳帧。
-
-| 项 | 取值 |
-|---|---|
-| Topic | `rt/motion/odometry` |
-| 载荷类型 | `uniubi::msg::dds_::MotionOdometry_` |
-| 推送频率 | 由 `motionCapacity` 中 walking 动作的 `odometry.publishFrequencyHz` 配置，缺省 `50 Hz` |
-| `RELIABILITY` | `BEST_EFFORT` |
-| `HISTORY` | `KEEP_LAST, depth=1` |
-| `DURABILITY` | `VOLATILE` |
-
-模型给出的 `velocity[0:2]` 是机器人本体系平面速度。服务端用相邻 IMU yaw 的最短角差 `Δyaw` 和中点角 `yaw + Δyaw/2` 把 `vx/vy` 旋转到当前 `epoch` 的世界系，再积分为 `position[0:2]`；`yaw` 同步累计 `Δyaw`。发布频率配置只影响 DDS 输出节奏，不影响模型推理与内部积分频率。
-
-里程计值仅在 Walk 模式有效。进入 Walk 或显式 reset 时，服务端清零累计位姿并递增 `epoch`；从 Walk 切换到任意其他动作时，服务端立即将 `position` / `yaw` 清零、递增 `epoch` 并发布 `valid=false` 的帧。进入 Walk 后首个有效观测只建立时间和 yaw 基线，因此 `valid=false`；完成一次有效积分后才为 `true`。非 Walk、IMU/速度无效、时间戳倒退或积分间隔异常时 `valid=false`，调用方不得用该帧更新定位。
+> `odom` 不依赖 GPS / UWB 硬件；开启 `sensorEnable` 后随本 topic 发布。GPS / UWB 不存在时，其各自的 `valid` 字段保持无效。
 
 ### 3.6 事件接收与分发
 
@@ -1543,7 +1517,7 @@ Walk 模型里程计的数据链路为：Walk 模型输出本体系 `vx/vy` → 
 
 #### 同设备多客户端
 
-允许"一个持权 + N 个只读观察者"。每个客户端用独立的 `Header.clientId`（uint64）与 `payload.call.clientId`（string）；响应通过 `clientId` + `requestId` + `device_id` 匹配（[§1.3.1](#131-rpc-通道请求-应答)）自动路由到正确客户端。
+允许"一个持权 + N 个只读观察者"。每个客户端用独立的 `Header.clientId`（uint64）与 `payload.call.clientId`（string）；响应通过 `clientId` + `requestId` 匹配（[§1.3.1](#131-rpc-通道请求-应答)）自动路由到正确客户端。
 
 #### 同网多设备
 
@@ -1569,7 +1543,7 @@ module uniubi {
 
       struct RemoteControl_ {
           uint64   controller;   // 鉴权字段，填 takeMotionControl 响应里的 rawActionId
-          uint64   timestamp;    // 客户端维护的递增相对值；同一控制会话内必须单调递增
+          uint64   timestamp;    // 客户端发送时刻，ms since epoch
 
           // 16 个数字按键（uint8，0 = 未按 / 1 = 按下，单帧瞬时）
           uint8    back;
@@ -1607,8 +1581,8 @@ module uniubi {
 
 | IDL 字段 | 物理映射 |
 |---|---|
-| `back` | Stand 键；动作语义由设备能力配置决定 |
-| `start` | Motion 键；动作语义由设备能力配置决定 |
+| `back` | Back / Select 键 |
+| `start` | Start 键 |
 | `lb` / `rb` | 左 / 右肩键（Left/Right Bumper） |
 | `f1` / `f2` | 功能键 1 / 2 |
 | `a` / `b` / `x` / `y` | ABXY 键 |
@@ -1626,7 +1600,7 @@ module uniubi {
 | `triggerL` | 左扳机 | [0.0, 1.0] |
 | `triggerR` | 右扳机 | [0.0, 1.0] |
 
-#### 标准遥控功能映射
+#### 按键组合 → 动作映射
 
 TRC 帧承担两类输入：
 - **按键组合切换动作**：将 `require` 中的按键同时置 1，且满足 `axisRequire`（如有），即可触发对应预置动作（等价于 `startMotionAction`）
@@ -1634,39 +1608,31 @@ TRC 帧承担两类输入：
 
 两类输入可同时在一帧中携带。
 
-下表的 posture 动作快照来自 RobotService `motionCapacity` 的 `motionTRC.motionMap.posture`。对外按键名 Stand / Motion 在 DDS 中分别对应 `back` / `start`，在 SDK 中分别对应 `buttonBack` / `buttonStart`。实际开放动作和 `require` / `axisRequire` / `priority` / `exact` / `minHoldTime` 以 `getMotionCapabilities` 返回为准。
+下表完整对应 RobotService `motionCapacity` 的 `motionTRC.motionMap.posture`。对外按键名 Stand / Motion 在 DDS 中分别对应 `back` / `start`，在 SDK 中分别对应 `buttonBack` / `buttonStart`；设备实际开放动作和映射仍以 `getMotionCapabilities` 返回为准。
 
-| 分类 | 用户操作 | 中文标准名 | 英文标准名 | 用户说明 | DDS 字段 / 内部动作 |
-|---|---|---|---|---|---|
-| 安全 | LB + RB | 急停 | Emergency Stop | 立刻停下并趴下 | `lb + rb`；`emergencyStop` |
-| 姿态 | LB + Y | 双足站立 | Two-Leg Stand | 后腿站起来 | `lb + y`；`bipedStand` |
-| 姿态 | LB + A | 倒立 | Handstand | 前脚撑地倒立 | `lb + a`；`handstand` |
-| 姿态 | LB + X | 左侧双足站立 | Left-Side Stand | 用左侧两脚站立 | `lb + x`；`leftSideStand` |
-| 姿态 | LB + B | 右侧双足站立 | Right-Side Stand | 用右侧两脚站立 | `lb + b`；`rightSideStand` |
-| 状态 | Stand + A | 趴下 | Lie Down | 趴到地上，进入安全低姿态 | `back + a`；`laying` |
-| 状态 | Stand + Y | 行走 | Walking | 进入可移动状态 | `back + y`；`walking` |
-| 状态 | Motion | 站立 | Standing | 进入站立状态 | `start`；`standing`（priority 0） |
-| 表演 | LB + Motion | 扭一扭 | Wiggle | 原地扭动表演 | `lb + start`；`waveBody` |
-| 表演 | B | 招手 | Wave Hand | 执行招手动作 | `b`；`waveHand` |
-| 表演 | 按住 Y 1 秒 | 坐起画心 | Heart Sit | 坐起并完成画心动作 | `y`；`heartSit`（minHoldTime 1000） |
-| 移动 | 按住 A 1 秒 | 低速微动 | Tweak | 进入低速小幅移动模式 | `a`；`tweak`（minHoldTime 1000） |
-| 姿态 | Motion | 负重站立 | Peak Load Stand | 进入负重站立状态 | `start`；`peakLoadStand`（priority 2） |
-| 特技 | RB + 方向键上 | 前跳 | Forward Jump | 向前跳一下 | `rb + up`；`jumpForward` |
-| 特技 | RB + Y | 前空翻 | Front Flip | 向前翻一下 | `rb + y`；`jumpFrontflip` |
-| 特技 | RB + B | 侧空翻 | Side Flip | 向侧方翻转 | `rb + b` 且 `triggerR` ∈ [-1.0, 0.49]；`jumpSideflip` |
-| 特技 | RB + A | 后空翻 | Back Flip | 向后翻一下 | `rb + a` 且 `triggerR` ∈ [-1.0, 0.49]；`jumpBackflip` |
-| 特技 | 按住 RT + RB + A | 后空翻两圈 | Double Back Flip | 按住保险键后向后翻两圈 | `rb + a` 且 `triggerR` ∈ [0.5, 1.0]；`jumpDoubleBackflip` |
-| 特技 | 按住 RT + RB + B | 侧空翻两圈 | Double Side Flip | 按住保险键后向侧方翻两圈 | `rb + b` 且 `triggerR` ∈ [0.5, 1.0]；`jumpDoubleSideflip` |
-| 行走 | 左摇杆上 | 前进 | Forward | 往前走 | `stickLY` → `lineVelocityX > 0`（`walking`） |
-| 行走 | 左摇杆下 | 后退 | Backward | 往后走 | `stickLY` → `lineVelocityX < 0`（`walking`） |
-| 行走 | 左摇杆左 | 左移 | Move Left | 横着向左走 | `stickLX` → `lineVelocityY < 0`（`walking`） |
-| 行走 | 左摇杆右 | 右移 | Move Right | 横着向右走 | `stickLX` → `lineVelocityY > 0`（`walking`） |
-| 转向 | 右摇杆左 | 左转 | Turn Left | 向左转身 | `stickRX` → `velocity > 0`（`walking`） |
-| 转向 | 右摇杆右 | 右转 | Turn Right | 向右转身 | `stickRX` → `velocity < 0`（`walking`） |
-| 速度 | 方向键上 | 加速 | Speed Up | 走得更快 | `up`；切换 fast profile |
-| 速度 | 方向键下 | 减速 | Slow Down | 走得更慢 | `down`；切换 slow profile |
+| 动作 | 含义 | require | axisRequire | priority | exact | minHoldTime |
+|---|---|---|---|---:|---|---:|
+| `emergencyStop` | 急停 | `lb + rb` | - | 10 | false | 0 |
+| `bipedStand` | 双足站立 | `lb + y` | - | 1 | true | 0 |
+| `handstand` | 倒立 | `lb + a` | - | 1 | true | 0 |
+| `leftSideStand` | 左侧站立 | `lb + x` | - | 1 | true | 0 |
+| `rightSideStand` | 右侧站立 | `lb + b` | - | 1 | true | 0 |
+| `laying` | 趴下 | `back + a` | - | 0 | true | 0 |
+| `walking` | 行走 | `back + y` | - | 0 | true | 0 |
+| `standing` | 站立 | `start` | - | 0 | true | 0 |
+| `waveBody` | 身体摆动 | `lb + start` | - | 2 | true | 0 |
+| `waveHand` | 招手 | `b` | - | 2 | true | 1000 |
+| `heartSit` | 坐起画心 | `y` | - | 2 | true | 1000 |
+| `tweak` | 原地踏步 / 低速微动 | `a` | - | 2 | true | 1000 |
+| `peakLoadStand` | 负重站立 | `start` | - | 2 | true | 0 |
+| `jumpForward` | 前跳 | `rb + up` | - | 1 | true | 0 |
+| `jumpFrontflip` | 前空翻 | `rb + y` | - | 1 | true | 0 |
+| `jumpSideflip` | 侧空翻 | `rb + b` | `triggerR` in `[-1.0, 0.49]` | 1 | true | 0 |
+| `jumpBackflip` | 后空翻 | `rb + a` | `triggerR` in `[-1.0, 0.49]` | 1 | true | 0 |
+| `jumpDoubleBackflip` | 双后空翻 | `rb + a` | `triggerR` in `[0.5, 1.0]` | 2 | true | 0 |
+| `jumpDoubleSideflip` | 双侧空翻 | `rb + b` | `triggerR` in `[0.5, 1.0]` | 2 | true | 0 |
 
-`buttonStart` 同时匹配 `standing`（priority 0）和 `peakLoadStand`（priority 2）；同一帧多个动作命中时由服务端按能力配置的 priority 和当前可用动作决策。`waveHand` / `heartSit` / `tweak` 的 `minHoldTime` 均为 `1000`，其余 posture 动作当前为 `0`。`exact=true` 表示除 `require` 外不能有其它按钮同时按下；`emergencyStop` 未配置 `exact`，允许与其它按钮同时出现时仍按最高优先级触发。上述字段由 `getMotionCapabilities` 下发，不建议客户端按文档表格硬编码。
+`exact=true` 表示除 `require` 外不能有其它按钮同时按下；`emergencyStop` 未配置 `exact`，允许与其它按钮同时出现时仍按最高优先级触发。当前 `waveHand` / `heartSit` / `tweak` 的 `minHoldTime` 为 `1000`，其余为 `0`。
 
 #### 帧丢弃条件
 
@@ -1816,7 +1782,7 @@ module uniubi {
 
 #### 传感器观测 `SensorObserved_`（topic `rt/sensor/observed`）
 
-承载 GPS / UWB 观测，独立于 `MotionObserved_`，订阅见 [§3.5](#35-运控观测量订阅)。
+承载 GPS / UWB / Walk 里程计，独立于 `MotionObserved_`，订阅见 [§3.5](#35-运控观测量订阅)。
 
 ##### IDL（`uniubi::msg::dds_::SensorObserved_` 及其依赖）
 
@@ -1859,6 +1825,16 @@ module uniubi {
         uint32      distance;   // 距离 cm
     };
 
+    typedef float OdomVector3[3];
+    struct MotionOdometry {
+        uint8       valid;
+        uint32      epoch;
+        float       yaw;
+        float       yawSpeed;
+        OdomVector3 position;
+        OdomVector3 velocity;
+    };
+
   };
 
   module msg {
@@ -1868,6 +1844,7 @@ module uniubi {
           uint64                          timestamp;  // 递增相对时间戳，单位 us（设备内部服务使用，非墙钟）
           uniubi::dds_::GPSFrame          gps;        // GPS 观测
           uniubi::dds_::UWBRawObserved    uwb;        // UWB 观测
+          uniubi::dds_::MotionOdometry    odom;       // Walk 平面里程计
       };
 
     };
@@ -1897,41 +1874,20 @@ module uniubi {
 | `uwb.azimuth` | deg | 方位角，[0, 360)，正前方 0 度、逆时针递增 |
 | `uwb.distance` | cm | 距离 |
 
-#### Walk 模型里程计 `MotionOdometry_`
+##### Walk 里程计字段 `odom`
 
-```idl
-module uniubi {
-  module msg {
-    module dds_ {
-      typedef float OdomVector3[3];
-
-      struct MotionOdometry_ {
-        OdomVector3 position;
-        OdomVector3 velocity;
-        float   yaw;
-        float   yawSpeed;
-        uint64  timestampUs;
-        uint32  epoch;
-        boolean valid;
-      };
-    };
-  };
-};
-```
-
-| 字段 | 量纲 / 坐标系 | 说明 |
+| 字段 | 量纲 | 说明 |
 |---|---|---|
-| `position[0]` | m，当前 epoch 世界系 | 当前原点下累计 X 位移 |
-| `position[1]` | m，当前 epoch 世界系 | 当前原点下累计 Y 位移 |
+| `position[0]` | m | 当前 `epoch` 原点下累计 X 位移 |
+| `position[1]` | m | 当前 `epoch` 原点下累计 Y 位移 |
 | `position[2]` | — | 保留字段，当前固定为 `0`，不代表高度估计 |
-| `velocity[0]` | m/s，机器人本体系 | Walk 模型预测 X 方向速度 |
-| `velocity[1]` | m/s，机器人本体系 | Walk 模型预测 Y 方向速度 |
+| `velocity[0]` | m/s | 本体系 X 方向模型预测速度 |
+| `velocity[1]` | m/s | 本体系 Y 方向模型预测速度 |
 | `velocity[2]` | — | 保留字段，当前固定为 `0`，不代表垂直速度 |
-| `yaw` | rad，当前 epoch 世界系 | 当前原点下累计偏航角 |
+| `yaw` | rad | 当前 `epoch` 原点下累计偏航角 |
 | `yawSpeed` | rad/s | 相邻有效 IMU yaw 的差分角速度 |
-| `timestampUs` | us | 设备单调时钟，非 wall clock，不能直接当 Unix 时间戳 |
-| `epoch` | — | 原点代次；进入 Walk、退出 Walk 或显式清零时递增 |
-| `valid` | — | 当前帧是否完成有效平面积分；仅 Walk 模式可能为 `true`，退出 Walk 后为 `false`；不描述保留的 Z 分量 |
+| `epoch` | — | Walking 有效区间的原点代次；再次进入 Walking 时递增 |
+| `valid` | — | 当前平面里程计帧是否有效；不包含保留的 Z 分量 |
 
 ---
 
@@ -2106,7 +2062,7 @@ module uniubi {
 - [ ] `System_Request_.device_id` 必填非空
 - [ ] `Header.clientId` 进程内唯一（启动时随机 uint64）
 - [ ] `Header.requestId` session 内单调递增、永不重复
-- [ ] 响应匹配（clientId + requestId + device_id，[§1.3.1](#131-rpc-通道请求-应答)）
+- [ ] 响应匹配（clientId + requestId，[§1.3.1](#131-rpc-通道请求-应答)）
 
 **业务层**
 - [ ] 业务成功满足双层判定（`response.code==0` ∧ `payload.result==true`，[§2.1.3](#213-业务成败双层判定)）
@@ -2179,7 +2135,7 @@ C++ 客户端可选任一 OMG DDS 实现：Eclipse Cyclone DDS C++ / RTI Connext
 
 ### C.1 IDL 文件组织
 
-本协议涉及的 IDL 文件由 [`uniubi_robot_msgs`](https://github.com/uniubi-ai/uniubi_robot_msgs) 仓库发布，位于该仓库根目录的 `idl/` 下。
+本协议涉及的 IDL 文件随 SDK 一起发布，位于仓库根目录的 `IDL/` 下。
 
 文件清单与 include 关系：
 
@@ -2191,7 +2147,6 @@ C++ 客户端可选任一 OMG DDS 实现：Eclipse Cyclone DDS C++ / RTI Connext
 | `MotorState.idl` | `MotorHeader` + 常量 `MAX_MOTOR_NUM` | — |
 | `MotionObserved.idl` | `Vector3f` / `Quaternionf` / `IMUState` / `MotorObserved` / `PowerObserved` / `MotionObserved_` | `MotorState.idl` |
 | `SensorObserved.idl` | `GPSSignalLevel` / `GEOGPoint` / `GPSFrame` / `UWBRawObserved` / `SensorObserved_` | — |
-| `MotionOdometry.idl` | `MotionOdometry_` | — |
 | `RemoteControl.idl` | `RemoteControl_` | — |
 
 直接从该目录拷贝 .idl 文件到项目，用对应 DDS 实现的 IDL 编译器生成 C++ 类型（Cyclone DDS C++ 用 `idlc -l cxx`；RTI 用 `rtiddsgen`；Fast DDS 用 `fastddsgen`）。
