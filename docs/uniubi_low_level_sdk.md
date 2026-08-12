@@ -90,6 +90,7 @@ try:
 
     # 周期 send_control(...) + get_latest_observation(...)，完整循环见 §6.3
 finally:
+    client.set_motion_enable(False)
     client.disconnect()
     sdk.service.shutdown()
 ```
@@ -613,177 +614,33 @@ struct UWBRawObserved {
 
 ## 五、C++ 使用示例
 
-完整可运行示例：`examples/example_lowlevel.cpp`（同目录 `CMakeLists.txt`）
+> **实机测试前必须将机器狗可靠吊起，使四脚完全腾空，并确保四肢在完整运动范围内能够自由活动、不会碰到地面、吊架或周围物体。测试过程中必须保持急停可触达并由专人值守；本示例不得直接落地运行。**
 
-```cpp
-#include <mutex>
-#include <chrono>
-#include <thread>
-#include <cstdio>
-#include <cstring>
-#include <condition_variable>
-#include "MotionSdkService.h"
-#include "MotionLowLevelClient.h"
+完整可运行程序以 [`uniubi_robot_sdk/examples/example_lowlevel.cpp`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel.cpp) 为准；构建与运行方式见同仓库的 [`examples/README.md`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/README.md)。API 手册只解释控制流程，不复制整份示例源码，避免两处实现漂移。
 
-using namespace uniubi::RobotSdk;
-using LLState = IMotionLowLevelClient::LowLevelState;
-using LLError = IMotionLowLevelClient::LowLevelError;
+启动程序后会建立 Low-level 连接，但不会调用 `setMotionEnable(true)`，也不会自动执行姿态：
 
-int main(int argc, char** argv) {
-
-    auto svc = IMotionSdkService::instance();
-
-    if (!svc->initialService(nullptr, "myAppLowLevel")) {
-        fprintf(stderr, "SDK init failed\n");
-        return 1;
-    }
-
-    auto client = IMotionLowLevelClient::create();   // 板内单设备，无参
-
-    /// 回调线程与主线程间用 cv 同步 state 变化通知
-    std::mutex stateMu;
-    std::condition_variable stateCv;
-
-    client->setConnectCallback([&](LLState state, LLError err) {
-        switch (state) {
-            case LLState::kPrepared:
-                printf("[low] prepared (ready for sendControl)\n"); break;
-            case LLState::kConnected:
-                printf("[low] connected (call setMotionEnable to prepare)\n"); break;
-            case LLState::kConnecting:
-                printf("[low] connecting: err=%d\n", static_cast<int>(err)); break;
-            case LLState::kConnectionLost:
-                printf("[low] connection lost (auto-reconnecting): err=%d\n", static_cast<int>(err)); break;
-            case LLState::kDisconnected:
-                printf("[low] disconnected: err=%d\n", static_cast<int>(err)); break;
-        }
-        if (err == LLError::kMasterSwitchFailed) {
-            printf("[low] master role switch failed (peer may hold motion), retrying...\n");
-        }
-        std::lock_guard<std::mutex> lk(stateMu);
-        stateCv.notify_all();
-    });
-
-    auto waitStateCb = [&](LLState target, int timeoutMs) -> bool {
-        std::unique_lock<std::mutex> lk(stateMu);
-        return stateCv.wait_for(lk, std::chrono::milliseconds(timeoutMs),
-            [&] { return client->getState() == static_cast<int32_t>(target); });
-    };
-
-    if (!client->connect(/*observedHz=*/500, /*leaseMs=*/60000)) {
-        printf("connect failed: %d\n", client->getLastError());
-        IMotionSdkService::instance()->shutdown();
-        return 1;
-    }
-
-    if (!waitStateCb(LLState::kConnected, 10000)) {
-        printf("wait connected timeout\n");
-        client->disconnect();
-        IMotionSdkService::instance()->shutdown();
-        return 1;
-    }
-
-    if (!client->setMotionEnable(true)) {
-        printf("setMotionEnable(true) request rejected: %d\n", client->getLastError());
-        client->disconnect();
-        IMotionSdkService::instance()->shutdown();
-        return 1;
-    }
-
-    /// motor enable 是异步过程，每个关节上电 + 校验需要几百 ms 到几秒，留充足超时
-    if (!waitStateCb(LLState::kPrepared, 60000)) {
-        printf("wait prepared timeout\n");
-        client->disconnect();
-        IMotionSdkService::instance()->shutdown();
-        return 1;
-    }
-
-    /// 按真实硬件布局构造零力矩控制模板
-    /// 硬件首跑安全前提：
-    /// - 仅在吊架 / 急停可触达 / 空旷场地条件下运行；
-    /// - 下方零目标、零增益、零前馈力矩只是通信与观测闭环模板，不是平衡站立控制器；
-    /// - 真实闭环控制应从当前观测姿态初始化目标，并使用经过验证的阻尼、增益和力矩策略。
-    MotorLayout layout = {};
-    if (!client->getMotorLayout(layout)) {
-        printf("getMotorLayout failed: %d\n", client->getLastError());
-        client->setMotionEnable(false);
-        client->disconnect();
-        IMotionSdkService::instance()->shutdown();
-        return 1;
-    }
-    printf("[low] motor layout: %u motor(s)\n", layout.motorNum);
-    for (uint32_t i = 0; i < layout.motorNum; ++i) {
-        printf("  motor[%u]: limb=%u joint=%u name=%s\n",
-               i, layout.motors[i].limbNo, layout.motors[i].jointNo, layout.motors[i].name);
-    }
-
-    MotorCtrlAction action = {};
-    action.motorNum = layout.motorNum;
-    for (uint32_t i = 0; i < layout.motorNum; ++i) {
-        auto& m = action.motors[i];
-        m.position = 0.0f;m.velocity = 0.0f;
-        m.kpGain = 0.0f;m.kdGain = 0.0f;m.torque = 0.0f;
-        m.header.limbNo  = layout.motors[i].limbNo;
-        m.header.jointNo = layout.motors[i].jointNo;
-    }
-
-    constexpr int32_t kStandingAction = 1;
-    LowLevelMotionCmd cmd = {};
-    cmd.action = kStandingAction;
-    snprintf(cmd.acName, sizeof(cmd.acName), "%s", "standing");
-
-    /// 首次联调建议 50Hz × 60s；长稳态验证可在安全闭环确认后按需要延长
-    /// getLatestObservation 在 timeout 内拉一帧观测量，超时则返回 false（不回退到缓存帧）
-    constexpr uint32_t kObsTimeoutMs = 5;
-    constexpr auto kCyclePeriod = std::chrono::milliseconds(20);
-
-    LowLevelMotionObserved obs = {};
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
-    auto nextCycle = std::chrono::steady_clock::now();
-    int obsFailCount = 0;
-    auto obsLastLogAt = std::chrono::steady_clock::now();
-    auto dumpAt = std::chrono::steady_clock::now();
-    while (std::chrono::steady_clock::now() < deadline) {
-        nextCycle += kCyclePeriod;
-
-        if (!client->getLatestObservation(&obs, kObsTimeoutMs)) {
-            ++obsFailCount;
-            auto now = std::chrono::steady_clock::now();
-            if (now - obsLastLogAt >= std::chrono::seconds(1)) {
-                printf("getLatestObservation failed %d times/1s, state=%d lastErr=%d\n",
-                       obsFailCount, client->getState(), client->getLastError());
-                obsFailCount = 0;
-                obsLastLogAt = now;
-            }
-            std::this_thread::sleep_until(nextCycle);
-            continue;
-        }
-
-        /// 1Hz 打印观测量摘要
-        auto now = std::chrono::steady_clock::now();
-        if (now - dumpAt >= std::chrono::seconds(1)) {
-            const auto& a = obs.imu.accel; const auto& g = obs.imu.gyro; const auto& q = obs.imu.quaternion;
-            const auto& m0 = obs.motors[0];
-            printf("[obs] imu: temp=%.1f  accel=(%+.2f,%+.2f,%+.2f)  gyro=(%+.3f,%+.3f,%+.3f)  "
-                   "quat=(%.3f,%.3f,%.3f,%.3f)  power=%.2fV  motor[0]: pos=%+.3f vel=%+.3f torq=%+.3f\n",
-                   obs.imu.temp, a.x, a.y, a.z, g.x, g.y, g.z, q.w, q.x, q.y, q.z,
-                   obs.power.chargeVoltage, m0.position, m0.velocity, m0.torque);
-            dumpAt = now;
-        }
-
-        if (!client->sendControl(action, &cmd)) {
-            printf("send_control failed: %d\n", client->getLastError());
-            break;
-        }
-        std::this_thread::sleep_until(nextCycle);
-    }
-
-    client->setMotionEnable(false);
-    client->disconnect();
-    IMotionSdkService::instance()->shutdown();
-    return 0;
-}
+```text
+lowlevel> status
+lowlevel> motors
+lowlevel> stand
+lowlevel> lie
+lowlevel> damping
+lowlevel> release
+lowlevel> quit
 ```
+
+- `stand`：按需调用 `setMotionEnable(true)`，从实时关节位置平滑移动到站立目标并持续保持。
+- `lie` / `lie-down`：按需调用 `setMotionEnable(true)`，从实时关节位置平滑移动到趴下目标并持续保持。
+- `damping`：按需使能 Low-level，位置刚度设为 0，保留速度阻尼。
+- `release`：先发送短时阻尼，再停止控制线程并调用 `setMotionEnable(false)`。
+- `quit` / `Ctrl+C`：执行释放流程，并在断开前调用 `restoreMotionControlMode()` 恢复内置运控。
+
+姿态控制周期为 50 Hz，默认轨迹时间为 2 秒，单周期位置变化不超过 0.25 rad。程序按 `(limbNo, jointNo)` 匹配观测与控制，不依赖数组顺序；当实际跟踪误差超过 0.25 rad 时暂停轨迹推进。姿态命令只支持标准 DV500 12 关节布局，其他布局会被拒绝。
+
+Low-level SDK 没有 `take` / `startControl` 接口：`connect()` 建立并维护 session，`setMotionEnable(true/false)` 切换 prepare。CLI 直接沿用这套语义，不增加伪造的取权命令。
+
+站立目标每腿为 `hip=0.0, thigh=0.8, calf=-1.5` rad。趴下目标为 `thigh=1.10, calf=-2.72` rad，左腿 `hip=+0.48` rad、右腿 `hip=-0.48` rad。Kp/Kd 使用 DV500 板端 `motionCapacity` 中已经验证的站立/趴下配置。
 
 ---
 

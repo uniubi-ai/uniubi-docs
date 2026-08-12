@@ -1388,85 +1388,65 @@ signal.signal(signal.SIGINT, _on_signal)
 signal.signal(signal.SIGTERM, _on_signal)
 ```
 
-完整可运行示例：`Python/examples/example_highlevel.py`
+完整可运行示例：[`uniubi_robot_sdk_py/examples/example_highlevel.py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_highlevel.py)
 
 ### 6.3 Python 使用示例
 
-完整可运行版本：`Python/examples/example_highlevel.py`
+Python 示例参考 8 号狗 Orin 上验证过的交互控制台，与 C++ `example_highlevel` 保持一致：进程保持一个 High-level 连接和控制 lease，动作启动、参数修改和停止是相互独立的命令，程序不会自动执行动作。
+
+首次连接使用只读模式：
+
+```bash
+python3 examples/example_highlevel.py --read-only
+```
+
+进入 CLI 后先做只读检查：
+
+```text
+highlevel> status
+highlevel> motors
+highlevel> sensor 5
+highlevel> odom 5
+```
+
+需要控制时显式取权并执行动作：
+
+```text
+highlevel> take
+highlevel> start walking
+highlevel> send 3 {"lineVelocityX":0.3,"lineVelocityY":0,"velocity":0}
+highlevel> stop
+highlevel> release
+highlevel> quit
+```
+
+`send` 到时后会清零 walking 三轴速度，但不会停止当前动作；只有 `stop` 调用 `stop_action()`。`quit`、EOF、SIGINT 和 SIGTERM 都会进入统一清理流程：关闭观测、清零 walking 速度、释放控制权、显式 `disconnect()`，最后 `service.shutdown()`，不依赖 Python GC。
+
+完整命令以程序内 `help` 为准，完整源码见 [`uniubi_robot_sdk_py/examples/example_highlevel.py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_highlevel.py)。底层 API 的最小生命周期如下：
 
 ```python
-import json, signal, sys, time
+import time
 import robot_motion_sdk as sdk
 
-_stop = False
-def _on_signal(signum, frame):
-    global _stop
-    _stop = True
-
-signal.signal(signal.SIGINT, _on_signal)
-signal.signal(signal.SIGTERM, _on_signal)
-
-def main():
-    iface = sys.argv[1] if len(sys.argv) > 1 else "eth0"
-    sdk.service.set_network_interface(iface)
-
-    if not sdk.service.initial(None, "myAppHighLevel"):
-        return 1
-
-    if sdk.service.is_multi_device():
-        print("multi-device mode: use discover_devices() first to obtain a SN")
-        sdk.service.shutdown()
-        return 1
-    client = sdk.MotionHighLevelClient()
-    try:
-        @client.on_connect
-        def _on_connect(state, err):
-            if state == sdk.HighLevelState.kControlled:
-                print("[high] control acquired")
-            elif state == sdk.HighLevelState.kConnected:
-                if err == sdk.HighLevelError.kSessionExpired:   print("[high] lease expired")
-                elif err == sdk.HighLevelError.kSessionRevoked: print("[high] preempted")
-                else:                                            print("[high] released")
-
-        @client.on_event
-        def _on_event(topic, payload_json):
-            info = json.loads(payload_json) if payload_json else {}
-            if topic == "statistics/play_list":
-                print(f"[evt] play: {info}")
-            elif topic == "statistics/device_status":
-                print(f"[evt] dev:  {info}")
-
-        if not client.connect(lease_ms=60000):
-            return 1
-
-        if not client.start_control(timeout_ms=10000):
-            return 1
-
-        deadline = time.monotonic() + 6.0
-        while client.get_state() != sdk.HighLevelState.kControlled:
-            if _stop or time.monotonic() > deadline:
-                return 1
-            time.sleep(0.05)
-
-        client.start_action("walking")
-        for _ in range(50):
-            if _stop: break
-            time.sleep(0.1)
-        client.stop_action()
-
-        client.start_audio_play({"list": [{"id": "1"}], "volume": 50, "repeat": 1})
-        time.sleep(2)
-        client.pause_audio_play()
-        client.stop_audio_play()
-
-        client.release_control()
-    finally:
-        client.disconnect()
-        sdk.service.shutdown()
-    return 0
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+sdk.service.set_network_interface("eth0")
+sdk.service.initial(None, "myAppHighLevel")
+client = sdk.MotionHighLevelClient()
+try:
+    client.connect(lease_ms=60000)
+    client.start_control(timeout_ms=10000)
+    while client.get_state() != sdk.HighLevelState.kControlled:
+        time.sleep(0.05)
+    client.start_action("walking")
+    client.set_action_params({"lineVelocityX": 0.3})
+    time.sleep(3)
+    client.set_action_params({"lineVelocityX": 0.0,
+                              "lineVelocityY": 0.0,
+                              "velocity": 0.0})
+    client.stop_action()
+    client.release_control()
+finally:
+    client.disconnect()
+    sdk.service.shutdown()
 ```
 
 媒体帧订阅完整示例：`Python/examples/example_media_frames.py`。

@@ -33,6 +33,7 @@
 uniubi_robot_sdk/
 ├── CMakeLists.txt                 C++ SDK examples 工程入口
 ├── cmake/
+│   ├── UniubiRobotSdkConfig.cmake.in         CMake package 模板
 │   └── toolchain-aarch64-linux-gnu.cmake    （可选）交叉编译工具链样例
 ├── include/uniubi/robot_sdk/      SDK 公开头
 │   ├── MotionSdkProtocol.h
@@ -103,13 +104,33 @@ CMake 在 `lib/<arch>/` 下查找 `librobotMotionSdk.so`、`libmediaBus.so`、`l
 
 交叉编译时由工具链文件设置 `CMAKE_SYSTEM_PROCESSOR`，无需手动指定目标 arch。
 
-### B. 选择性构建
+### B. 安装并供业务工程使用
+
+```bash
+cmake --install build --prefix "$HOME/.local/uniubi"
+```
+
+安装内容包括公开头文件、当前目标架构的运行库、CMake package 和示例程序。业务工程不需要自行查找 `.so`：
+
+```cmake
+find_package(UniubiRobotSdk CONFIG REQUIRED)
+target_link_libraries(my_robot_app PRIVATE Uniubi::RobotMotionSdk)
+# MediaBus 应用额外链接 Uniubi::MediaBus
+```
+
+配置业务工程时指定安装前缀：
+
+```bash
+cmake -S . -B build -DCMAKE_PREFIX_PATH="$HOME/.local/uniubi"
+```
+
+### C. 选择性构建
 
 ```bash
 cmake -S . -B build -DBUILD_SDK_CPP_EXAMPLES=OFF       # 只做 configure，不编 examples
 ```
 
-### C. 构建选项汇总
+### D. 构建选项汇总
 
 | 变量 | 类型 | 默认 | 来源 | 说明 |
 |---|---|---|---|---|
@@ -124,6 +145,8 @@ cmake -S . -B build -DBUILD_SDK_CPP_EXAMPLES=OFF       # 只做 configure，不�
 | 产物 | 位置 |
 |---|---|
 | C++ 示例 | `build/examples/example_lowlevel`、`build/examples/example_highlevel`；`aarch64` 目标额外构建 `build/examples/example_media_frames` |
+| 安装后的示例 | `<prefix>/bin/example_lowlevel`、`<prefix>/bin/example_highlevel`；`aarch64` 目标可额外包含 `<prefix>/bin/example_media_frames` |
+| CMake package | `<prefix>/lib/cmake/UniubiRobotSdk/` |
 
 ---
 
@@ -137,7 +160,10 @@ cmake -S . -B build-aarch64 \
       -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-aarch64-linux-gnu.cmake \
       [-DUNIUBI_SDK_ROOT=$SDK_ROOT]                   # 工具链文件已设 CMAKE_SYSTEM_PROCESSOR=aarch64，CMake 自动从 lib/aarch64/ 取 .so
 cmake --build build-aarch64 -j
+cmake --install build-aarch64 --prefix "$HOME/.local/uniubi-aarch64"
 ```
+
+`uniubi-aarch64` 中的 `bin/`、`lib/aarch64/`、`include/` 和 CMake package 都是目标端产物。将所需安装目录部署到 Orin 后运行；不要在 x86_64 编译主机上执行其中的程序。
 
 **自定义工具链**：复制 `cmake/toolchain-aarch64-linux-gnu.cmake` 改 `CMAKE_C/CXX_COMPILER` 和（可选）`CMAKE_SYSROOT`。
 
@@ -148,13 +174,24 @@ cmake --build build-aarch64 -j
 ## 4. 运行 C++ 示例
 
 ```bash
-ARCH=$(uname -m)              # x86_64 / aarch64；32 位 x86 系统 uname 为 i686，需手动改 ARCH=i386
-export LD_LIBRARY_PATH=$SDK_ROOT/lib/$ARCH:$LD_LIBRARY_PATH
+case "$(uname -m)" in
+  x86_64|amd64) SDK_ARCH=x86_64 ;;
+  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  i386|i486|i586|i686) SDK_ARCH=i386 ;;
+  *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
+esac
+export LD_LIBRARY_PATH="$SDK_ROOT/lib/$SDK_ARCH${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+# 首次连接先运行 High-level 只读 CLI
+./build/examples/example_highlevel --read-only
+
+# Low-level 交互 CLI；启动不使能，姿态/阻尼命令按需使能
 ./build/examples/example_lowlevel
-./build/examples/example_highlevel
 # 仅 aarch64 板内本地部署：
 ./build/examples/example_media_frames
 ```
+
+High-level CLI 启动后输入 `status`、`motors`、`sensor 5`、`odom 5` 做只读检查；需要控制时再输入 `take`。Low-level CLI 同样先输入 `status`、`motors`，再按需执行 `stand`、`lie`、`damping` 和 `release`；Low-level 不提供 `take` 命令。完整命令以各 CLI 内的 `help` 为准。
 
 **前置**：
 - 目标机器人已就绪
