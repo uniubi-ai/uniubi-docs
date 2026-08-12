@@ -23,14 +23,17 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 
 关节级 Low-level 控制统一使用 SDK；ROS 2 Motion Bridge 不提供等价的关节级控制入口。
 
-### 3. 进入配套流程
+### 3. 从具体任务开始
 
-确定控制模式后，再按需要进入配套流程：
+确定控制模式和实现方式后，直接进入当前要完成的任务：
 
-- [训练、导出和回放策略](docs/how-to/train-export-replay.md)：训练或部署自己的 Low-level 策略。
-- [Mock / Sim2Sim](docs/how-to/mock-sim2sim.md)：没有真机时验证 SDK 链路。
+- [构建和安装 SDK](docs/BUILD.md)：准备本机或板端的 C++ / Python 开发环境。
+- [使用 High-level 控制](docs/how-to/high-level-control.md)：在真实机器人上读取状态并调用内置动作。
+- [使用 ROS 2 Motion Bridge](docs/how-to/ros2-motion-bridge.md)：通过 ROS 2 接入 High-level 能力。
+- [使用 Low-level 控制](docs/how-to/low-level-control.md)：在安全吊架条件下进行关节级控制。
+- [训练、导出和回放策略](docs/how-to/train-export-replay.md)：开发并部署自己的 Low-level 策略。
 
-每篇导读都从一个具体任务开始，不要求你先认识全部仓库，也不要求先读完整 API。
+每篇导读都从一个具体任务开始，不要求先认识全部仓库，也不要求先读完整 API。其他开发和排查专题可在 [How-to 指南](docs/how-to/README.md) 中按需查阅。
 
 ## Core Concepts
 
