@@ -23,6 +23,7 @@ How-to 文档面向一个明确的开发任务：先说明目标和前置条件�
 
 | 任务 | 导读 | 适用阶段 |
 |---|---|---|
+| 确认设备 IP、端口和大脑访问方式 | [设备网络与大脑访问](../core-concepts/device-network.md) | 连接真实机器人之前 |
 | 准备构建和安装环境 | [构建、安装和交叉编译](../BUILD.md) | 进入 SDK 或 ROS 2 之前 |
 | SDK 通用准备 | [SDK 通用准备](sdk-first-use.md) | 已选 High-level 或 Low-level，准备使用 SDK |
 | 编写 ROS 2 业务节点 | [启动并验证 Motion bridge](ros2-motion-bridge.md) | 已选择 High-level + ROS 2 |

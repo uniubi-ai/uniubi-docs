@@ -39,11 +39,24 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 
 先理解 High-level / Low-level 的定义、实现边界和仓库职责，再进入具体 How-to 或 API 文档。
 
+包含：
+
+- 设备网络、大脑访问方式与端口边界；
+- High-level / Low-level 控制抽象；
+- 控制权生命周期与各层组件职责。
+
 [进入 Core Concepts](docs/core-concepts/README.md)
 
 ## How-to
 
 按具体开发任务完成环境准备、最小验证和后续操作。
+
+包含：
+
+- SDK 构建、安装和首次连接；
+- High-level、Low-level 实机控制；
+- ROS 2 Motion Bridge 接入；
+- Low-level 策略训练、导出和回放。
 
 [进入 How-to 指南](docs/how-to/README.md)
 
@@ -51,11 +64,23 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 
 在确定控制模式并完成最小验证后，查阅 SDK 和媒体接口的字段、生命周期与示例。
 
+包含：
+
+- High-level SDK API；
+- Low-level SDK API；
+- 摄像头、麦克风和编码帧等 Media SDK API。
+
 [进入 API Reference](docs/api-reference/README.md)
 
 ## Advanced
 
 DDS / ROS 2 直连、协议映射和特殊集成等内容只在确有需要时阅读。
+
+包含：
+
+- DDS / RPC 直连接入；
+- Discovery、QoS 和底层协议字段；
+- ROS 2 topic、service 与 DDS wire contract 映射。
 
 [进入 Advanced](docs/advanced/README.md)
 

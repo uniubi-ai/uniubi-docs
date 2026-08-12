@@ -2,6 +2,8 @@
 
 Core Concepts 解释 Uniubi 机器人开发中的控制模型和系统边界。它不负责再次选择仓库，而是帮助你理解：应用到底控制什么、控制闭环由谁负责，以及 SDK、ROS 2 和机器人服务各自承担什么职责。
 
+设备连接前，先阅读 [设备网络与大脑访问](device-network.md)，确认无线桥接、有线 IP 和可用端口范围。
+
 ## 1. 两种控制抽象
 
 | 维度 | High-level | Low-level |
@@ -88,6 +90,7 @@ Low-level 策略通常经过以下验证链路：
 
 ## 继续阅读
 
+- [设备网络与大脑访问](device-network.md)：确认无线和有线连接下的地址与端口边界。
 - [Quick Start](../../README.md#quick-start)：选择控制模式和实现方式。
 - [How-to](../how-to/README.md)：按任务完成环境准备和最小验证。
 - [API Reference](../api-reference/README.md)：查阅接口、字段和生命周期。
