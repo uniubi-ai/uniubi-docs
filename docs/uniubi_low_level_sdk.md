@@ -635,7 +635,7 @@ struct UWBRawObserved {
 
 ## 五、C++ 使用示例
 
-> **实机测试前必须将机器狗可靠吊起，使四脚完全腾空，并确保四肢在完整运动范围内能够自由活动、不会碰到地面、吊架或周围物体。测试过程中必须保持急停可触达并由专人值守；本示例不得直接落地运行。**
+> **通用姿态控制示例必须将机器狗可靠固定在安全吊架上，保持四脚完全腾空。TensorRT 策略示例采用分阶段验证：吊架上只验证 `stand` 和 `lay`，确认姿态与关节方向后，移到空旷、平整、无障碍地面再验证 `walk`。不要在四脚腾空时执行 `walk`；测试过程中必须保持急停可触达并由专人值守。**
 
 通用姿态控制程序以 [`example_lowlevel.cpp`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel.cpp) 为准；C++ ONNX/TensorRT 策略程序以 [`example_lowlevel_tensorrt.cpp`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel_tensorrt.cpp) 为准。构建与运行方式见同仓库的 [`examples/README.md`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/README.md)。API 手册只解释控制流程和模型契约，不复制整份示例源码，避免两处实现漂移。
 
@@ -708,7 +708,15 @@ FL_KNEE, FR_KNEE, RL_KNEE, RR_KNEE
 替换模型时必须同步修改和验证模型顺序、observation 定义、归一化、action scale、
 shape 与控制频率。
 
-交互流程如下：
+实机动作分两阶段验证。首先将机器狗可靠固定在安全吊架上，保持四脚完全腾空，只执行：
+
+```text
+lowlevel> stand
+lowlevel> lay
+lowlevel> quit
+```
+
+确认姿态、关节方向和急停均正常后，将机器狗放到空旷、平整、无障碍地面，再执行：
 
 ```text
 lowlevel> stand
@@ -717,6 +725,8 @@ lowlevel> stop
 lowlevel> lay
 lowlevel> quit
 ```
+
+不要在四脚腾空时执行 `walk`；两个阶段都必须保持急停可触达并由专人值守。
 
 该 TensorRT 示例退出时只在处于 prepared 状态时调用 `setMotionEnable(false)`，随后
 断开 client 并关闭 SDK；不会调用 `emergencyStop()` 或

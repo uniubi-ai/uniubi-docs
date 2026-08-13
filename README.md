@@ -30,7 +30,7 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 - [构建和安装 SDK](docs/BUILD.md)：准备本机或板端的 C++ / Python 开发环境。
 - [使用 High-level 控制](docs/how-to/high-level-control.md)：在真实机器人上读取状态并调用内置动作。
 - [使用 ROS 2 Motion Bridge](docs/how-to/ros2-motion-bridge.md)：通过 ROS 2 接入 High-level 能力。
-- [使用 Low-level 控制](docs/how-to/low-level-control.md)：在安全吊架条件下进行关节级控制。
+- [使用 Low-level 控制](docs/how-to/low-level-control.md)：先在安全吊架上验证姿态，再到空旷平整地面验证策略行走。
 - [训练、导出和回放策略](docs/how-to/train-export-replay.md)：开发并部署自己的 Low-level 策略。
 
 每篇导读都从一个具体任务开始，不要求先认识全部仓库，也不要求先读完整 API。其他开发和排查专题可在 [How-to 指南](docs/how-to/README.md) 中按需查阅。
