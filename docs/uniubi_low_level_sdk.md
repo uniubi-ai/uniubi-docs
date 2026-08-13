@@ -522,6 +522,23 @@ struct MotorInfo {
 };
 ```
 
+当前 DV500 12 关节 `MotorLayout` 使用 leg-major 顺序：
+
+```text
+FL_ABAD, FL_HIP, FL_KNEE,
+FR_ABAD, FR_HIP, FR_KNEE,
+RL_ABAD, RL_HIP, RL_KNEE,
+RR_ABAD, RR_HIP, RR_KNEE
+```
+
+程序应调用 `getMotorLayout()` / `get_motor_layout()` 获取并校验实际布局，再按每项的
+`limbNo` / `jointNo`（Python：`limb_no` / `joint_no`）构造控制帧，不应只依赖固定
+数组下标。若关节数量或 `(limbNo, jointNo)` 顺序与程序支持的机器人布局不一致，
+应在 `setMotionEnable(true)` / `set_motion_enable(True)` 前拒绝控制。
+
+该顺序是 SDK/机器人数据契约，不代表策略模型的输入输出顺序。模型顺序由训练和导出
+契约定义；部署程序必须显式完成 `SDK 顺序 → 模型顺序 → SDK 顺序` 的双向重排。
+
 #### 4.4.4 `TRCStickFrame` —— 遥控手柄帧
 
 ```cpp

@@ -32,6 +32,33 @@ ROS 2 Motion Bridge 不提供等价的关节级控制入口。直接使用 DDS/R
 3. **验证 SDK 链路**：没有真机时，使用 [Mock / Sim2Sim](mock-sim2sim.md) 验证策略、仿真 bridge 和 SDK client 的闭环。
 4. **进入真实机器人**：先只读，再进行低风险控制；确认控制周期、关节顺序、板端推理格式、急停和人工接管条件。
 
+## SDK 与模型关节顺序
+
+当前 `MotorLayout` 返回 12 个关节，SDK/机器人采用 leg-major 顺序：
+
+```text
+FL_ABAD, FL_HIP, FL_KNEE,
+FR_ABAD, FR_HIP, FR_KNEE,
+RL_ABAD, RL_HIP, RL_KNEE,
+RR_ABAD, RR_HIP, RR_KNEE
+```
+
+Low-level 程序必须在 `kConnected` 后调用 `client.get_motor_layout()`，校验关节数量和
+实际顺序，再使用每个 `MotorInfo` 返回的 `limb_no`、`joint_no` 构造控制帧。不能仅
+依赖硬编码数组下标；数量或顺序不匹配时，应在 `set_motion_enable(true)` 前拒绝运行。
+
+模型输入输出顺序由模型训练和导出契约决定，可能不同于 SDK 的 leg-major 顺序。
+模型运行程序必须分别声明 SDK 顺序和模型顺序，并在构造模型输入前、解析模型输出后
+显式完成双向重排。替换模型时还需同时核对 observation 定义、归一化、action scale、
+输入输出 shape 和控制频率，不能只替换 ONNX 文件。
+
+板端运行 Python Low-level TensorRT 控制进程时，建议通过 `taskset -c 2` 绑定 CPU 2，
+以减少调度抖动，使观测数据获取耗时和 50 Hz 控制周期更稳定。如果设备已有不同的
+CPU 隔离或核分配方案，应选择实际分配给该控制进程的独立核心。
+
+Python TensorRT 参考实现见
+[`example_lowlevel_tensorrt.py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_lowlevel_tensorrt.py)。
+
 ## 详细接口
 
 - [C++ 低级控制 SDK](../uniubi_low_level_sdk.md)
