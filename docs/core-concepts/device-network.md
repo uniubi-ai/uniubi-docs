@@ -2,14 +2,14 @@
 
 **English** | [简体中文](device-network.zh-CN.md)
 
-A Uniubi robot includes a motion controller and a robot compute module on which developer applications run. Access to the compute module differs between wireless and wired connections.
+A Uniubi robot includes a cerebellum (motion controller) for standard functions such as core motion control, remote-controller input, and UWB, plus a brain (compute module) that provides greater general-purpose compute for extension applications. See [Brain and Cerebellum](README.md#1-brain-and-cerebellum) for the full responsibility boundary. Accessing the compute module works essentially the same over wireless and wired connections; the difference is that the compute module can also have its own IP address when wired.
 
 ## Network Topology
 
-| Connection | Externally visible address | Compute-module access |
+| Connection | Available address | Notes |
 |---|---|---|
-| Wireless | Motion-controller IP shown in the app | The compute module has no separately reachable wireless IP; access is bridged through the motion controller |
-| Wired | Compute module's wired IP | Connect directly to the compute module's wired address |
+| Wireless | Motion-controller IP shown in the app | Access to the compute module is bridged through the motion controller |
+| Wired | Motion-controller IP shown in the app, or the compute module's own wired IP | Access operations stay the same; the compute module's independent IP is also available |
 
 ## Wireless Connection
 
@@ -23,7 +23,7 @@ SSH users, keys, and passwords are determined by the device delivery configurati
 
 ## Wired Connection
 
-On a wired network, the compute module obtains its own IP address. The development machine can connect directly to that address without the wireless bridge's application-port restriction.
+On a wired network, the compute module can obtain its own IP address, giving the development machine an additional address for direct access. Operations such as SSH and service access are essentially the same as with a wireless connection.
 
 If the wired IP is unknown, first SSH through the motion-controller IP shown in the app, then run this command on the compute module:
 
@@ -31,10 +31,10 @@ If the wired IP is unknown, first SSH through the motion-controller IP shown in 
 ip -br -4 addr
 ```
 
-Use the IPv4 address of the active wired interface. Do not confuse the motion-controller IP displayed in the app with the compute module's wired IP.
+Use the IPv4 address of the active wired interface. Both the motion-controller IP displayed in the app and the compute module's wired IP can serve as access points, but they are different addresses.
 
-## Choosing a Connection During Development
+## Choosing an Address During Development
 
-- For a service hosted on the compute module and reached over the robot's wireless connection, use a port in the `20000–29999` range.
-- Prefer the wired connection for unrestricted port access, large transfers, or network troubleshooting.
+- When reaching a compute-module service through the motion-controller IP shown in the app, use a port in the device's exposed `20000–29999` range.
+- With a wired connection, either keep using the existing access point or use the compute module's independent IP; the application-level operations do not change.
 - When an SDK or DDS program requires an explicit network interface, select the interface that actually reaches the robot. Use `ip -br addr` to determine its name.

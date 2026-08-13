@@ -37,7 +37,7 @@ Each guide begins with a concrete task and an observable success criterion. See 
 
 ## Core Concepts
 
-Understand High-level and Low-level control, component responsibilities, device networking, and the control lifecycle before moving to implementation details.
+Understand brain and cerebellum responsibilities, High-level and Low-level control, component responsibilities, device networking, and the control lifecycle before moving to implementation details.
 
 [Read Core Concepts](docs/core-concepts/README.md)
 

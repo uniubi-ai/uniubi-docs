@@ -39,10 +39,11 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 
 ## Core Concepts
 
-先理解 High-level / Low-level 的定义、实现边界和仓库职责，再进入具体 How-to 或 API 文档。
+先理解大小脑分工、High-level / Low-level 的定义、实现边界和仓库职责，再进入具体 How-to 或 API 文档。
 
 包含：
 
+- 大脑与小脑的职责分工；
 - 设备网络、大脑访问方式与端口边界；
 - High-level / Low-level 控制抽象；
 - 控制权生命周期与各层组件职责。

@@ -2,11 +2,20 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-This section explains the control abstractions and system boundaries used in Uniubi robot development: what an application controls, where the feedback loop runs, and what responsibilities belong to the SDK, ROS 2 components, and robot services.
+This section explains the compute architecture, control abstractions, and system boundaries used in Uniubi robot development: how responsibilities are divided between the brain and cerebellum, what an application controls, where the feedback loop runs, and what responsibilities belong to the SDK, ROS 2 components, and robot services.
 
 Before connecting to a robot, read [Device Network and Robot Compute Module Access](device-network.md) to understand wireless bridging, wired addressing, and exposed ports.
 
-## 1. Two Control Abstractions
+## 1. Brain and Cerebellum
+
+Uniubi robots use a cooperative brain-and-cerebellum architecture:
+
+- The **cerebellum (motion controller)** provides the robot's standard, ready-to-use functions, including core motion control, remote-controller input, UWB, and related device access. It executes these functions in real time so the robot retains its complete baseline capabilities without depending on a user extension.
+- The **brain (compute module)** provides substantially more general-purpose compute and serves as the platform for advanced algorithms and custom applications. Developers can deploy perception, planning, decision-making, model inference, and other compute-intensive workloads on the brain, then use robot capabilities through the system interfaces.
+
+The two modules complement each other: the cerebellum executes the standard functions, while the brain extends what the robot can do. Using the brain for extensions does not require an application to bypass or reimplement the built-in motion control, remote-controller, or UWB functions.
+
+## 2. Two Control Abstractions
 
 | Dimension | High-level | Low-level |
 |---|---|---|
@@ -23,7 +32,7 @@ A High-level application tells the robot what to do. The robot's built-in motion
 
 A Low-level application determines how each joint should be controlled on every cycle. The controller may be a trained policy or a conventional control algorithm. The SDK provides observations, control interfaces, and the real-time communication path, but it does not supply the policy or choose joint targets.
 
-## 2. Control Lifecycle
+## 3. Control Lifecycle
 
 Real-robot control should follow this lifecycle in either mode:
 
@@ -50,7 +59,7 @@ The continuous-control step differs by mode:
 
 See the [API Reference](../api-reference/README.md) for client state machines and lifecycle details.
 
-## 3. Component Responsibilities
+## 4. Component Responsibilities
 
 | Component | Responsible for | Not responsible for |
 |---|---|---|
@@ -62,7 +71,7 @@ See the [API Reference](../api-reference/README.md) for client state machines an
 
 The SDK, ROS 2 bridge, and message definitions are complementary components, not interchangeable entry points. Choose the control abstraction first, then choose an implementation that supports it.
 
-## 4. From Training to a Real Robot
+## 5. From Training to a Real Robot
 
 A Low-level policy normally progresses through these validation stages:
 
@@ -83,7 +92,7 @@ Each stage answers a different question:
 
 Passing simulation or Mock validation does not prove safe real-robot operation.
 
-## 5. Common Boundaries
+## 6. Common Boundaries
 
 - High-level and Low-level are control abstractions, not choices between C++, Python, and ROS 2.
 - High-level supports the SDK or ROS 2 Motion Bridge. Joint-level Low-level control uses the SDK.
