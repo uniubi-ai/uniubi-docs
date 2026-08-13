@@ -19,6 +19,8 @@
   - [4.3 数据面接口](#43-数据面接口)
   - [4.4 关键数据结构](#44-关键数据结构来自-motionsdkprotocolh)
 - [五、C++ 使用示例](#五c-使用示例)
+  - [5.1 通用姿态控制示例](#51-通用姿态控制示例)
+  - [5.2 C++ TensorRT 策略示例](#52-c-tensorrt-策略示例)
 - [六、Python SDK](#六python-sdk)
   - [6.1 binding 覆盖范围](#61-当前-binding-覆盖范围已与-c-接口对齐)
   - [6.2 退出死锁规避（必读）](#62--退出死锁规避必读)
@@ -635,7 +637,9 @@ struct UWBRawObserved {
 
 > **实机测试前必须将机器狗可靠吊起，使四脚完全腾空，并确保四肢在完整运动范围内能够自由活动、不会碰到地面、吊架或周围物体。测试过程中必须保持急停可触达并由专人值守；本示例不得直接落地运行。**
 
-完整可运行程序以 [`uniubi_robot_sdk/examples/example_lowlevel.cpp`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel.cpp) 为准；构建与运行方式见同仓库的 [`examples/README.md`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/README.md)。API 手册只解释控制流程，不复制整份示例源码，避免两处实现漂移。
+通用姿态控制程序以 [`example_lowlevel.cpp`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel.cpp) 为准；C++ ONNX/TensorRT 策略程序以 [`example_lowlevel_tensorrt.cpp`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel_tensorrt.cpp) 为准。构建与运行方式见同仓库的 [`examples/README.md`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/README.md)。API 手册只解释控制流程和模型契约，不复制整份示例源码，避免两处实现漂移。
+
+### 5.1 通用姿态控制示例
 
 启动程序后会建立 Low-level 连接，但不会调用 `setMotionEnable(true)`，也不会自动执行姿态：
 
@@ -660,6 +664,63 @@ lowlevel> quit
 Low-level SDK 没有 `take` / `startControl` 接口：`connect()` 建立并维护 session，`setMotionEnable(true/false)` 切换 prepare。CLI 直接沿用这套语义，不增加伪造的取权命令。
 
 站立目标每腿为 `hip=0.0, thigh=0.8, calf=-1.5` rad。趴下目标为 `thigh=1.10, calf=-2.72` rad，左腿 `hip=+0.48` rad、右腿 `hip=-0.48` rad。Kp/Kd 使用 DV500 板端 `motionCapacity` 中已经验证的站立/趴下配置。
+
+### 5.2 C++ TensorRT 策略示例
+
+`example_lowlevel_tensorrt` 面向 JetPack 6.2.1 Orin，直接接收静态
+`[1,45] -> [1,12]` ONNX。进程每次启动都重新构建严格 FP32 TensorRT engine：
+不读取或写入 `.engine` 缓存，并显式关闭 TensorRT 默认 TF32。该示例只依赖
+JetPack 自带的 TensorRT/CUDA C++ 库和 SDK，不依赖 PyTorch 或 ONNX Runtime。
+
+先运行纯模型验证。`--validate-only` 只构建 engine 并执行一次零输入推理，不初始化
+SDK，也不会连接或使能机器人：
+
+```bash
+taskset -c 2 ./build/examples/example_lowlevel_tensorrt \
+  --onnx /path/to/policy.onnx --validate-only
+```
+
+实机运行建议绑定 CPU 2，以减少调度抖动，使观测获取耗时和 50 Hz 控制周期更稳定：
+
+```bash
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
+  taskset -c 2 ./build/examples/example_lowlevel_tensorrt \
+  --onnx /path/to/policy.onnx
+```
+
+连接后程序必须完成以下校验，之后才允许 `setMotionEnable(true)`：
+
+1. `getMotorLayout()` 返回且关节数量恰好为 12；
+2. 实际 `(limbNo, jointNo)` 顺序符合 §4.4.3 的 SDK leg-major 契约；
+3. ONNX 输入输出 shape 为 `[1,45] -> [1,12]`，tensor dtype 为 float32。
+
+本示例模型的输入输出使用 joint-major 顺序：
+
+```text
+FL_ABAD, FR_ABAD, RL_ABAD, RR_ABAD,
+FL_HIP,  FR_HIP,  RL_HIP,  RR_HIP,
+FL_KNEE, FR_KNEE, RL_KNEE, RR_KNEE
+```
+
+程序在构造模型输入时显式执行 `SDK leg-major -> 模型 joint-major`，解析模型输出时
+再执行 `模型 joint-major -> SDK leg-major`，并根据 `MotorLayout` 实际返回的
+`limbNo` / `jointNo` 构造每个 `MotorCtrl`。不得把示例模型顺序误认为 SDK 顺序；
+替换模型时必须同步修改和验证模型顺序、observation 定义、归一化、action scale、
+shape 与控制频率。
+
+交互流程如下：
+
+```text
+lowlevel> stand
+lowlevel> walk 0.5 0 0
+lowlevel> stop
+lowlevel> lay
+lowlevel> quit
+```
+
+该 TensorRT 示例退出时只在处于 prepared 状态时调用 `setMotionEnable(false)`，随后
+断开 client 并关闭 SDK；不会调用 `emergencyStop()` 或
+`restoreMotionControlMode()`。这一退出语义与 §5.1 的通用姿态示例不同。
 
 ---
 

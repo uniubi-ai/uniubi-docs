@@ -51,6 +51,7 @@ uniubi_robot_sdk/
 ├── examples/                      C++ 示例
 │   ├── CMakeLists.txt
 │   ├── example_lowlevel.cpp
+│   ├── example_lowlevel_tensorrt.cpp
 │   ├── example_highlevel.cpp
 │   └── example_media_frames.cpp
 └── README.md
@@ -130,12 +131,26 @@ cmake -S . -B build -DCMAKE_PREFIX_PATH="$HOME/.local/uniubi"
 cmake -S . -B build -DBUILD_SDK_CPP_EXAMPLES=OFF       # 只做 configure，不编 examples
 ```
 
+JetPack 6.2.1 Orin 原生构建时，C++ TensorRT Low-level 示例默认开启。也可以显式
+控制：
+
+```bash
+cmake -S . -B build -DBUILD_SDK_TENSORRT_EXAMPLE=ON
+cmake --build build --target example_lowlevel_tensorrt -j$(nproc)
+```
+
+该目标使用 JetPack 预装的 CUDA 12.6 / TensorRT 10.3 C++ 开发文件，不依赖
+PyTorch。非 Orin 构建和交叉编译默认关闭，不影响普通 SDK examples。
+
 ### D. 构建选项汇总
 
 | 变量 | 类型 | 默认 | 来源 | 说明 |
 |---|---|---|---|---|
 | `UNIUBI_SDK_ROOT` | path | （未设） | `-D` / 环境变量 | SDK 安装前缀；CMake 在 `${UNIUBI_SDK_ROOT}/lib/<arch>/` 下找 `librobotMotionSdk.so`。未设时 fallback 仓库内自带 `lib/<arch>/` 与 `/opt/uniubi/lib/<arch>/` |
 | `BUILD_SDK_CPP_EXAMPLES` | option | `ON` | `-D` | 是否编 C++ examples（`examples/example_*`） |
+| `BUILD_SDK_TENSORRT_EXAMPLE` | option | Orin 原生构建 `ON`，其他 `OFF` | `-D` | 是否构建 `example_lowlevel_tensorrt` |
+| `UNIUBI_TENSORRT_ROOT` | path | （未设） | `-D` | TensorRT 目标端开发文件根目录；交叉编译示例时使用 |
+| `UNIUBI_CUDA_ROOT` | path | （未设） | `-D` | CUDA 目标端开发文件根目录；交叉编译示例时使用 |
 | `CMAKE_TOOLCHAIN_FILE` | path | （未设） | `-D` | 交叉编译工具链文件路径；样例 `cmake/toolchain-aarch64-linux-gnu.cmake` |
 | `CMAKE_SYSTEM_PROCESSOR` | string | host arch | toolchain file | 目标 arch；决定 `lib/<arch>/` 子目录选择，本机编无需手动设 |
 | `CMAKE_BUILD_TYPE` | string | `Release` | `-D` | 标准 CMake 选项，`Debug` / `RelWithDebInfo` 等可选 |
@@ -144,8 +159,8 @@ cmake -S . -B build -DBUILD_SDK_CPP_EXAMPLES=OFF       # 只做 configure，不�
 
 | 产物 | 位置 |
 |---|---|
-| C++ 示例 | `build/examples/example_lowlevel`、`build/examples/example_highlevel`；`aarch64` 目标额外构建 `build/examples/example_media_frames` |
-| 安装后的示例 | `<prefix>/bin/example_lowlevel`、`<prefix>/bin/example_highlevel`；`aarch64` 目标可额外包含 `<prefix>/bin/example_media_frames` |
+| C++ 示例 | `build/examples/example_lowlevel`、`build/examples/example_highlevel`；`aarch64` 目标额外构建 `example_media_frames`；Orin 原生构建额外构建 `example_lowlevel_tensorrt` |
+| 安装后的示例 | `<prefix>/bin/example_lowlevel`、`<prefix>/bin/example_highlevel`；按构建选项可额外包含 `example_media_frames`、`example_lowlevel_tensorrt` |
 | CMake package | `<prefix>/lib/cmake/UniubiRobotSdk/` |
 
 ---
@@ -169,6 +184,27 @@ cmake --install build-aarch64 --prefix "$HOME/.local/uniubi-aarch64"
 
 > **交叉编 Python 绑定**：Python SDK 在 `uniubi_robot_sdk_py` 仓库内独立构建；交叉编时需在目标 sysroot 里准备**目标 arch 的 `python3-dev`**（Python 头 + libpython），否则配置失败。
 
+### 3.1 交叉编译 TensorRT 示例的额外边界
+
+普通 C++ SDK examples 只需要仓库提供的 aarch64 SDK 运行库。TensorRT 示例还需要
+与目标 JetPack 完全匹配的 aarch64 TensorRT/CUDA 头文件和链接库，因此交叉编译时
+不会默认启用，也不能链接主机 x86_64 的 NVIDIA 库。
+
+准备好目标端开发根目录后，显式配置：
+
+```bash
+cmake -S . -B build-aarch64 \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-aarch64-linux-gnu.cmake \
+  -DBUILD_SDK_TENSORRT_EXAMPLE=ON \
+  -DUNIUBI_TENSORRT_ROOT=/path/to/aarch64-tensorrt \
+  -DUNIUBI_CUDA_ROOT=/path/to/aarch64-cuda
+```
+
+这两个根目录必须提供 `NvInfer.h`、`NvOnnxParser.h`、`cuda_runtime_api.h`，以及
+aarch64 的 `libnvinfer.so`、`libnvonnxparser.so`、`libcudart.so`。SDK 仓库不分发
+NVIDIA 二进制库。当前已验证、推荐的路径是在 JetPack 6.2.1 Orin 上原生编译；
+NVIDIA APT 交叉包的安装命令在完成版本与仓库验证前不作为标准步骤。
+
 ---
 
 ## 4. 运行 C++ 示例
@@ -191,6 +227,13 @@ sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
 # Low-level 交互 CLI；启动不使能，姿态/阻尼命令按需使能
 sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
   ./build/examples/example_lowlevel
+
+# Orin C++ TensorRT Low-level：先做纯模型验证，再进入实机交互
+taskset -c 2 ./build/examples/example_lowlevel_tensorrt \
+  --onnx /path/to/policy.onnx --validate-only
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
+  taskset -c 2 ./build/examples/example_lowlevel_tensorrt \
+  --onnx /path/to/policy.onnx
 # 仅 aarch64 板内本地部署：
 sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
   ./build/examples/example_media_frames

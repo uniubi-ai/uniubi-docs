@@ -52,12 +52,20 @@ Low-level 程序必须在 `kConnected` 后调用 `client.get_motor_layout()`，�
 显式完成双向重排。替换模型时还需同时核对 observation 定义、归一化、action scale、
 输入输出 shape 和控制频率，不能只替换 ONNX 文件。
 
-板端运行 Python Low-level TensorRT 控制进程时，建议通过 `taskset -c 2` 绑定 CPU 2，
+板端运行 C++ 或 Python Low-level TensorRT 控制进程时，建议通过 `taskset -c 2` 绑定 CPU 2，
 以减少调度抖动，使观测数据获取耗时和 50 Hz 控制周期更稳定。如果设备已有不同的
 CPU 隔离或核分配方案，应选择实际分配给该控制进程的独立核心。
 
-Python TensorRT 参考实现见
-[`example_lowlevel_tensorrt.py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_lowlevel_tensorrt.py)。
+TensorRT 参考实现：
+
+- C++：[`example_lowlevel_tensorrt.cpp`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel_tensorrt.cpp)
+- Python：[`example_lowlevel_tensorrt.py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_lowlevel_tensorrt.py)
+
+两个板端示例都输入 ONNX，并在每次进程启动时重新构建 TensorRT engine，不依赖
+PyTorch；C++ 示例还显式关闭 TF32，使用严格 FP32。C++ 示例提供
+`--validate-only`，可在不初始化 SDK、不连接机器人的情况下先验证 ONNX 解析、
+engine 构建和一次零输入推理。替换模型时不得复用未经核对的关节重排或
+observation 契约。
 
 ## 详细接口
 
