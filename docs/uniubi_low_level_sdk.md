@@ -290,7 +290,7 @@ bool IMotionSdkService::initialService(const char* file, const char* server, uin
 进程级一次性初始化，必须在创建任何 client 之前调用。返回 `true` 表示初始化成功。
 
 ```cpp
-/// SDK 版本字符串，格式："<semver> (commit <git-short-sha>)"，如 "0.1.0 (commit 7bb376b2)"
+/// SDK 版本字符串，格式："<semver> (commit <git-short-sha>)"，如 "1.0.0 (commit <sha>)"
 /// 任意时刻可调，无需先 initialService；可用于运行时日志 / bug 上报 / 兼容性检查
 static const char* version();
 ```

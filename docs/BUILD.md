@@ -258,13 +258,13 @@ Python native binding 使用 `UNIUBI_SDK_ENABLE_MEDIA` 控制是否编译媒体�
 ```bash
 cd ~/uniubi_robot_sdk_py
 UNIUBI_SDK_ROOT=~/uniubi_robot_sdk pip wheel . -w dist/
-# → dist/uniubi_robot_motion_sdk-0.1.0-cp310-cp310-linux_aarch64.whl
+# → dist/uniubi_robot_motion_sdk-1.0.0-cp310-cp310-linux_aarch64.whl
 ```
 
 客户端安装：
 
 ```bash
-pip install uniubi_robot_motion_sdk-0.1.0-cp310-cp310-linux_aarch64.whl
+pip install uniubi_robot_motion_sdk-1.0.0-cp310-cp310-linux_aarch64.whl
 ```
 
 ---
