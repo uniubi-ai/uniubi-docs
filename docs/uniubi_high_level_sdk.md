@@ -170,9 +170,11 @@ make -j$(nproc)
 
 # 运行前确保 SDK .so 在动态库路径
 export LD_LIBRARY_PATH=/path/to/uniubi_sdk/Lib/$(uname -m):$LD_LIBRARY_PATH
-./my_robot_app                  # 默认网卡 eth0
-./my_robot_app wlan0            # 用 wlan0 网卡（仅远端模式）
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./my_robot_app       # 默认网卡 eth0
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./my_robot_app wlan0 # 用 wlan0 网卡（仅远端模式）
 ```
+
+当前设备运行 SDK 程序需要 root 权限。构建不需要 `sudo`；运行时显式传入 `LD_LIBRARY_PATH`，避免 `sudo` 清理当前用户环境后找不到 SDK 动态库。
 
 ---
 
@@ -1179,10 +1181,12 @@ int main(int argc, char** argv) {
 
 ```bash
 # config 省略或传 "-" 时使用 SDK 内置 MediaBus 配置
-./example_media_frames [config|-] [client_id] [device_id|-] [video_channel] [audio_channel] [stream] [seconds] [network_iface|-]
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
+  ./example_media_frames [config|-] [client_id] [device_id|-] [video_channel] [audio_channel] [stream] [seconds] [network_iface|-]
 
 # 常用：订阅 channel=0、audio_channel=0、主码流，运行 10 秒
-./example_media_frames - mediaFrameExample - 0 0 0 10 eth0
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
+  ./example_media_frames - mediaFrameExample - 0 0 0 10 eth0
 ```
 
 输出内容：
@@ -1394,10 +1398,14 @@ signal.signal(signal.SIGTERM, _on_signal)
 
 Python 示例参考 8 号狗 Orin 上验证过的交互控制台，与 C++ `example_highlevel` 保持一致：进程保持一个 High-level 连接和控制 lease，动作启动、参数修改和停止是相互独立的命令，程序不会自动执行动作。
 
+大脑上直接使用系统 `python3`。先将 Python SDK 安装到系统 Python，再以 root 权限运行示例。
+
 首次连接使用只读模式：
 
 ```bash
-python3 examples/example_highlevel.py --read-only
+sudo env \
+  LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
+  python3 examples/example_highlevel.py --read-only
 ```
 
 进入 CLI 后先做只读检查：
@@ -1453,7 +1461,8 @@ finally:
 
 ```bash
 export PYTHONPATH=$SDK_ROOT/Python:$PYTHONPATH
-python3 $SDK_ROOT/Python/examples/example_media_frames.py \
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" PYTHONPATH="$PYTHONPATH" \
+  python3 $SDK_ROOT/Python/examples/example_media_frames.py \
     [config|-] [client_id] [device_id|-] [video_channel] [audio_channel] [stream] [seconds] [network_iface|-]
 ```
 

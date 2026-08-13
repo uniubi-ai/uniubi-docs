@@ -173,6 +173,8 @@ cmake --install build-aarch64 --prefix "$HOME/.local/uniubi-aarch64"
 
 ## 4. 运行 C++ 示例
 
+当前设备运行 SDK 程序需要 root 权限，构建过程不需要 `sudo`。由于 `sudo` 可能清理 `LD_LIBRARY_PATH`，运行时应通过 `sudo env` 显式传入动态库路径。
+
 ```bash
 case "$(uname -m)" in
   x86_64|amd64) SDK_ARCH=x86_64 ;;
@@ -183,12 +185,15 @@ esac
 export LD_LIBRARY_PATH="$SDK_ROOT/lib/$SDK_ARCH${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 # 首次连接先运行 High-level 只读 CLI
-./build/examples/example_highlevel --read-only
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
+  ./build/examples/example_highlevel --read-only
 
 # Low-level 交互 CLI；启动不使能，姿态/阻尼命令按需使能
-./build/examples/example_lowlevel
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
+  ./build/examples/example_lowlevel
 # 仅 aarch64 板内本地部署：
-./build/examples/example_media_frames
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
+  ./build/examples/example_media_frames
 ```
 
 High-level CLI 启动后输入 `status`、`motors`、`sensor 5`、`odom 5` 做只读检查；需要控制时再输入 `take`。Low-level CLI 同样先输入 `status`、`motors`，再按需执行 `stand`、`lie`、`damping` 和 `release`；Low-level 不提供 `take` 命令。完整命令以各 CLI 内的 `help` 为准。
@@ -197,11 +202,13 @@ High-level CLI 启动后输入 `status`、`motors`、`sensor 5`、`odom 5` 做�
 - 目标机器人已就绪
 - SDK 端**无需准备 JSON / XML 配置文件**；DDS 配置由 SDK 内部构造
 - 远端 / 多设备场景：调用方在 `initialService` 之前调 `setNetworkInterface("eth0")` 指定网卡（详见接口手册 §4.1.2）
-- 板内场景：SDK 与机器人同机，共享内存权限受限时使用 `sudo` 启动
+- SDK 程序统一使用 root 权限启动；板内 Low-level 和 MediaBus 还会访问受限的共享内存资源
 
 ---
 
 ## 5. Python SDK 构建 —— 三种使用方式
+
+实际运行 SDK 程序仍需 root 权限。大脑上直接使用系统 `python3`。
 
 ### A. PYTHONPATH 直接用（开发期，无需安装）
 
@@ -211,7 +218,10 @@ ARCH=$(uname -m)
 export UNIUBI_SDK_ROOT=~/uniubi_robot_sdk
 export LD_LIBRARY_PATH=$UNIUBI_SDK_ROOT/lib/$ARCH:$LD_LIBRARY_PATH
 export PYTHONPATH=~/uniubi_robot_sdk_py
-python3 ~/uniubi_robot_sdk_py/examples/example_lowlevel.py
+sudo env \
+  LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
+  PYTHONPATH="$PYTHONPATH" \
+  python3 ~/uniubi_robot_sdk_py/examples/example_lowlevel.py
 ```
 
 ### B. pip install（装到 site-packages）
@@ -219,11 +229,14 @@ python3 ~/uniubi_robot_sdk_py/examples/example_lowlevel.py
 ```bash
 git clone https://github.com/uniubi-ai/uniubi_robot_sdk_py.git ~/uniubi_robot_sdk_py
 cd ~/uniubi_robot_sdk_py
-UNIUBI_SDK_ROOT=~/uniubi_robot_sdk pip install .
+sudo -H env UNIUBI_SDK_ROOT=~/uniubi_robot_sdk \
+  python3 -m pip install .
 # 或用 -C 透传 cmake 变量（等价于设 UNIUBI_SDK_ROOT 环境变量）：
-pip install . -Ccmake.define.UNIUBI_SDK_ROOT=~/uniubi_robot_sdk
+sudo -H python3 -m pip install . \
+  -Ccmake.define.UNIUBI_SDK_ROOT=~/uniubi_robot_sdk
 # 开发期可编辑安装（改 .py 即时生效，改 C++ 需重装）：
-UNIUBI_SDK_ROOT=~/uniubi_robot_sdk pip install -e .
+sudo -H env UNIUBI_SDK_ROOT=~/uniubi_robot_sdk \
+  python3 -m pip install -e .
 ```
 
 `uniubi_robot_sdk_py/CMakeLists.txt` 自包含，pip 通过 `scikit-build-core` 后端调用 cmake（支持 `pip install -e .` 可编辑安装与 `-Ccmake.define.*` 透传）。
@@ -333,13 +346,13 @@ ls $SDK_ROOT/lib/$(uname -m)/librobotMotionSdk.so   # 文件必须存在
 2. 目标机器人是否已就绪
 3. DDS 网络是否通：同一 domain ID、组播未被防火墙挡
 
-### 9.4 板内模式 SHM `Permission denied`
+### 9.4 未使用 root 权限或出现 SHM `Permission denied`
 
-板内部署时数据面走共享内存，遇到权限限制可：
+当前设备上的 SDK 程序必须以 root 权限运行。板内部署时 Low-level 和 MediaBus 数据面还会访问受限共享内存。先配置动态库路径，再按本文示例使用：
 
 ```bash
-sudo ./build/examples/example_lowlevel               # 简单 workaround
-# 或：将运行用户加入 SHM 所属用户组（视部署而定）
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
+  ./build/examples/example_lowlevel
 ```
 
 ### 9.5 Python `ImportError: cannot import name '_uniubi_robot_motion_py_native'`

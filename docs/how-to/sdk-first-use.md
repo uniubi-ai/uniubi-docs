@@ -19,6 +19,7 @@ Low-level 关节控制使用 SDK 的 `MotionLowLevelClient`。ROS 2 Motion Bridg
 
 - Linux 环境，以及目标架构对应的 SDK 运行库。
 - 已按 [设备网络与大脑访问](../core-concepts/device-network.md) 确认当前连接方式、目标 IP、可用端口和通信网卡。
+- 当前设备运行 SDK 程序需要 root 权限；C++ 构建不要求 `sudo`，Python SDK 在大脑上直接安装到系统 `python3`，运行示例时按对应 README 使用 `sudo env` 保留动态库环境。
 - C++ SDK 与 Python binding 使用同一套 ABI、架构和版本。
 - 先阅读 [构建、安装和交叉编译](../BUILD.md)。
 

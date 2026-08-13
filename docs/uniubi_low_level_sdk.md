@@ -163,8 +163,10 @@ make -j$(nproc)
 
 # 运行前确保 SDK .so 在动态库路径
 export LD_LIBRARY_PATH=~/uniubi_robot_sdk/lib/$(uname -m):$LD_LIBRARY_PATH
-./my_robot_app
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./my_robot_app
 ```
+
+当前设备运行 SDK 程序需要 root 权限。构建不需要 `sudo`；运行时显式传入 `LD_LIBRARY_PATH`，避免 `sudo` 清理当前用户环境后找不到 SDK 动态库。
 
 ---
 
