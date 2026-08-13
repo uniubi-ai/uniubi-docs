@@ -722,6 +722,11 @@ lowlevel> quit
 断开 client 并关闭 SDK；不会调用 `emergencyStop()` 或
 `restoreMotionControlMode()`。这一退出语义与 §5.1 的通用姿态示例不同。
 
+在 Orin 上原生编译以及 Ubuntu 22.04 x86_64 → JetPack 6.2.1 Orin 的 NVIDIA APT
+交叉编译链路均已实机验证。交叉编译必须使用 `cross-linux-aarch64` 专用软件源，
+并将 TensorRT 整组固定在 10.3，不能直接安装仓库中的默认最新版本。完整的软件源、
+版本 pin、CMake 参数、磁盘占用和部署说明见 [`BUILD.md` §3.1](BUILD.md#31-交叉编译-tensorrt-示例的额外边界)。
+
 ---
 
 ## 六、Python SDK

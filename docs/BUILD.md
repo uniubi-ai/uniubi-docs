@@ -190,20 +190,77 @@ cmake --install build-aarch64 --prefix "$HOME/.local/uniubi-aarch64"
 与目标 JetPack 完全匹配的 aarch64 TensorRT/CUDA 头文件和链接库，因此交叉编译时
 不会默认启用，也不能链接主机 x86_64 的 NVIDIA 库。
 
-准备好目标端开发根目录后，显式配置：
+以下流程已在 Ubuntu 22.04 x86_64 主机完成交叉编译，并将产物部署到 JetPack 6.2.1
+（CUDA 12.6 / TensorRT 10.3）Orin 实机验证通过。NVIDIA 的交叉包位于专用的
+`ubuntu2204/cross-linux-aarch64` 软件源，不在普通的 `ubuntu2204/x86_64` 源。
+
+先安装交叉软件源和编译器；如果所在网络需要 HTTP 代理，只对当前命令设置
+`http_proxy` / `https_proxy` 即可，无需写入系统配置：
+
+```bash
+wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/cross-linux-aarch64/cuda-keyring_1.1-1_all.deb
+sudo dpkg -i cuda-keyring_1.1-1_all.deb
+sudo apt update
+sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+```
+
+该软件源当前默认的 `tensorrt-dev-cross-aarch64` 可能高于机器人运行时版本。JetPack
+6.2.1 目标必须将 TensorRT 交叉开发包整组固定在 10.3，不能直接安装默认 candidate：
+
+```text
+# /etc/apt/preferences.d/uniubi-tensorrt-10-3-cross
+Package: tensorrt-dev-cross-aarch64 libnvinfer*-cross-aarch64 libnvonnxparsers*-cross-aarch64
+Pin: version 10.3.0.26-1+cuda12.5
+Pin-Priority: 1001
+```
+
+安装 CUDA 12.6 与 TensorRT 10.3 的 aarch64 交叉开发文件：
+
+```bash
+sudo apt install cuda-cross-aarch64-12-6 tensorrt-dev-cross-aarch64
+
+apt-cache policy cuda-cross-aarch64-12-6 tensorrt-dev-cross-aarch64
+```
+
+实测该组合下载约 1.14 GB，安装后约占用 3.72 GB。TensorRT 10.3 交叉包的版本字符串
+带有 `+cuda12.5`，但它提供的是 JetPack 6.2.1 TensorRT 10.3 ABI 所需的 aarch64
+头文件与链接库；CUDA runtime 仍使用 `cuda-cross-aarch64-12-6`。应用不在交叉主机
+构建 engine，而是在 Orin 每次启动时从 ONNX 现场构建。
+
+安装后，文件位于：
+
+```text
+/usr/include/aarch64-linux-gnu/NvInfer.h
+/usr/include/aarch64-linux-gnu/NvOnnxParser.h
+/usr/lib/aarch64-linux-gnu/libnvinfer.so
+/usr/lib/aarch64-linux-gnu/libnvonnxparser.so
+/usr/local/cuda-12.6/targets/aarch64-linux/include/cuda_runtime_api.h
+/usr/local/cuda-12.6/targets/aarch64-linux/lib/libcudart.so
+```
+
+使用 SDK 自带工具链显式启用 TensorRT 示例：
 
 ```bash
 cmake -S . -B build-aarch64 \
   -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-aarch64-linux-gnu.cmake \
   -DBUILD_SDK_TENSORRT_EXAMPLE=ON \
-  -DUNIUBI_TENSORRT_ROOT=/path/to/aarch64-tensorrt \
-  -DUNIUBI_CUDA_ROOT=/path/to/aarch64-cuda
+  -DBUILD_SDK_MEDIA_EXAMPLE=OFF \
+  -DUNIUBI_TENSORRT_ROOT=/usr \
+  -DUNIUBI_CUDA_ROOT=/usr/local/cuda-12.6 \
+  -DCMAKE_BUILD_TYPE=Release
+
+cmake --build build-aarch64 --target example_lowlevel_tensorrt -j$(nproc)
 ```
 
-这两个根目录必须提供 `NvInfer.h`、`NvOnnxParser.h`、`cuda_runtime_api.h`，以及
-aarch64 的 `libnvinfer.so`、`libnvonnxparser.so`、`libcudart.so`。SDK 仓库不分发
-NVIDIA 二进制库。当前已验证、推荐的路径是在 JetPack 6.2.1 Orin 上原生编译；
-NVIDIA APT 交叉包的安装命令在完成版本与仓库验证前不作为标准步骤。
+产物为 `build-aarch64/examples/example_lowlevel_tensorrt`。Jetson TensorRT 还依赖
+`libnvdla_compiler.so`、`libcudla.so.1` 等目标端运行库，官方交叉包不提供完整实现；
+SDK CMake 在 aarch64 交叉链接时允许这些目标端符号保持未解析，最终由 Orin 的
+`/vendor/usr/lib` 提供。不能因此把 x86_64 NVIDIA 库加入链接路径。
+
+部署时应同时携带同一 SDK 版本的 `lib/aarch64/`。先在 Orin 执行
+`--validate-only`，确认动态库解析、ONNX 解析、FP32 engine 构建和一次推理全部成功，
+再进入 Low-level 连接与控制验证。SDK 仓库不分发 NVIDIA 二进制库；不希望在交叉
+主机安装上述依赖时，仍可选择直接在 Orin 上原生编译。
 
 ---
 
