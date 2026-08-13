@@ -1,48 +1,50 @@
-# 宇泛智能机器狗低级控制 SDK 接口手册
+# Uniubi Quadruped Low-level Control SDK API Reference
 
-> SDK 入口类：`uniubi::RobotSdk::IMotionLowLevelClient`
-> C++ 头文件：`include/uniubi/robot_sdk/MotionLowLevelClient.h`
+**English** | [简体中文](uniubi_low_level_sdk.zh-CN.md)
+
+> SDK entry class: `uniubi::RobotSdk::IMotionLowLevelClient`
+> C++ header file: `include/uniubi/robot_sdk/MotionLowLevelClient.h`
 
 ---
 
-## 目录
+## Table of contents
 
-- [一、SDK 概述](#一sdk-概述)
+- [1. SDK Overview ](#1-sdk-overview)
 - [Quick Start](#quick-start)
-- [开发工程模板](#开发工程模板)
-- [二、枚举定义](#二枚举定义)
-- [三、回调定义](#三回调定义)
-  - [3.2 回调汇总](#32-回调汇总)
-- [四、接口定义](#四接口定义)
-  - [4.1 全局初始化与实例创建](#41-全局初始化与实例创建)
-  - [4.2 生命周期与状态切换](#42-生命周期与状态切换)
-  - [4.3 数据面接口](#43-数据面接口)
-  - [4.4 关键数据结构](#44-关键数据结构来自-motionsdkprotocolh)
-- [五、C++ 使用示例](#五c-使用示例)
-  - [5.1 通用姿态控制示例](#51-通用姿态控制示例)
-  - [5.2 C++ TensorRT 策略示例](#52-c-tensorrt-策略示例)
-- [六、Python SDK](#六python-sdk)
-  - [6.1 binding 覆盖范围](#61-当前-binding-覆盖范围已与-c-接口对齐)
-  - [6.2 退出死锁规避（必读）](#62--退出死锁规避必读)
-  - [6.3 Python 使用示例](#63-python-使用示例)
-- [七、注意事项](#七注意事项)
-- [八、调试与故障排查](#八调试与故障排查)
+- [Development project template ](#development-project-template)
+- [2. Enumeration definition ](#2-enumeration-definition)
+- [3. Callback definition ](#3-callback-definition)
+- [3.2 Callback Summary ](#32-callback-summary)
+- [4. Interface definition ](#4-interface-definition)
+- [4.1 Global initialization and instance creation ](#41-global-initialization-and-instance-creation)
+- [4.2 Life cycle and status switching ](#42-life-cycle-and-status-switching)
+- [4.3 Data plane interface ](#43-data-plane-interface)
+- [4.4 Key data structure ](#44-key-data-structure-from-motionsdkprotocolh)
+- [5. C++ usage example ](#5-c-usage-examples)
+- [5.1 General posture-control example](#51-general-posture-control-example)
+- [5.2 C++ TensorRT policy example](#52-c-tensorrt-policy-example)
+- [6. Python SDK](#6-python-sdk)
+- [6.1 binding coverage ](#61-current-binding-coverage-aligned-with-c-interface)
+- [6.2 Exit deadlock avoidance (must read)](#62-exit-deadlock-avoidance-must-read)
+- [6.3 Python usage example ](#63-python-usage-examples)
+- [7. Precautions ](#7-precautions)
+- [8. Debugging and Troubleshooting ](#8-debugging-and-troubleshooting)
 
 ---
 
-## 一、SDK 概述
+## 1. SDK Overview
 
-- 仅支持**板内单设备**部署：SDK 与 MotionServer 运行于同一台机器，直连本地服务（无远端 / UDP / 多设备）
-- 控制面走 RPC，数据面走板内共享内存（SHM），均直接走二进制结构，不走 JSON
-- 工厂 `IMotionLowLevelClient::create()` 无参；同进程内多次 `create()` 返回同一实例（进程级单例）
-- 控制权获取/续约由 SDK 内部自动维持，外部只用 `setMotionEnable(true/false)` 切 prepare
-- 状态机由 SDK 内部推进，调用方通过 `ConnectCallback` / `getState()` 感知
+- Supports **single-device, on-board deployment only**: the SDK and MotionServer run on the same computer and connect through local services (no remote, UDP, or multi-device mode).
+- The control plane uses RPC, and the data plane uses on-board shared memory (SHM), both of which use binary structures directly instead of JSON.
+- The `IMotionLowLevelClient::create()` factory takes no arguments. Repeated calls within one process return the same process-wide singleton.
+- The SDK manages control acquisition and renewal internally. Applications use only `setMotionEnable(true/false)` to enter or leave the prepared state.
+- The SDK advances the state machine internally; callers observe it through `ConnectCallback` or `getState()`.
 
 ---
 
 ## Quick Start
 
-最小运行流程（完整版本见 §五）：
+Minimum running process (see §5 for the complete version):
 
 **C++**
 
@@ -58,15 +60,15 @@ int main() {
     auto svc = IMotionSdkService::instance();
     svc->initialService(nullptr, "myApp");
 
-    auto client = IMotionLowLevelClient::create();   // 板内单设备，无参；同进程返回同一实例
+    auto client = IMotionLowLevelClient::create();   // On-board single device; no arguments; one instance per process
     client->connect(/*observedHz=*/500);
     while (client->getState() != static_cast<int32_t>(LLState::kConnected)) usleep(10000);
 
     client->setMotionEnable(true);
     while (client->getState() != static_cast<int32_t>(LLState::kPrepared))  usleep(10000);
 
-    /// 周期下发 sendControl(...) + 拉取 getLatestObservation(...)
-    /// 具体 MotorCtrlAction 构造与控制循环见 §五
+    /// Periodically call sendControl(...) and pull getLatestObservation(...).
+    /// See §5 for MotorCtrlAction construction and the complete control loop.
 
     client->setMotionEnable(false);
     client->disconnect();
@@ -82,7 +84,7 @@ import time
 import robot_motion_sdk as sdk
 
 sdk.service.initial(None, "myApp")
-client = sdk.MotionLowLevelClient()              # 板内单设备，无参
+client = sdk.MotionLowLevelClient()              # On-board single device; no arguments
 try:
     client.connect(observed_hz=500)
     while client.get_state() != sdk.LowLevelState.kConnected: time.sleep(0.01)
@@ -90,42 +92,42 @@ try:
     client.set_motion_enable(True)
     while client.get_state() != sdk.LowLevelState.kPrepared:  time.sleep(0.01)
 
-    # 周期 send_control(...) + get_latest_observation(...)，完整循环见 §6.3
+    # Periodically call send_control(...) and get_latest_observation(...); see §6.3.
 finally:
     client.set_motion_enable(False)
     client.disconnect()
     sdk.service.shutdown()
 ```
 
-> Python 退出必须走 `try/finally`，原因详见 [§6.2](#62--退出死锁规避必读)。
+> Python must exit via `try/finally`. For details, see [§6.2](#62-exit-deadlock-avoidance-must-read).
 
 ---
 
-## 开发工程模板
+## Development project template
 
-最小可起跑的项目模板，开发者照着复制 + 写自己的应用代码即可编译运行。
+This is the smallest buildable project template. Copy it, add the application code, then build and run it.
 
-> 完整构建说明（含交叉编译 / wheel 打包 / Troubleshooting）参见 [`BUILD.md`](BUILD.md)。
+> For complete build instructions (including cross-compilation/wheel packaging/Troubleshooting), see [`BUILD.md`](BUILD.md).
 
-### 依赖
+### Dependencies
 
-| 依赖 | 来源 | 说明 |
+| Dependencies | Source | Description |
 |---|---|---|
-| `librobotMotionSdk.so` | SDK 仓库 `lib/<arch>/` | 预编译运行库，按目标架构选 |
-| 公开头 | SDK 仓库 `include/uniubi/robot_sdk/` | `MotionSdkService.h` / `MotionLowLevelClient.h` / `MotionSdkProtocol.h` |
-| 编译器 | g++ ≥ 9（支持 C++14） | |
-| 运行时基础库 | 目标机预装（标准动态库路径） | 不需要客户额外装 Cyclone DDS —— 已链接进 SDK .so |
+| `librobotMotionSdk.so` | SDK repository `lib/<arch>/` | Precompiled runtime library selected for the target architecture |
+| Public headers | SDK repository `include/uniubi/robot_sdk/` | `MotionSdkService.h` / `MotionLowLevelClient.h` / `MotionSdkProtocol.h` |
+| Compiler | g++ ≥ 9 (supports C++14) | |
+| Runtime basic library | Pre-installed on target machine (standard dynamic library path) | No need for customers to install Cyclone DDS additionally - already linked into SDK .so |
 
-### 工程目录
+### Project directory
 
 ```
 my_robot_app/
 ├── CMakeLists.txt
 └── src/
-    └── main.cpp             ← 用户应用代码（参考 §五 完整示例）
+    └── main.cpp             # Application code; see the complete example in §5
 ```
 
-### CMakeLists.txt 样例
+### CMakeLists.txt sample
 
 ```cmake
 cmake_minimum_required(VERSION 3.16)
@@ -134,10 +136,10 @@ project(my_robot_app CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 1) 指定 SDK 安装前缀（默认 /opt/uniubi/；源码仓库可用 ~/uniubi_robot_sdk）
+# 1) Set the SDK prefix (default: /opt/uniubi/; source checkout: ~/uniubi_robot_sdk)
 set(UNIUBI_SDK_ROOT "$ENV{HOME}/uniubi_robot_sdk" CACHE PATH "Uniubi SDK install root")
 
-# 2) 按目标架构自动选 Lib 子目录（x86_64 / aarch64 / i386）
+# 2) Select the library subdirectory for the target architecture (x86_64 / aarch64 / i386)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
     set(ARCH_DIR "x86_64")
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
@@ -146,7 +148,7 @@ else()
     set(ARCH_DIR "i386")
 endif()
 
-# 3) 定位 SDK .so 与公开头
+# 3) Locate the SDK shared library and public headers
 find_library(SDK_LIB robotMotionSdk
              PATHS ${UNIUBI_SDK_ROOT}/lib/${ARCH_DIR}
              NO_DEFAULT_PATH REQUIRED)
@@ -156,167 +158,167 @@ target_include_directories(my_robot_app PRIVATE ${UNIUBI_SDK_ROOT}/include)
 target_link_libraries(my_robot_app PRIVATE ${SDK_LIB} pthread)
 ```
 
-### 构建 + 运行
+### Build + Run
 
 ```bash
 mkdir -p build && cd build
 cmake -DUNIUBI_SDK_ROOT=~/uniubi_robot_sdk ..
 make -j$(nproc)
 
-# 运行前确保 SDK .so 在动态库路径
+# Ensure that the SDK shared libraries are on the runtime search path
 export LD_LIBRARY_PATH=~/uniubi_robot_sdk/lib/$(uname -m):$LD_LIBRARY_PATH
 sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./my_robot_app
 ```
 
-当前设备运行 SDK 程序需要 root 权限。构建不需要 `sudo`；运行时显式传入 `LD_LIBRARY_PATH`，避免 `sudo` 清理当前用户环境后找不到 SDK 动态库。
+The current device requires root permissions to run the SDK program. `sudo` is not required for the build; `LD_LIBRARY_PATH` is explicitly passed in during runtime to avoid `sudo` from not being able to find the SDK dynamic library after cleaning up the current user environment.
 
 ---
 
-## 二、枚举定义
+## 2. Enumeration definition
 
-### 2.1 `LowLevelState` —— 客户端状态
+### 2.1 `LowLevelState` — Client state
 
-| 值 | 含义 |
+| Value | Meaning |
 |---|---|
-| `kDisconnected` (0) | 初始 / `disconnect()` 后 |
-| `kConnecting` (1) | 首次连接尝试中（尚未连上） |
-| `kConnected` (2) | 控制面 + 数据面通道就绪，但 prepare 未开 → `sendControl` 无效 |
-| `kPrepared` (3) | prepare 已开，`sendControl` 才会被服务端采纳 |
-| `kConnectionLost` (4) | 曾经 connected/prepared，因 session 失效 / 服务端异常掉线，SDK 正在自动重连 |
+| `kDisconnected` (0) | Initial / After `disconnect()` |
+| `kConnecting` (1) | First connection attempt (not connected yet) |
+| `kConnected` (2) | The control plane + data plane channel is ready, but prepare is not turned on → `sendControl` is invalid |
+| `kPrepared` (3) | `sendControl` will be adopted by the server only if prepare is enabled |
+| `kConnectionLost` (4) | Once connected/prepared, due to session failure/server abnormal disconnection, the SDK is automatically reconnecting |
 
-### 2.2 `LowLevelError` —— 失败原因
+### 2.2 `LowLevelError` — Failure reason
 
-| 值 | 含义 |
+| Value | Meaning |
 |---|---|
-| `kNone` | 无错 |
-| `kRpcConnectFailed` | SDK 未初始化或通信通道未就绪 |
-| `kRpcAcquireRejected` | 请求获取控制权被服务端拒绝（被他人占用 / 服务端不可达） |
-| `kPrepareRejected` | 运控开关请求失败 |
-| `kSessionExpired` | session 到期被服务端回收 |
-| `kSessionReleased` | session 被服务端主动释放 |
-| `kServerStop` | 服务端主动关闭通道 |
-| `kRpcCallFailed` | RPC 调用失败（含超时 / 通道断 / 编解码错 / id 不匹配等）|
-| `kNotConnected` | 未 connect 即调需要连接的接口 |
-| `kNotPrepared` | 当前未 prepare，无法下发控制 |
-| `kInvalidArgument` | 入参非法（如 `motorNum == 0` 或 `> kLowLevelMaxMotorNum`） |
-| `kMasterSwitchFailed` | 连接时切换本端为运控 master 失败（对端仍在运控 / 服务端拒绝） |
+| `kNone` | No error |
+| `kRpcConnectFailed` | SDK is not initialized or the communication channel is not ready |
+| `kRpcAcquireRejected` | The request to obtain control was rejected by the server (occupied by others/the server is unreachable) |
+| `kPrepareRejected` | Motion-control switch request failed |
+| `kSessionExpired` | The session expired and was recycled by the server |
+| `kSessionReleased` | The session was actively released by the server |
+| `kServerStop` | The server actively closes the channel |
+| `kRpcCallFailed` | RPC call failure (including timeout/channel disconnection/codec error/id mismatch, etc.)|
+| `kNotConnected` | The interface requires an established connection |
+| `kNotPrepared` | Currently not prepared, control cannot be issued |
+| `kInvalidArgument` | Invalid argument, such as `motorNum == 0` or `motorNum > kLowLevelMaxMotorNum` |
+| `kMasterSwitchFailed` | Failed to switch the local end to the motion-control master during connection (the other end is still in operation control/rejected by the server) |
 
-### 2.3 `MotionControlMode` —— 运控执行模式
+### 2.3 `MotionControlMode` — Motion-control execution mode
 
-标识由大脑还是小脑执行运控。该枚举仍定义于协议头 `MotionSdkProtocol.h`，但当前**没有任何 client 接口返回它**；低级 SDK 只提供 `restoreMotionControlMode()` 把运控模式恢复到默认。
+Identifies whether motion control runs on the main computer or the motion controller. This enum remains defined in `MotionSdkProtocol.h`, but **no current client API returns it**. The Low-level SDK only exposes `restoreMotionControlMode()` to restore the default motion-control mode.
 
-| 值 | 含义 |
+| Value | Meaning |
 |---|---|
-| `cerebellumMode` (0) | 小脑执行运控 |
-| `brainControlMode` (1) | 大脑执行运控 |
-| `motionModeNotReady` (255) | 运控模式未就绪 |
+| `cerebellumMode` (0) | Motion-controller execution |
+| `brainControlMode` (1) | Main-computer execution |
+| `motionModeNotReady` (255) | Motion-control mode is not ready |
 
 ---
 
-## 三、回调定义
+## 3. Callback definition
 
-### 3.1 `ConnectCallback` —— 状态变化
+### 3.1 `ConnectCallback` —— Status change
 
 ```cpp
 using ConnectCallback = std::function<void(LowLevelState state, LowLevelError error)>;
 ```
 
-回调由 SDK 内部线程触发。任何 session 异常（到期 / 被释放 / 服务端停服）统一视为逻辑断连，state 转入 `kConnectionLost`，SDK 自动尝试重连，成功后回 `kConnected`。
+Callbacks are triggered by SDK internal threads. Any session exception (expiration/release/server outage) will be regarded as a logical disconnection, and the state will be transferred to `kConnectionLost`. The SDK will automatically try to reconnect, and return to `kConnected` after success.
 
-典型时序：
+Typical timing:
 
-| 触发场景 | state | error |
+| trigger scene | state | error |
 |---|---|---|
-| 切换运控 master 失败 | `kConnecting` | `kMasterSwitchFailed` |
-| 控制面 + 数据面建联成功 | `kConnected` | `kNone` |
-| `setMotionEnable(true)` 成功 | `kPrepared` | `kNone` |
-| `setMotionEnable(false)` 成功 | `kConnected` | `kNotPrepared` |
-| Session 到期 | `kConnectionLost` | `kSessionExpired` |
-| 服务端主动停服 | `kConnectionLost` | `kServerStop` |
+| Failed to switch motion-control master | `kConnecting` | `kMasterSwitchFailed` |
+| Control plane + data plane connection established successfully | `kConnected` | `kNone` |
+| `setMotionEnable(true)` Success | `kPrepared` | `kNone` |
+| `setMotionEnable(false)` Success | `kConnected` | `kNotPrepared` |
+| Session expiration | `kConnectionLost` | `kSessionExpired` |
+| The server actively stops the service | `kConnectionLost` | `kServerStop` |
 
-### 3.2 回调汇总
+### 3.2 Callback summary
 
-SDK 共暴露 2 种回调，注册时机和用途见下表。
+The SDK exposes a total of 2 callbacks. The registration timing and usage are shown in the table below.
 
-| 回调 | 用途 | 注册接口 |
+| Callback | Purpose | Registration interface |
 |---|---|---|
-| `LogCallback` | 接收 SDK 内部日志输出（调试 / 运维可重定向到自家日志框架） | `IMotionSdkService::setLogCallback` |
-| `ConnectCallback` | 连接 / prepare 状态变化（建联 / session 异常等），驱动调用方状态机 | `IMotionLowLevelClient::setConnectCallback` |
+| `LogCallback` | Receive SDK internal log output (debugging/operation and maintenance can be redirected to your own log framework) | `IMotionSdkService::setLogCallback` |
+| `ConnectCallback` | Connection/prepare state changes (connection establishment/session exceptions, etc.), driving the caller state machine | `IMotionLowLevelClient::setConnectCallback` |
 
-#### 回调内严禁阻塞
+#### Blocking is strictly prohibited within callbacks
 
-**所有回调函数体内严禁执行任何阻塞操作 —— 回调由 SDK 内部线程触发，阻塞会直接把内部线程卡住**：
+**It is strictly prohibited to perform any blocking operations within the body of all callback functions - callbacks are triggered by SDK internal threads, and blocking will directly block the internal threads**:
 
-- ❌ 不能 `sleep` / 等待 mutex / 等待 condvar
-- ❌ 不能调任何同步 RPC 接口（`emergencyStop` / `getMotorLayout` 等）
-- ❌ 不能做磁盘 IO / 网络 IO / 大块内存分配
-- ❌ 不能 `disconnect()` / `shutdown()` 本对象
+- ❌ cannot `sleep` / wait for mutex / wait for condvar
+- ❌ Cannot adjust any synchronous RPC interface (`emergencyStop` / `getMotorLayout`, etc.)
+- ❌ Cannot do disk IO / network IO / large memory allocation
+- ❌ Cannot `disconnect()` / `shutdown()` this object
 
-内部线程被卡死后果是连锁的：观测帧投递停摆、状态机不再推进、心跳超时被服务端踢线、重连流程也无法启动。
+The consequences of internal threads being stuck are chain-linked: the delivery of observation frames stops, the state machine no longer advances, the heartbeat times out and the server kicks it off, and the reconnection process cannot be started.
 
-**正确做法**：在回调里只做"轻量记录 / 通知"：
+**Correct approach**: Only do "lightweight recording/notification" in the callback:
 
 ```cpp
 client->setConnectCallback([&](LowLevelState s, LowLevelError e) {
-    /// ✓ 写一个 atomic 标志
+    /// ✓ Set an atomic flag
     mLastState.store(s);
-    /// ✓ post 一个信号量 / notify_one 一个 condvar 给业务线程
+    /// ✓ Post a semaphore or notify_one a condition variable for the application thread
     mStateChangedCv.notify_one();
-    /// ✓ enqueue 一个事件到业务队列，让 worker 线程处理
+    /// ✓ Enqueue an event for an application worker thread
     mEventQueue.push({s, e});
 });
 ```
 
-业务线程感知到信号后再做实际处理（包括反调 SDK 接口、IO、计算等）。
+The business thread performs actual processing after sensing the signal (including detuning the SDK interface, IO, calculation, etc.).
 
 ---
 
-## 四、接口定义
+## 4. Interface definition
 
-### 4.1 全局初始化与实例创建
+### 4.1 Global initialization and instance creation
 
-SDK 的 RPC 控制面与事件订阅基于 [Eclipse Cyclone DDS](https://cyclonedds.io/) 实现。DDS 拓扑（domain、QoS profile、客户端 / 事件订阅声明）由 SDK 内部构造，**调用方无需准备 JSON 配置或 XML 文件**。开发者只需通过下面几个 setter 在 `initialService` 之前传入必要参数。
+The RPC control plane and event subscription of the SDK are implemented based on [Eclipse Cyclone DDS](https://cyclonedds.io/). The DDS topology (domain, QoS profile, client/event subscription declaration) is constructed internally by the SDK, and **the caller does not need to prepare JSON configuration or XML files**. Developers only need to pass in the necessary parameters before `initialService` through the following setters.
 
-#### 4.1.1 全局初始化
+#### 4.1.1 Global initialization
 
 ```cpp
 bool IMotionSdkService::initialService(const char* file, const char* server, uint32_t timeout = 30);
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameters | Type | Description |
 |---|---|---|
-| `file` | `const char*` | 预留：JSON 配置文件路径。当前 SDK 默认 DDS 配置已内置，传 `nullptr` 即可 |
-| `server` | `const char*` | 应用标识，用于 RPC / 日志区分多实例（如 `"myAppLowLevel"`），调用方自定义 |
-| `timeout` | `uint32_t` | 等待系统环境就绪的超时（**秒**，默认 30）。板内模式下若 SDK 比系统环境先起，可能需要等待；超时未就绪返回 `false` |
+| `file` | `const char*` | Reserved: JSON configuration file path. The current SDK default DDS configuration has been built in, just pass `nullptr` |
+| `server` | `const char*` | Application identifier, used for RPC/log to distinguish multiple instances (such as `"myAppLowLevel"`), customized by the caller |
+| `timeout` | `uint32_t` | Timeout waiting for the system environment to be ready (** seconds **, default 30). In on-board mode, if the SDK starts earlier than the system environment, you may need to wait; if it times out and is not ready, it will return `false` |
 
-进程级一次性初始化，必须在创建任何 client 之前调用。返回 `true` 表示初始化成功。
+Process-level one-time initialization, must be called before any client is created. Returning `true` indicates successful initialization.
 
 ```cpp
-/// SDK 版本字符串，格式："<semver> (commit <git-short-sha>)"，如 "1.0.0 (commit <sha>)"
-/// 任意时刻可调，无需先 initialService；可用于运行时日志 / bug 上报 / 兼容性检查
+/// SDK version string: "<semver> (commit <git-short-sha>)", for example "1.0.0 (commit <sha>)"
+/// Available before initialService; suitable for runtime logs, bug reports, and compatibility checks
 static const char* version();
 ```
 
-> **版本兼容性**：SDK 与机器人侧约定走 OMG XTYPES `@appendable`（IDL 字段可追加，向后兼容）。若 SDK 与机器人版本严重不一致，典型现象是 RPC 调用 / 数据面 binary 包**静默无响应**（DDS 报 `RequestedIncompatibleQos` 但不抛错）。出现这种现象时把 `version()` 输出贴到故障报告里。
+> **Version Compatibility**: The SDK and the robot side agree to OMG XTYPES `@appendable` (the IDL field can be appended, backward compatible). If the SDK is seriously inconsistent with the robot version, the typical phenomenon is that the RPC call/data plane binary package is silently unresponsive (DDS reports `RequestedIncompatibleQos` but does not throw an error). When this phenomenon occurs, paste the `version()` output into the fault report.
 
-#### 4.1.2 setter / 查询接口（必须在 `initialService` 之前调用）
+#### 4.1.2 setter / query interface (must be called before `initialService`)
 
-低级 SDK 仅板内单设备部署，无需网络接口选择 / 设备发现等远端能力，仅保留日志回调注册：
+The low-level SDK is only deployed on a single device on the board, without the need for remote capabilities such as network interface selection/device discovery, and only log callback registration is retained:
 
 ```cpp
-/// 注册日志回调（必须在 initialService 之前调用）
+/// Register the log callback before initialService
 void setLogCallback(LogCallback cb);
 ```
 
-> `setNetworkInterface` / `setDiscoverCallback` / `isMultiDevice` / `discoverDevices` 等接口仅为高级远端模式服务，板内低级 SDK 不涉及。
+> `setNetworkInterface` / `setDiscoverCallback` / `isMultiDevice` / `discoverDevices` and other interfaces only serve the advanced remote mode, and the low-level SDK on the board is not involved.
 
-#### 4.1.3 客户端实例创建
+#### 4.1.3 Client instance creation
 
 ```cpp
 static std::shared_ptr<IMotionLowLevelClient> create();
 ```
 
-无参工厂，直连本机 MotionServer。低级 SDK 为**板内进程级单例**：同一进程内多次调用 `create()` 返回同一实例。失败返回空指针。
+No factory parameters, directly connected to the local MotionServer. The low-level SDK is **on-board process-level singleton**: calling `create()` multiple times in the same process returns the same instance. Returns a null pointer on failure.
 
 ```cpp
 auto svc = IMotionSdkService::instance();
@@ -324,40 +326,40 @@ svc->initialService(nullptr, "myAppLowLevel");
 auto client = IMotionLowLevelClient::create();
 ```
 
-### 4.2 生命周期与状态切换
+### 4.2 Life cycle and status switching
 
-| 方法 | 状态要求 | 说明 |
+| Method | Status Requirements | Description |
 |---|---|---|
-| `bool connect(uint32_t observedHz = 500, uint32_t leaseMs = 0)` | 任意 | 非阻塞，连接由 SDK 自动完成全流程。`observedHz`：期望观测频率；`leaseMs`：控制权租约（ms），0 = 使用 server 默认值（server 按自身策略 clamp/校验后下发真实值，SDK 按真实值续约） |
-| `void disconnect()` | 任意 | 关闭连接；幂等 |
-| `bool setMotionEnable(bool enable)` | `kConnected` / `kPrepared` | **异步**：仅记录意图，SDK 在 RPC 完成后切 `kConnected ↔ kPrepared` 并回调 |
-| `bool emergencyStop(uint32_t timeout = 5000)` | `kPrepared` | 急停（同步 RPC，timeout 单位 ms） |
-| `int32_t getState() const` | 任意 | 当前 `LowLevelState` |
-| `int32_t getLastError() const` | 任意 | 读后清零的最后失败原因 |
-| `void setConnectCallback(ConnectCallback cb)` | 任意 | 注册状态回调 |
-| `IMediaBusClient::Ptr createMediaBusClient()` | 任意 | 创建音视频帧订阅通道；仅 `aarch64` 板内本地媒体帧订阅使用（用法见 MediaBus 文档） |
-| `bool restoreMotionControlMode(uint32_t timeout = 5000)` | `kConnected` 后即可 | 恢复运控模式到出厂默认；同步 RPC，timeout 单位 ms |
+| `bool connect(uint32_t observedHz = 500, uint32_t leaseMs = 0)` | Any | Non-blocking, the connection is automatically completed by the SDK. `observedHz`: expected observation frequency; `leaseMs`: control lease (ms), 0 = use the server default value (the server clamps/verifies the real value according to its own policy, and the SDK renews the contract according to the real value) |
+| `void disconnect()` | Any | Close the connection; idempotent |
+| `bool setMotionEnable(bool enable)` | `kConnected` / `kPrepared` | **Asynchronous**: Only record the intent, the SDK cuts `kConnected ↔ kPrepared` and callback after the RPC is completed |
+| `bool emergencyStop(uint32_t timeout = 5000)` | `kPrepared` | Emergency stop (synchronous RPC, timeout unit ms) |
+| `int32_t getState() const` | Any | Current `LowLevelState` |
+| `int32_t getLastError() const` | Any | The last failure reason for clearing after reading |
+| `void setConnectCallback(ConnectCallback cb)` | Any | Registration status callback |
+| `IMediaBusClient::Ptr createMediaBusClient()` | Any | Create an audio and video frame subscription channel; only used for local media frame subscription on the `aarch64` board (see the MediaBus documentation for usage) |
+| `bool restoreMotionControlMode(uint32_t timeout = 5000)` | `kConnected` | Restore the motion-control mode to the factory default; synchronize RPC, timeout unit ms |
 
-#### `connect` 的超时与重试策略（重要）
+#### `connect`’s timeout and retry strategy (important)
 
-- SDK 对 connect 流程 **不设整体超时**，会按内置退避策略无限循环重试，直到成功或被 `disconnect()` 显式打断
-- 每一次中间环节失败都会触发 `ConnectCallback(state, error)`，调用方可据此感知进度
-- 调用方如需 "N 秒 / N 次失败放弃" 语义，自行在 `ConnectCallback` 中累计失败次数或比对墙上时间，达到阈值后调用 `disconnect()` 终止（SDK 不主动放弃，给调用方完整决策权）
-- **取权重试幂等**：SDK 在实例创建时生成一个稳定令牌随取权请求携带；若服务端已成功授予但回复在链路上丢失，SDK 重试取权时服务端识别为同一调用方，**复用原 `sessionId` 并刷新租约后成功返回**，不会因自己上一次的成功而被 `controlWasSeized` 永久卡死。令牌为 SDK 内部细节，调用方无需感知
+- The SDK does not set an overall timeout for the connect process, and will retry in an infinite loop according to the built-in backoff policy until it succeeds or is explicitly interrupted by `disconnect()`
+- `ConnectCallback(state, error)` will be triggered every time an intermediate link fails, and the caller can sense the progress accordingly.
+- If the caller needs "N seconds/N failed attempts to give up" semantics, he or she can accumulate the number of failures in `ConnectCallback` or compare it with the wall time. When the threshold is reached, `disconnect()` is called to terminate (the SDK will not give up on its own initiative and gives the caller full decision-making power)
+- **Impotent for weight retry**: The SDK generates a stable token when the instance is created and carries it with the right request; if the server has successfully granted but the reply is lost on the link, the SDK will identify the server as the same caller when retrying the right, **reuse the original `sessionId` and refresh the lease and return successfully**, and will not be permanently stuck by `controlWasSeized` due to its last success. The token is an internal detail of the SDK and the caller does not need to be aware of it.
 
-### 4.3 数据面接口
+### 4.3 Data plane interface
 
-| 方法 | 状态要求 | 说明 |
+| Method | Status Requirements | Description |
 |---|---|---|
-| `bool sendControl(const MotorCtrlAction& action, const LowLevelMotionCmd* cmd = nullptr)` | `kPrepared` | 下发一帧控制；动作相关控制帧建议传 `cmd`，并同时填写 `action` 和 `acName`；`motorNum` 必须 ∈ `[1, kLowLevelMaxMotorNum]`，否则返 `kInvalidArgument` |
-| `bool sendMaxTorque(const MotorCtrlAction& action)` | `kPrepared` | 设置电机最大扭矩；使用各元素的 `header` 定位电机、`torque` 携带目标上限；`motorNum` 必须 ∈ `[1, kLowLevelMaxMotorNum]`，否则返 `kInvalidArgument` |
-| `bool getLatestObservation(LowLevelMotionObserved* obs, uint32_t timeout)` | `kPrepared` | 在指定 `timeout`（**ms**）内获取一帧运控观测量（电机/IMU/TRC/电源）；未取到返回 false |
-| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout)` | `kConnected` / `kPrepared` 任一 | 获取一帧传感器观测（GPS + UWB），与 prepare 无关、传感器常驻采集；`timeout` 单位 **us**；无传感器硬件设备会等到超时返 false |
-| `bool getMotorLayout(MotorLayout& layout, uint32_t timeout = 5000)` | `kConnected` 后即可 | 硬件电机布局（启动后不变，SDK 内部缓存；首次走 RPC，timeout 单位 ms） |
+| `bool sendControl(const MotorCtrlAction& action, const LowLevelMotionCmd* cmd = nullptr)` | `kPrepared` | Send a frame of control; action-related control frames are recommended to be transmitted to `cmd`, and fill in `action` and `acName` at the same time; `motorNum` must ∈ `[1, kLowLevelMaxMotorNum]`, otherwise `kInvalidArgument` will be returned |
+| `bool sendMaxTorque(const MotorCtrlAction& action)` | `kPrepared` | Set the maximum torque of the motor; use each element of `header` to position the motor and `torque` to carry the target upper limit; `motorNum` must ∈ `[1, kLowLevelMaxMotorNum]`, otherwise `kInvalidArgument` |
+| `bool getLatestObservation(LowLevelMotionObserved* obs, uint32_t timeout)` | `kPrepared` | Obtain one frame of motion observation (motor/IMU/TRC/power supply) within the specified `timeout` (**ms**); return false if not obtained |
+| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout)` | `kConnected` / `kPrepared` any one | Obtain a frame of sensor observation (GPS + UWB), independent of prepare, sensor resident acquisition; `timeout` unit **us**; no sensor hardware device will wait until timeout and return false |
+| `bool getMotorLayout(MotorLayout& layout, uint32_t timeout = 5000)` | `kConnected` | Hardware motor layout (unchanged after startup, SDK internal cache; first time RPC, timeout unit ms) |
 
-#### 4.3.1 `sendMaxTorque` —— 设置电机最大扭矩
+#### 4.3.1 `sendMaxTorque` ——Set the maximum torque of the motor
 
-该接口复用 `MotorCtrlAction`，但每个 `MotorCtrl` 只使用 `header.limbNo` / `header.jointNo` 和 `torque`。以下假设 `maxTorqueNm` 是业务侧按当前机型校验过、长度不小于 `layout.motorNum` 的 N·m 上限数组：
+This interface multiplexes `MotorCtrlAction`, but each `MotorCtrl` only uses `header.limbNo` / `header.jointNo` and `torque`. The following assumes that `maxTorqueNm` is an N·m upper limit array that has been verified by the business side according to the current model and has a length not less than `layout.motorNum`:
 
 ```cpp
 MotorLayout layout = {};
@@ -378,139 +380,139 @@ if (!client->sendMaxTorque(limits)) {
 }
 ```
 
-- 返回 `true` 只代表配置帧已提交到共享内存，不代表电机侧已经完成切换。
-- 底层默认存在约 10 ms 的扭矩切换窗口，期间不支持位置控制指令。该接口用于低频配置，不应放入高频 `sendControl()` 循环，也不要在切换窗口内继续下发位置控制帧。
-- 可通过后续 `getLatestObservation()` 返回的 `motors[i].maxTorque` 确认当前观测值。
-- 公开头、Python native binding 和 `librobotMotionSdk.so` 必须来自同一套 SDK，不能混用不匹配的头文件与运行库。
+- Returning `true` only means that the configuration frame has been submitted to the shared memory, but does not mean that the motor side has been switched.
+- The bottom layer has a torque switching window of about 10 ms by default, during which position control instructions are not supported. This interface is used for low-frequency configuration and should not be placed in the high-frequency `sendControl()` loop, nor should it continue to deliver position control frames within the switching window.
+- The current observation value can be confirmed through `motors[i].maxTorque` returned by subsequent `getLatestObservation()`.
+- Public headers, Python native binding and `librobotMotionSdk.so` must come from the same SDK, and mismatched header files and runtime libraries cannot be mixed.
 
-### 4.4 关键数据结构（来自 `MotionSdkProtocol.h`）
+### 4.4 Key data structure (from `MotionSdkProtocol.h`)
 
-#### 4.4.1 `MotorCtrlAction` —— 控制下发
+#### 4.4.1 `MotorCtrlAction` - Control delivery
 
 ```cpp
 struct MotorCtrlAction {
-    uint32_t   motorNum;                              // 实际生效电机数
-    MotorCtrl  motors[kLowLevelMaxMotorNum];          // 每电机控制量
+    uint32_t   motorNum;                              // Number of active motors
+    MotorCtrl  motors[kLowLevelMaxMotorNum];          // Per-motor control values
 };
 
 struct MotorCtrl {
-    float       position;       // 目标位置 (rad)
-    float       velocity;       // 目标速度 (rad/s)
-    float       kpGain;         // 位置环增益，单位：Nm/rad（≥ 0）
-    float       kdGain;         // 速度环增益，单位：Nm/(rad/s)（≥ 0）
-    float       torque;         // 前馈力矩 (Nm)
+    float       position;       // Target position (rad)
+    float       velocity;       // Target velocity (rad/s)
+    float       kpGain;         // Position-loop gain, Nm/rad (>= 0)
+    float       kdGain;         // Velocity-loop gain, Nm/(rad/s) (>= 0)
+    float       torque;         // Feedforward torque (Nm)
     MotorHeader header;         // {limbNo, jointNo}
 };
 
 struct MotorHeader { uint16_t limbNo; uint16_t jointNo; };
 ```
 
-> 注意：这里的 `MotorHeader` 是 SDK POD/ABI 结构，字段为 `uint16_t limbNo/jointNo`。DDS IDL wire struct 中的 `MotorHeader` 使用 `uint32 limbsNo/jointNo`。两者属于不同边界，不能直接按内存布局互转；跨 DDS 时必须按字段名和语义显式转换。
+> Note: `MotorHeader` here is the SDK POD/ABI structure, and the field is `uint16_t limbNo/jointNo`. `MotorHeader` in DDS IDL wire struct uses `uint32 limbsNo/jointNo`. The two belong to different boundaries and cannot be converted directly according to the memory layout; when crossing DDS, they must be explicitly converted according to field names and semantics.
 
-**电机关节定义（四足）**：
+**Motor joint definition (quadruped)**:
 - `limbNo`：FL=0 / FR=1 / RL=2 / RR=3
-- `jointNo`：胯=0 / 大腿=1 / 小腿=2
+- `jointNo`：crotch=0/thigh=1/calf=2
 
-#### 4.4.2 `LowLevelMotionCmd` —— 低级运控操作指令
+#### 4.4.2 `LowLevelMotionCmd` —— Low-level operation control instructions
 
 ```cpp
 struct LowLevelMotionCmd {
-    int32_t action = -1;                 // 动作 id，如 standing = 1
-    char    acName[kMotionActionLength]; // 动作名，如 "standing"
+    int32_t action = -1;                 // Action ID, for example standing = 1
+    char    acName[kMotionActionLength]; // Action name, for example "standing"
     float   velocity = 0.0f;
     float   velocityX = 0.0f;
     float   velocityY = 0.0f;
 };
 ```
 
-动作相关控制帧应同时填写 `action` 和 `acName`，例如执行站立时使用 `action = 1`、`acName = "standing"`。这样服务端内部处理和外部观测都能拿到一致的动作语义。
+Action-related control frames should be filled in `action` and `acName` at the same time, for example, `action = 1` and `acName = "standing"` are used when performing standing. In this way, the internal processing and external observation of the server can obtain consistent action semantics.
 
-#### 4.4.3 `LowLevelMotionObserved` —— 观测量
+#### 4.4.3 `LowLevelMotionObserved` - Observations
 
 ```cpp
 struct LowLevelMotionObserved {
-    uint8_t         systemSta;                            // 系统状态（busy 等标志）
+    uint8_t         systemSta;                            // System state (busy and other flags)
     uint32_t        motorNum;
     IMUObserved     imu;                                  // temp + accel/gyro/mag/euler/quaternion
-    TRCStickFrame   trc;                                  // 摇杆/按键
-    PowerObserved   power;                                // 电池
+    TRCStickFrame   trc;                                  // Sticks/buttons
+    PowerObserved   power;                                // Battery
     MotorObserved   motors[kLowLevelMaxMotorNum];
 };
 
 struct IMUObserved {
-    float        temp;          // IMU 温度 (°C)
-    Vector3f     accel;         // 加速度 m/s²  (x/y/z)；{int8 error; float x,y,z}
-    Vector3f     gyro;          // 角速度 rad/s (x/y/z)
-    Vector3f     mag;           // 磁场   μT    (x/y/z)
-    Vector3f     euler;         // 欧拉角 rad   (x=roll [-π,π] / y=pitch [-π/2,π/2] / z=yaw [-π,π])
-    Quaternionf  quaternion;    // 姿态四元数，无量纲；{int8 error; float w,x,y,z}
+    float        temp;          // IMU temperature (°C)
+    Vector3f     accel;         // Acceleration, m/s² (x/y/z); {int8 error; float x,y,z}
+    Vector3f     gyro;          // Angular velocity, rad/s (x/y/z)
+    Vector3f     mag;           // Magnetic field, μT (x/y/z)
+    Vector3f     euler;         // Euler angles, rad (x=roll [-π,π] / y=pitch [-π/2,π/2] / z=yaw [-π,π])
+    Quaternionf  quaternion;    // Unitless orientation quaternion; {int8 error; float w,x,y,z}
 };
 
 struct PowerObserved {
-    float power;             // 电量百分比 (0~100)
-    float health;            // 健康度百分比 (0~100)
-    float temper;            // 电池温度 (°C)
-    float chargeCurrent;     // 充放电电流 (A)，正充负放
-    float chargeVoltage;     // 总电压 (V)
+    float power;             // Charge percentage (0~100)
+    float health;            // Health percentage (0~100)
+    float temper;            // Battery temperature (°C)
+    float chargeCurrent;     // Charge/discharge current (A); positive=charging, negative=discharging
+    float chargeVoltage;     // Total voltage (V)
 };
 
 struct MotorObserved {
-    uint8_t      enable;     // 1 = 上电就绪
-    uint8_t      online;     // 1 = 总线在线
-    uint8_t      error;      // 错误码，见下方 "MotorDeviceErrno" 表
-    float        position;   // 当前位置 (rad)
-    float        velocity;   // 当前速度 (rad/s)
-    float        torque;     // 当前力矩 (Nm)
-    float        temp;       // 电机温度 (°C)
-    float        voltage;    // 电机端电压 (V)
-    float        lossRate;   // 通信丢包率 (%)
-    float        maxTorque;  // 电机最大扭矩 (Nm)
+    uint8_t      enable;     // 1 = powered and ready
+    uint8_t      online;     // 1 = bus online
+    uint8_t      error;      // Error code; see MotorDeviceErrno below
+    float        position;   // Current position (rad)
+    float        velocity;   // Current velocity (rad/s)
+    float        torque;     // Current torque (Nm)
+    float        temp;       // Motor temperature (°C)
+    float        voltage;    // Motor terminal voltage (V)
+    float        lossRate;   // Communication packet-loss rate (%)
+    float        maxTorque;  // Maximum motor torque (Nm)
     MotorHeader  header;
 };
 ```
 
-**`IMUObserved` 子字段 `error` 错误码枚举（`IMUDeviceErrno`）**：
+**`IMUObserved` subfield `error` error code enumeration (`IMUDeviceErrno`)**:
 
-Vector3f / Quaternionf 的 `error` 字段共用此枚举，分别独立标识 `accel` / `gyro` / `mag` / `euler` / `quaternion` 各路数据是否可信。
+The `error` fields of Vector3f / Quaternionf share this enumeration, which independently identifies whether the data of `accel` / `gyro` / `mag` / `euler` / `quaternion` is trustworthy.
 
-| 值 | 名称 | 含义 |
+| value | name | meaning |
 |---|---|---|
-| `0` | `imuNormal` | 数据有效 |
-| `1` | `imuInvalid` | IMU 数据无效（该量当前不可信） |
-| `64` | `imuControlOffline` | IMU 控制板离线 |
-| `65` | `imuControlNotReady` | 控制板未就绪 |
-| `66` | `imuControlUpgrade` | 控制板升级中 |
-| `67` | `imuControlNotParams` | IMU 模组参数未就绪 |
-| `68` | `imuNotReady` | IMU 加热 / 未就绪 |
+| `0` | `imuNormal` | Data is valid |
+| `1` | `imuInvalid` | IMU data is invalid (this quantity is currently untrustworthy) |
+| `64` | `imuControlOffline` | IMU control board offline |
+| `65` | `imuControlNotReady` | Control board not ready |
+| `66` | `imuControlUpgrade` | Control board upgrading |
+| `67` | `imuControlNotParams` | IMU module parameters are not ready |
+| `68` | `imuNotReady` | IMU heating / not ready |
 
-> `0` / `1` 由 IMU 上报，`64+` 由 SDK / 服务端检测后填入（如 SPI 通信中断）。`mag` / `quaternion` 在某些机型上未上报，error 字段恒为 `imuInvalid`。
+> `0` / `1` is reported by IMU, `64+` is filled in after detection by SDK / server (such as SPI communication interruption). `mag` / `quaternion` is not reported on some models, and the error field is always `imuInvalid`.
 
-**`MotorObserved.error` 错误码枚举（`MotorDeviceErrno`）**：
+**`MotorObserved.error` error code enumeration (`MotorDeviceErrno`)**:
 
-| 值 | 名称 | 含义 |
+| value | name | meaning |
 |---|---|---|
-| `0` | `motorNormal` | 无故障 |
-| `1` | `motorPreDriver` | 预驱故障 |
-| `2` | `motorEcodeError` | 编码器故障 |
-| `3` | `motorOverSpeed` | 过速故障 |
-| `4` | `motorOverTempe` | 过温故障 |
-| `5` | `motorOverCurrent` | 过流故障 |
-| `6` | `motorOverVoltage` | 过压故障 |
-| `59` | `motorPGAbnormality` | PG 异常 |
-| `60` | `motorHWUndervoltage` | 硬件欠压 |
-| `63` | `motorCommError` | 通信错误 |
-| `64` | `motorControlOffline` | 控制板离线 |
-| `65` | `controlMotorNotEnable` | 未使能 |
-| `66` | `motorControlNotReady` | 控制未就绪 |
-| `67` | `motorControlUpgrade` | 升级中 |
-| `68` | `motorNoCalibrated` | 未标定 |
-| `69` | `motorURDFNotMapped` | 标定丢失 |
+| `0` | `motorNormal` | No fault |
+| `1` | `motorPreDriver` | Pre-drive failure |
+| `2` | `motorEcodeError` | Encoder failure |
+| `3` | `motorOverSpeed` | Overspeed fault |
+| `4` | `motorOverTempe` | Overtemperature fault |
+| `5` | `motorOverCurrent` | Overcurrent fault |
+| `6` | `motorOverVoltage` | Overvoltage fault |
+| `59` | `motorPGAbnormality` | PG exception |
+| `60` | `motorHWUndervoltage` | Hardware undervoltage |
+| `63` | `motorCommError` | Communication error |
+| `64` | `motorControlOffline` | Control board offline |
+| `65` | `controlMotorNotEnable` | Not enabled |
+| `66` | `motorControlNotReady` | Control not ready |
+| `67` | `motorControlUpgrade` | Upgrading |
+| `68` | `motorNoCalibrated` | Not calibrated |
+| `69` | `motorURDFNotMapped` | Calibration lost |
 
-> `0~6` / `59` / `60` / `63` 由电机上报，`64+` 由 SDK / 服务端检测后填入（如控制板离线、未使能、缺标定数据等）。
+> `0~6` / `59` / `60` / `63` is reported by the motor, `64+` is filled in after detection by the SDK / server (such as the control board is offline, not enabled, lacks calibration data, etc.).
 
-> 低级数据面的 `PowerObserved` 与高级查询 `querySystemStatus.battery`（详见高级接口手册 §4.5.1）描述同一物理电池，但 `PowerObserved` 是嵌入观测帧的轻量子集（实时性优先），`querySystemStatus.battery` 是更完整的快照（含 BMS 状态码、循环次数等，按查询响应）。
+> `PowerObserved` on the low-level data plane and high-level query `querySystemStatus.battery` (see Advanced Interface Manual §4.5.1 for details) describe the same physical battery, but `PowerObserved` is a lightweight subset embedded in the observation frame (real-time performance is priority), and `querySystemStatus.battery` is a more complete snapshot (including BMS status code, cycle times, etc., according to query response).
 
-#### 4.4.3 `MotorLayout` —— 硬件布局
+#### 4.4.3 `MotorLayout` - Hardware layout
 
 ```cpp
 struct MotorLayout {
@@ -520,11 +522,11 @@ struct MotorLayout {
 struct MotorInfo {
     uint16_t  limbNo;
     uint16_t  jointNo;
-    char      name[28];   // "<limb>.<joint>"，如 "leftFront.hip"
+    char      name[28];   // "<limb>.<joint>"; for example "leftFront.hip"
 };
 ```
 
-当前 DV500 12 关节 `MotorLayout` 使用 leg-major 顺序：
+Currently DV500 12-joint `MotorLayout` uses leg-major sequence:
 
 ```text
 FL_ABAD, FL_HIP, FL_KNEE,
@@ -533,49 +535,45 @@ RL_ABAD, RL_HIP, RL_KNEE,
 RR_ABAD, RR_HIP, RR_KNEE
 ```
 
-程序应调用 `getMotorLayout()` / `get_motor_layout()` 获取并校验实际布局，再按每项的
-`limbNo` / `jointNo`（Python：`limb_no` / `joint_no`）构造控制帧，不应只依赖固定
-数组下标。若关节数量或 `(limbNo, jointNo)` 顺序与程序支持的机器人布局不一致，
-应在 `setMotionEnable(true)` / `set_motion_enable(True)` 前拒绝控制。
+The application must call `getMotorLayout()` / `get_motor_layout()` to obtain and validate the actual layout. It must then construct control frames from `limbNo` / `jointNo` (Python: `limb_no` / `joint_no`) instead of relying only on fixed array indices. If the joint count or `(limbNo, jointNo)` sequence does not match the layout supported by the application, it must refuse to enable control before calling `setMotionEnable(true)` / `set_motion_enable(True)`.
 
-该顺序是 SDK/机器人数据契约，不代表策略模型的输入输出顺序。模型顺序由训练和导出
-契约定义；部署程序必须显式完成 `SDK 顺序 → 模型顺序 → SDK 顺序` 的双向重排。
+This order is the SDK/robot data contract; it does not define the policy model's input or output order. The model order is defined by its training and export contract. Deployment code must explicitly perform the bidirectional reorder `SDK order → model order → SDK order`.
 
-#### 4.4.4 `TRCStickFrame` —— 遥控手柄帧
+#### 4.4.4 `TRCStickFrame` ——Remote Controller Frame
 
 ```cpp
 struct TRCStickFrame {
-    uint32_t  valid;                  // 帧是否有效，非 0 视为有效
-    uint8_t   buttons[BUTTON_MAX];    // 按键状态：每位置 1 = 按下，0 = 释放
-    float     axes[AXES_MAX];         // 摇杆 / 扳机量
-    uint64_t  controlId;              // 控制 ID，由调用方维护用于帧序去重
+    uint32_t  valid;                  // Frame validity; nonzero means valid
+    uint8_t   buttons[BUTTON_MAX];    // Button state: 1 = pressed, 0 = released
+    float     axes[AXES_MAX];         // Stick and trigger values
+    uint64_t  controlId;              // Caller-managed control ID for frame deduplication
 };
 ```
 
-**`buttons[]` 索引枚举（`ButtonDefine`）**：
+**`buttons[]` index enumeration (`ButtonDefine`)**:
 
-| 索引名 | 值 | 含义 |
+| Index name | Value | Meaning |
 |---|---|---|
-| `buttonBack` / `buttonStart` | 0 / 1 | 对外按键名 Stand / Motion；动作语义由设备能力配置决定 |
-| `buttonLB` / `buttonRB` | 2 / 3 | 左 / 右肩键 |
-| `buttonF1` / `buttonF2` | 4 / 5 | 自定义功能键 |
-| `buttonA` / `buttonB` / `buttonX` / `buttonY` | 6 / 7 / 8 / 9 | 主功能键 |
-| `buttonUp` / `buttonDown` / `buttonLeft` / `buttonRight` | 10 / 11 / 12 / 13 | 方向键 |
-| `buttonLS` / `buttonRS` | 14 / 15 | 左 / 右摇杆按键 |
+| `buttonBack` / `buttonStart` | 0 / 1 | External button name Stand / Motion; action semantics are determined by device capability configuration |
+| `buttonLB` / `buttonRB` | 2 / 3 | Left/right shoulder keys |
+| `buttonF1` / `buttonF2` | 4 / 5 | Customized function keys |
+| `buttonA` / `buttonB` / `buttonX` / `buttonY` | 6 / 7 / 8 / 9 | Main function keys |
+| `buttonUp` / `buttonDown` / `buttonLeft` / `buttonRight` | 10 / 11 / 12 / 13 | Direction keys |
+| `buttonLS` / `buttonRS` | 14 / 15 | Left / right joystick button |
 
-**`axes[]` 索引枚举（`AxesDefine`）**：
+**`axes[]` index enumeration (`AxesDefine`)**:
 
-| 索引名 | 值 | 含义 | 典型范围 |
+| Index name | Value | Meaning | Typical range |
 |---|---|---|---|
-| `axesLX` / `axesLY` | 0 / 1 | 左摇杆 X / Y | -1.0 ~ 1.0 |
-| `axesRX` / `axesRY` | 2 / 3 | 右摇杆 X / Y | -1.0 ~ 1.0 |
-| `axesLT` / `axesRT` | 4 / 5 | 左 / 右扳机 | 0.0 ~ 1.0 |
+| `axesLX` / `axesLY` | 0 / 1 | Left joystick X / Y | -1.0 ~ 1.0 |
+| `axesRX` / `axesRY` | 2 / 3 | Right joystick X / Y | -1.0 ~ 1.0 |
+| `axesLT` / `axesRT` | 4 / 5 | Left / right trigger | 0.0 ~ 1.0 |
 
-对外按键名 Stand / Motion 在 SDK 中分别对应 `buttonBack` / `buttonStart`。具体动作组合以设备 `getMotionCapabilities()` 返回的 `mapping` 为准；当前标准映射见高阶 TRC 文档。RT 条件对应 `axesRT`。
+The external button names Stand / Motion correspond to `buttonBack` / `buttonStart` respectively in the SDK. The specific action combination is subject to `mapping` returned by device `getMotionCapabilities()`; see the high-level TRC document for the current standard mapping. RT condition corresponds to `axesRT`.
 
-#### 4.4.5 `SensorObserved` —— 传感器观测（GPS + UWB）
+#### 4.4.5 `SensorObserved` - Sensor Observation (GPS + UWB)
 
-由 `getSensorObservation(SensorObserved*, uint32_t timeout)` 返回（`timeout` 单位 us，与 prepare 无关，`kConnected` / `kPrepared` 任一即可读）。
+Returned by `getSensorObservation(SensorObserved*, uint32_t timeout)` (`timeout` unit us, has nothing to do with prepare, any one of `kConnected` / `kPrepared` can be read).
 
 ```cpp
 struct SensorObserved {
@@ -584,64 +582,64 @@ struct SensorObserved {
 };
 
 struct GPSFrame {
-    uint32_t   valid;     // 1=有效，0=异常
-    float      speed;     // GPS 测速，km/h
-    int32_t    level;     // 信号等级，见 GPSSignalLevel
-    int32_t    rssi;      // 信号强度原始值 单位 dbm
-    GEOGPoint  point;     // 坐标信息
+    uint32_t   valid;     // 1 = valid, 0 = invalid
+    float      speed;     // GPS speed, km/h
+    int32_t    level;     // Signal level; see GPSSignalLevel
+    int32_t    rssi;      // Raw signal strength, dBm
+    GEOGPoint  point;     // Coordinates
 };
 
 struct GEOGPoint {
-    float      lat;       // 纬度，deg
-    float      lng;       // 经度，deg
+    float      lat;       // Latitude, deg
+    float      lng;       // Longitude, deg
 };
 
 struct UWBRawObserved {
-    uint8_t    valid;     // 数据是否有效
-    uint8_t    pairState; // 配对状态，见 UWBPairState
-    int16_t    rssi;      // 信号强度 单位 dbm
-    uint16_t   pitch;     // 俯仰角，deg [0,360)，用于将空间距离投影到水平距离
-    uint16_t   azimuth;   // 方位角，deg [0,360)，正前方 0 度、逆时针递增
-    uint32_t   distance;  // 距离，cm
+    uint8_t    valid;     // Whether the data is valid
+    uint8_t    pairState; // Pairing state; see UWBPairState
+    int16_t    rssi;      // Signal strength, dBm
+    uint16_t   pitch;     // Pitch, deg [0, 360), used to project spatial distance horizontally
+    uint16_t   azimuth;   // Azimuth, deg [0, 360); 0 is forward, increasing counterclockwise
+    uint32_t   distance;  // Distance, cm
 };
 ```
 
-**`GPSFrame.level` 取值枚举（`GPSSignalLevel`）**：
+**`GPSFrame.level` value enumeration (`GPSSignalLevel`)**:
 
-| 值 | 名称 | 含义 |
+| value | name | meaning |
 |---|---|---|
-| `0` | `gpsGre38db` | 信号强 |
-| `1` | `gpsGre30db` | 信号中 |
-| `2` | `gpsLes30db` | 信号弱 |
+| `0` | `gpsGre38db` | Strong signal |
+| `1` | `gpsGre30db` | Signaling |
+| `2` | `gpsLes30db` | Weak signal |
 
-**`UWBRawObserved.pairState` 取值枚举（`UWBPairState`）**：
+**`UWBRawObserved.pairState` value enumeration (`UWBPairState`)**:
 
-| 值 | 名称 | 含义 |
+| value | name | meaning |
 |---|---|---|
-| `0` | `uwbPairNone` | 未配对 |
-| `1` | `uwbInPairing` | 配对中 |
-| `2` | `uwbPairSuccess` | 配对成功 |
-| `3` | `uwbPairFailed` | 配对失败 |
+| `0` | `uwbPairNone` | Not paired |
+| `1` | `uwbInPairing` | Pairing |
+| `2` | `uwbPairSuccess` | Pairing successful |
+| `3` | `uwbPairFailed` | Pairing failed |
 
-> 无对应传感器硬件的设备无数据写入，`getSensorObservation` 会等待至超时返回 false。
+> If there is no data written to the device without corresponding sensor hardware, `getSensorObservation` will wait until timeout and return false.
 
-#### 4.4.6 坐标系类型 `GEOGCoordMode`（保留）
+#### 4.4.6 Coordinate system type `GEOGCoordMode` (reserved)
 
-`GEOGCoordMode`（`gcj02` / `wgs84` / `bd09` / `mapBar`）已在公开头定义、并导出为 Python `sdk.GEOGCoordMode`，但当前**无观测字段引用**（保留给坐标转换用途）。
+`GEOGCoordMode` (`gcj02` / `wgs84` / `bd09` / `mapBar`) has been defined in the public header and exported as Python `sdk.GEOGCoordMode`, but currently has no observation field reference (reserved for coordinate transformation purposes).
 
-> 所有结构均 `#pragma pack(push, 1)`，字节级对齐固定，跨架构二进制兼容。
+> All structures are `#pragma pack(push, 1)`, with fixed byte-level alignment and cross-architecture binary compatibility.
 
 ---
 
-## 五、C++ 使用示例
+## 5. C++ usage examples
 
-> **通用姿态控制示例必须将机器狗可靠固定在安全吊架上，保持四脚完全腾空。TensorRT 策略示例采用分阶段验证：吊架上只验证 `stand` 和 `lay`，确认姿态与关节方向后，移到空旷、平整、无障碍地面再验证 `walk`。不要在四脚腾空时执行 `walk`；测试过程中必须保持急停可触达并由专人值守。**
+> **Safety:** Run the general posture-control example only while the robot is secured in a safety rig with all four feet clear of the ground. Validate the TensorRT policy in two stages: test only `stand` and `lay` in the rig; after confirming the posture and joint directions, move the robot to open, level, obstacle-free ground before testing `walk`. Never execute `walk` while the feet are suspended. Keep the emergency stop within reach and assign a dedicated operator throughout both stages.
 
-通用姿态控制程序以 [`example_lowlevel.cpp`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel.cpp) 为准；C++ ONNX/TensorRT 策略程序以 [`example_lowlevel_tensorrt.cpp`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel_tensorrt.cpp) 为准。构建与运行方式见同仓库的 [`examples/README.md`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/README.md)。API 手册只解释控制流程和模型契约，不复制整份示例源码，避免两处实现漂移。
+The general posture-control program is implemented in [`example_lowlevel.cpp`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel.cpp); the C++ ONNX/TensorRT policy program is implemented in [`example_lowlevel_tensorrt.cpp`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel_tensorrt.cpp). Build and run instructions are in the same repository's [`examples/README.md`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/README.md). This API reference explains the control flow and model contract without duplicating the complete example source, preventing the two copies from drifting.
 
-### 5.1 通用姿态控制示例
+### 5.1 General posture-control example
 
-启动程序后会建立 Low-level 连接，但不会调用 `setMotionEnable(true)`，也不会自动执行姿态：
+At startup, the program establishes a Low-level connection but does not call `setMotionEnable(true)` or execute a posture command automatically:
 
 ```text
 lowlevel> status
@@ -653,34 +651,30 @@ lowlevel> release
 lowlevel> quit
 ```
 
-- `stand`：按需调用 `setMotionEnable(true)`，从实时关节位置平滑移动到站立目标并持续保持。
-- `lie` / `lie-down`：按需调用 `setMotionEnable(true)`，从实时关节位置平滑移动到趴下目标并持续保持。
-- `damping`：按需使能 Low-level，位置刚度设为 0，保留速度阻尼。
-- `release`：先发送短时阻尼，再停止控制线程并调用 `setMotionEnable(false)`。
-- `quit` / `Ctrl+C`：执行释放流程，并在断开前调用 `restoreMotionControlMode()` 恢复内置运控。
+- `stand`: Call `setMotionEnable(true)` on demand to smoothly move from the real-time joint position to the standing target and maintain it continuously.
+- `lie` / `lie-down`: Call `setMotionEnable(true)` on demand to smoothly move from real-time joint positions to the prone target and maintain it.
+- `damping`: Enable Low-level on demand, set position stiffness to 0, and retain speed damping.
+- `release`: Send short-term damping first, then stop the control thread and call `setMotionEnable(false)`.
+- `quit` / `Ctrl+C`: Run the release sequence, call `restoreMotionControlMode()` to return control to the built-in motion controller, and then disconnect.
 
-姿态控制周期为 50 Hz，默认轨迹时间为 2 秒，单周期位置变化不超过 0.25 rad。程序按 `(limbNo, jointNo)` 匹配观测与控制，不依赖数组顺序；当实际跟踪误差超过 0.25 rad 时暂停轨迹推进。姿态命令只支持标准 DV500 12 关节布局，其他布局会被拒绝。
+The attitude control period is 50 Hz, the default trajectory time is 2 seconds, and the position change in a single cycle does not exceed 0.25 rad. The program matches observation and control according to `(limbNo, jointNo)` and does not rely on the array order; when the actual tracking error exceeds 0.25 rad, trajectory advancement is suspended. The attitude command only supports the standard DV500 12-joint layout, other layouts will be rejected.
 
-Low-level SDK 没有 `take` / `startControl` 接口：`connect()` 建立并维护 session，`setMotionEnable(true/false)` 切换 prepare。CLI 直接沿用这套语义，不增加伪造的取权命令。
+Low-level SDK does not have `take` / `startControl` interface: `connect()` establishes and maintains session, `setMotionEnable(true/false)` switches prepare. The CLI directly follows this set of semantics without adding fake permission commands.
 
-站立目标每腿为 `hip=0.0, thigh=0.8, calf=-1.5` rad。趴下目标为 `thigh=1.10, calf=-2.72` rad，左腿 `hip=+0.48` rad、右腿 `hip=-0.48` rad。Kp/Kd 使用 DV500 板端 `motionCapacity` 中已经验证的站立/趴下配置。
+Standing target is `hip=0.0, thigh=0.8, calf=-1.5` rad per leg. The target for lying down is `thigh=1.10, calf=-2.72` rad, the left leg is `hip=+0.48` rad, and the right leg is `hip=-0.48` rad. Kp/Kd uses the proven stand/lay configuration in DV500 board header `motionCapacity`.
 
-### 5.2 C++ TensorRT 策略示例
+### 5.2 C++ TensorRT policy example
 
-`example_lowlevel_tensorrt` 面向 JetPack 6.2.1 Orin，直接接收静态
-`[1,45] -> [1,12]` ONNX。进程每次启动都重新构建严格 FP32 TensorRT engine：
-不读取或写入 `.engine` 缓存，并显式关闭 TensorRT 默认 TF32。该示例只依赖
-JetPack 自带的 TensorRT/CUDA C++ 库和 SDK，不依赖 PyTorch 或 ONNX Runtime。
+`example_lowlevel_tensorrt` targets an Orin running JetPack 6.2.1 and accepts a static-shape `[1,45] -> [1,12]` ONNX model directly. It rebuilds a strict FP32 TensorRT engine every time the process starts, never reads or writes an `.engine` cache, and explicitly disables TensorRT's default TF32 mode. The example depends only on the TensorRT/CUDA C++ libraries included with JetPack and the robot SDK; it does not depend on PyTorch or ONNX Runtime.
 
-先运行纯模型验证。`--validate-only` 只构建 engine 并执行一次零输入推理，不初始化
-SDK，也不会连接或使能机器人：
+Start with model-only validation. `--validate-only` builds the engine and runs one zero-input inference without initializing the SDK, connecting to the robot, or enabling control:
 
 ```bash
 taskset -c 2 ./build/examples/example_lowlevel_tensorrt \
   --onnx /path/to/policy.onnx --validate-only
 ```
 
-实机运行建议绑定 CPU 2，以减少调度抖动，使观测获取耗时和 50 Hz 控制周期更稳定：
+For real-hardware operation, bind the process to CPU 2 to reduce scheduling jitter and stabilize observation latency and the 50 Hz control period:
 
 ```bash
 sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
@@ -688,13 +682,13 @@ sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
   --onnx /path/to/policy.onnx
 ```
 
-连接后程序必须完成以下校验，之后才允许 `setMotionEnable(true)`：
+After connection, the program must complete the following verification before allowing `setMotionEnable(true)`:
 
-1. `getMotorLayout()` 返回且关节数量恰好为 12；
-2. 实际 `(limbNo, jointNo)` 顺序符合 §4.4.3 的 SDK leg-major 契约；
-3. ONNX 输入输出 shape 为 `[1,45] -> [1,12]`，tensor dtype 为 float32。
+1. `getMotorLayout()` is returned and the number of joints is exactly 12;
+2. The actual `(limbNo, jointNo)` sequence complies with the SDK leg-major contract in §4.4.3;
+3. The ONNX input and output shape is `[1,45] -> [1,12]`, and the tensor dtype is float32.
 
-本示例模型的输入输出使用 joint-major 顺序：
+The input and output of this example model use joint-major order:
 
 ```text
 FL_ABAD, FR_ABAD, RL_ABAD, RR_ABAD,
@@ -702,13 +696,9 @@ FL_HIP,  FR_HIP,  RL_HIP,  RR_HIP,
 FL_KNEE, FR_KNEE, RL_KNEE, RR_KNEE
 ```
 
-程序在构造模型输入时显式执行 `SDK leg-major -> 模型 joint-major`，解析模型输出时
-再执行 `模型 joint-major -> SDK leg-major`，并根据 `MotorLayout` 实际返回的
-`limbNo` / `jointNo` 构造每个 `MotorCtrl`。不得把示例模型顺序误认为 SDK 顺序；
-替换模型时必须同步修改和验证模型顺序、observation 定义、归一化、action scale、
-shape 与控制频率。
+When constructing model input, the program explicitly performs `SDK leg-major -> model joint-major`. When parsing model output, it performs `model joint-major -> SDK leg-major`, then constructs each `MotorCtrl` from the `limbNo` / `jointNo` values returned by `MotorLayout`. Do not mistake the example model order for the SDK order. When replacing the model, revalidate the model order, observation definition, normalization, action scale, tensor shapes, and control frequency.
 
-实机动作分两阶段验证。首先将机器狗可靠固定在安全吊架上，保持四脚完全腾空，只执行：
+Validate real-hardware motion in two stages. First, secure the robot in a safety rig with all four feet clear of the ground, and execute only:
 
 ```text
 lowlevel> stand
@@ -716,7 +706,7 @@ lowlevel> lay
 lowlevel> quit
 ```
 
-确认姿态、关节方向和急停均正常后，将机器狗放到空旷、平整、无障碍地面，再执行：
+After confirming the posture, joint directions, and emergency-stop path, place the robot on open, level, obstacle-free ground and execute:
 
 ```text
 lowlevel> stand
@@ -726,88 +716,83 @@ lowlevel> lay
 lowlevel> quit
 ```
 
-不要在四脚腾空时执行 `walk`；两个阶段都必须保持急停可触达并由专人值守。
+Never execute `walk` while the feet are suspended. Keep the emergency stop within reach and staffed during both stages.
 
-该 TensorRT 示例退出时只在处于 prepared 状态时调用 `setMotionEnable(false)`，随后
-断开 client 并关闭 SDK；不会调用 `emergencyStop()` 或
-`restoreMotionControlMode()`。这一退出语义与 §5.1 的通用姿态示例不同。
+On exit, the TensorRT example calls `setMotionEnable(false)` only if the client is in the prepared state, then disconnects the client and shuts down the SDK. It does **not** call `emergencyStop()` or `restoreMotionControlMode()`. These exit semantics intentionally differ from the general posture-control example in §5.1.
 
-在 Orin 上原生编译以及 Ubuntu 22.04 x86_64 → JetPack 6.2.1 Orin 的 NVIDIA APT
-交叉编译链路均已实机验证。交叉编译必须使用 `cross-linux-aarch64` 专用软件源，
-并将 TensorRT 整组固定在 10.3，不能直接安装仓库中的默认最新版本。完整的软件源、
-版本 pin、CMake 参数、磁盘占用和部署说明见 [`BUILD.md` §3.1](BUILD.md#31-交叉编译-tensorrt-示例的额外边界)。
+Both native compilation on Orin and cross-compilation on Ubuntu 22.04 x86_64 for JetPack 6.2.1 have been verified on hardware. Cross-compilation must use NVIDIA's `cross-linux-aarch64` repository and pin the complete TensorRT package set to 10.3; do not install the repository's latest default versions. For repository configuration, version pinning, CMake parameters, disk usage, and deployment instructions, see [`BUILD.md` §3.1](BUILD.md#31-additional-boundaries-for-cross-compiling-the-tensorrt-example).
 
 ---
 
-## 六、Python SDK
+## 6. Python SDK
 
-模块：`robot_motion_sdk`，源码 `uniubi_robot_sdk_py/`
+Module: `robot_motion_sdk`, source code `uniubi_robot_sdk_py/`
 - pybind11 binding：`uniubi_robot_sdk_py/src/MotionSdkPython.cpp`
 - Python wrapper：`uniubi_robot_sdk_py/robot_motion_sdk/__init__.py`
-- pybind11 依赖：`uniubi_robot_sdk_py/ThirdParty/pybind11/`
+- pybind11 dependency: `uniubi_robot_sdk_py/ThirdParty/pybind11/`
 
-### 6.1 当前 binding 覆盖范围（已与 C++ 接口对齐）
+### 6.1 Current binding coverage (aligned with C++ interface)
 
-**全局服务（`sdk.service` —— 对应 `IMotionSdkService` 单例）：**
+**Global service (`sdk.service` - corresponding to `IMotionSdkService` singleton): **
 
-| C++ 接口 | Python wrapper |
+| C++ interface | Python wrapper |
 |---|---|
-| `version()` | `sdk.service.version()` —— 返回 SDK 版本字符串 |
-| `setLogCallback` | `sdk.service.set_log_callback(cb)`；签名 `(level: LogLevel, msg: str) -> None` |
+| `version()` | `sdk.service.version()` —— Returns the SDK version string |
+| `setLogCallback` | `sdk.service.set_log_callback(cb)`; signature `(level: LogLevel, msg: str) -> None` |
 | `initialService` | `sdk.service.initial(file_or_none, server_name, timeout=30)` |
 | `shutdown` | `sdk.service.shutdown()` |
 
-**LowLevel client（`sdk.MotionLowLevelClient` —— 对应 `IMotionLowLevelClient`）：**
+**LowLevel client (`sdk.MotionLowLevelClient` - corresponding to `IMotionLowLevelClient`): **
 
-| C++ 接口 | Python wrapper |
+| C++ interface | Python wrapper |
 |---|---|
-| `create()` | `MotionLowLevelClient()` 无参构造（板内单设备） |
+| `create()` | `MotionLowLevelClient()` No-parameter structure (single device on the board) |
 | `connect / disconnect` | `connect(observed_hz=500, lease_ms=0)` / `disconnect()` |
-| `getState / getLastError` | `get_state()` / `get_last_error()`（返回 enum） |
+| `getState / getLastError` | `get_state()` / `get_last_error()` (return enum) |
 | `setMotionEnable` | `set_motion_enable(enable)` |
 | `emergencyStop` | `emergency_stop(timeout_ms=5000)` |
-| `createMediaBusClient` | `create_media_bus_client()`；返回 `MediaBusClient`（同一 client 复用同一实例，仅 `aarch64` 板内本地媒体帧订阅使用；Python 需先确认 `sdk.MEDIA_ENABLED == True`） |
-| `sendControl(action[, cmd])` | `send_control(action, cmd=None)`；`action` 是 `sdk.MotorCtrlAction()`，动作相关控制帧传 `sdk.LowLevelMotionCmd()` 并填写 `action/ac_name` |
-| `sendMaxTorque(action)` | `send_max_torque(action)`；使用 `action.motors[i].torque` 表示目标最大扭矩 |
-| `getLatestObservation` | `get_latest_observation(timeout_ms=5)`；返回 `LowLevelMotionObserved` 或 `None` |
-| `getSensorObservation` | `get_sensor_observation(timeout_us=5000)`；返回 `SensorObserved` 或 `None`（GPS + UWB，timeout 单位 us，默认 5000us=5ms） |
-| `getMotorLayout` | `get_motor_layout(timeout_ms=5000)`；返回 `MotorLayout` 或 `None` |
-| `restoreMotionControlMode` | `restore_motion_control_mode(timeout_ms=5000)`；返回 bool |
-| `setConnectCallback` | `set_connect_callback(cb)` 或装饰器 `@client.on_connect`；签名 `(state, error)` |
+| `createMediaBusClient` | `create_media_bus_client()`; return `MediaBusClient` (the same client reuses the same instance, only `aarch64` on-board local media frame subscription is used; Python needs to confirm `sdk.MEDIA_ENABLED == True` first) |
+| `sendControl(action[, cmd])` | `send_control(action, cmd=None)`; `action` is `sdk.MotorCtrlAction()`, and the action-related control frame is transmitted to `sdk.LowLevelMotionCmd()` and filled in `action/ac_name` |
+| `sendMaxTorque(action)` | `send_max_torque(action)`; use `action.motors[i].torque` to represent the target maximum torque |
+| `getLatestObservation` | `get_latest_observation(timeout_ms=5)`; return `LowLevelMotionObserved` or `None` |
+| `getSensorObservation` | `get_sensor_observation(timeout_us=5000)`; return `SensorObserved` or `None` (GPS + UWB, timeout unit us, default 5000us=5ms) |
+| `getMotorLayout` | `get_motor_layout(timeout_ms=5000)`; return `MotorLayout` or `None` |
+| `restoreMotionControlMode` | `restore_motion_control_mode(timeout_ms=5000)`; return bool |
+| `setConnectCallback` | `set_connect_callback(cb)` or decorator `@client.on_connect`; signature `(state, error)` |
 
-数据结构 `MotorCtrl / MotorCtrlAction / LowLevelMotionCmd / MotorObserved / MotorInfo / MotorLayout / IMUObserved / Vector3f / Quaternionf / PowerObserved / TRCStickFrame / LowLevelMotionObserved / SensorObserved / GPSFrame / GEOGPoint / UWBRawObserved` 全部 expose 为 Python 类（字段下划线命名：`limb_no`, `joint_no`, `kp_gain`, `kd_gain`, `motor_num`, `charge_voltage`, `velocity_x` 等）。
+The data structure `MotorCtrl / MotorCtrlAction / LowLevelMotionCmd / MotorObserved / MotorInfo / MotorLayout / IMUObserved / Vector3f / Quaternionf / PowerObserved / TRCStickFrame / LowLevelMotionObserved / SensorObserved / GPSFrame / GEOGPoint / UWBRawObserved` is all exposed as Python classes (fields are named underlined: `limb_no`, `joint_no`, `kp_gain`, `kd_gain`, `motor_num`, `charge_voltage`, `velocity_x`, etc.).
 
-### 6.2 ⚠ 退出死锁规避（必读）
+### 6.2 ⚠ Exit deadlock avoidance (must read)
 
-**典型死锁场景**：
-- Python 主线程持有 GIL → 解释器 atexit 阶段开始 GC
-- GC 析构 `client` 触发 C++ 析构链 → 内部 `disconnect()` → 等待 SDK 内部线程结束
-- SDK 内部线程在 RPC 调用中，需要主线程释放 GIL 才能继续
-- SDK 内部线程持有的 Python 回调对象需要析构 —— 析构也需要 GIL
-- **主线程等内部线程结束 → 内部线程等 GIL → 死锁**
+**Typical deadlock scenario**:
+- Python main thread holds GIL → interpreter atexit phase starts GC
+- GC destruction `client` triggers C++ destruction chain → internal `disconnect()` → waits for the SDK internal thread to end
+- The SDK internal thread needs the main thread to release the GIL before it can continue during the RPC call.
+- The Python callback object held by the SDK internal thread needs to be destroyed - destruction also requires GIL
+- **Main thread waits for internal thread to end → internal thread waits for GIL → deadlock**
 
-**规避做法**：
+**Avoidance**:
 
 ```python
-# ❌ 不要这样：靠 GC 析构
+# ❌ Do not rely on GC destruction
 def main():
     client = sdk.MotionLowLevelClient()
     client.connect()
     ...
-    # 函数结束，client 进入 GC —— 死锁风险
+    # Function returns and client enters GC — deadlock risk
 
-# ✓ 正确：try/finally 显式释放
+# ✓ Correct: release explicitly with try/finally
 def main():
     client = sdk.MotionLowLevelClient()
     try:
         client.connect()
         ...
     finally:
-        client.disconnect()       # 主线程持 GIL，SDK binding 内部释放 GIL，内部线程才能继续完成清理
+        client.disconnect()       # Main thread holds the GIL; the binding releases it so internal cleanup can finish
         sdk.service.shutdown()
 ```
 
-**SIGINT/SIGTERM 处理**：handler 内**只置位标志**，不做任何 IO / SDK 调用；在主循环检测标志后走 finally：
+**SIGINT/SIGTERM processing**: **only sets the flag** in the handler and does not make any IO/SDK calls; go after the main loop detects the flag and finally:
 
 ```python
 _stop = False
@@ -818,11 +803,11 @@ signal.signal(signal.SIGINT, _on_signal)
 signal.signal(signal.SIGTERM, _on_signal)
 ```
 
-完整可运行示例：`uniubi_robot_sdk_py/examples/example_lowlevel.py`
+Complete runnable example: `uniubi_robot_sdk_py/examples/example_lowlevel.py`
 
-### 6.3 Python 使用示例
+### 6.3 Python usage examples
 
-完整可运行版本：`uniubi_robot_sdk_py/examples/example_lowlevel.py`
+Complete runnable version: `uniubi_robot_sdk_py/examples/example_lowlevel.py`
 
 ```python
 import signal
@@ -904,10 +889,11 @@ def main() -> int:
         for i, mi in enumerate(layout.motors):
             print(f"  motor[{i}]: limb={mi.limb_no} joint={mi.joint_no} name={mi.name}")
 
-        # 硬件首跑安全前提：
-        # - 仅在吊架 / 急停可触达 / 空旷场地条件下运行；
-        # - 下方零目标、零增益、零前馈力矩只是通信与观测闭环模板，不是平衡站立控制器；
-        # - 真实闭环控制应从当前观测姿态初始化目标，并使用经过验证的阻尼、增益和力矩策略。
+        # Safety prerequisites for the first hardware run:
+        # - Use a safety rig, keep the emergency stop reachable, and ensure the area is clear.
+        # - The zero targets, gains, and feedforward torques below form only a communication/observation template, not a standing controller;
+        # - A real closed-loop controller must initialize its target from the current observed pose
+        #   and use validated damping, gain, and torque policies.
         action = sdk.MotorCtrlAction()
         motors = []
         for mi in layout.motors:
@@ -979,47 +965,47 @@ if __name__ == "__main__":
 
 ---
 
-## 七、注意事项
+## 7. Precautions
 
-1. **回调注册时机**：`setConnectCallback` 建议在 `connect()` 之前调，便于第一时间感知首次连接状态。
-2. **回调线程**：`ConnectCallback` 在 SDK 内部线程触发；回调里反调 SDK 接口要保证可重入。
-3. **状态查询**：`getState()` / `getLastError()` 线程安全；`getLastError()` 读后清零。
-4. **`setMotionEnable` 是异步**：返回 true 仅表示请求已受理，state 由 SDK 推进至 `kPrepared` / `kConnected`，调用方应通过 `getState()` 或 `ConnectCallback` 感知到位。
-5. **`sendControl` / `sendMaxTorque` 仅在 `kPrepared` 生效**：其它状态返 false + `kNotPrepared` / `kNotConnected`；`motorNum` 必须 ∈ `[1, kLowLevelMaxMotorNum]`，否则返 `kInvalidArgument`（不做隐式 clamp）。
-6. **`sendMaxTorque` 是低频配置接口**：提交后为异步硬件切换，默认约 10 ms 内不要继续下发位置控制帧；通过后续观测确认 `maxTorque`。
-7. **观测拉模式**：`getLatestObservation` 在指定 timeout 内获取运控观测量，未取到返回 false。
-8. **`getMotorLayout` 缓存**：首次走 RPC，命中后 SDK 本地缓存，硬件配置启动后不变。
-9. **lease 默认值**：`connect(observedHz, 0)` → 使用默认 60s；最终生效值由服务端确定，SDK 按真实值自动续约。
-10. **断连自动重连**：`kConnectionLost` 状态下 SDK 按内置退避策略自动重试，外部不需手动干预；如需主动放弃，调用 `disconnect()`。
+1. **Callback registration timing**: `setConnectCallback` It is recommended to call it before `connect()` to facilitate the first time perception of the first connection status.
+2. **Callback thread**: `ConnectCallback` is triggered in the SDK internal thread; the SDK interface in the callback must be reentrant.
+3. **Status Query**: `getState()` / `getLastError()` is thread safe; `getLastError()` is cleared after reading.
+4. **`setMotionEnable` is asynchronous**: Returning true only means that the request has been accepted, the state is advanced to `kPrepared` / `kConnected` by the SDK, and the caller should be aware of it through `getState()` or `ConnectCallback`.
+5. **`sendControl` / `sendMaxTorque` only takes effect in `kPrepared`**: other states return false + `kNotPrepared` / `kNotConnected`; `motorNum` must ∈ `[1, kLowLevelMaxMotorNum]`, otherwise return `kInvalidArgument` (no implicit clamp).
+6. **`sendMaxTorque` is a low-frequency configuration interface**: After submission, it is asynchronous hardware switching. By default, do not continue to send position control frames within about 10 ms; confirm `maxTorque` through subsequent observations.
+7. **Observation pull mode**: `getLatestObservation` obtains motion observations within the specified timeout, and returns false if not obtained.
+8. **`getMotorLayout` cache**: The first time RPC is used, the SDK local cache is hit, and the hardware configuration remains unchanged after startup.
+9. **lease default value**: `connect(observedHz, 0)` → Use the default 60s; the final effective value is determined by the server, and the SDK automatically renews according to the real value.
+10. **Automatic reconnection after disconnection**: In the `kConnectionLost` state, the SDK will automatically retry according to the built-in backoff policy, and no external manual intervention is required; if you need to give up actively, call `disconnect()`.
 
 ---
 
-## 八、调试与故障排查
+## 8. Debugging and Troubleshooting
 
-### 8.1 机器人侧最小验证（先验）
+### 8.1 Minimum verification on the robot side (a priori)
 
-调用 SDK 之前先把机器人侧的"对端"确认好，避免在客户端瞎找原因。
+Before calling the SDK, first confirm the "opposite end" on the robot side to avoid blindly searching for reasons on the client side.
 
-| 检查项 | 命令 / 方法 | 期望结果 |
+| Check items | Command/Method | Expected results |
 |---|---|---|
-| motionServer 是否在跑 | `ps -ef \| grep motionServer` | 进程存在 |
-| 共享内存权限 | `ls -la /dev/shm/ \| grep motion` | 文件存在且当前用户可读 |
-| 实时日志 | `journalctl -u motionServer -f` | 无报错刷屏 |
+| Is motionServer running | `ps -ef \| grep motionServer` | The process exists |
+| Shared memory permissions | `ls -la /dev/shm/ \| grep motion` | The file exists and is readable by the current user |
+| Real-time log | `journalctl -u motionServer -f` | Screen refresh without error |
 
-### 8.2 SDK 端常见现象排查
+### 8.2 Troubleshooting common phenomena on the SDK side
 
-| 现象 | 检查项 | 解决思路 |
+| Phenomenon | Check items | Solution ideas |
 |---|---|---|
-| `initialService` 返回 false | 日志 `errorf` 输出 | 看错误码：`kRpcConnectFailed` → DDS 域起不来（domain id 不对 / 本机环境未就绪） |
-| `create()` 返回 nullptr | SDK 是否已 `initialService` 成功 | 必须先成功初始化再 `create()` |
-| `connect()` 一直在 `kConnecting` | 1. ConnectCallback 推的 error 码<br>2. SHM 文件权限<br>3. 机器人侧 motionServer 是否在跑 | `kRpcAcquireRejected` → 控制权被别人占；`kMasterSwitchFailed` → 切换运控 master 失败（对端仍在运控） |
-| `setMotionEnable(true)` 后 state 不切 `kPrepared` | 1. `getLastError()` 取错误码<br>2. ConnectCallback 是否报 `kPrepareRejected` | 机器人侧 motor 上电流程慢（关节自检 + 校准），可能需要等几秒到几十秒 |
-| `getLatestObservation` 频繁返 false | 1. 当前 state 是不是 `kPrepared`<br>2. 观测频率（observedHz）是否设得过高、超出硬件能力 | 板内 SHM 模式应该几乎不丢；持续丢说明频率超出硬件能力或服务端异常 |
-| `sendControl` 返 false，state 显示 `kPrepared` | `getLastError()` 取值；`motorNum` 是否合法 | `kSessionExpired` → 服务端 session 失效，等自动重连；`kInvalidArgument` → action.motorNum 超出 [1, kLowLevelMaxMotorNum] |
-| `MotorObserved.error` 非 0 | 看 §4.4.2 `MotorDeviceErrno` 枚举 | `0~6`/`59`/`60`/`63` 是电机上报故障；`64+` 是 SDK / 服务端检测的状态（如 `motorControlOffline`） |
-| **静默无响应**（任何接口都 timeout） | DDS QoS 不兼容 | 客户端 / 服务端 IDL 或 Cyclone DDS 版本不一致；用 `ddsperf sanity` 做最小握手 |
+| `initialService` returns false | Log `errorf` output | See error code: `kRpcConnectFailed` → DDS domain cannot be started (domain id is incorrect/local environment is not ready) |
+| `create()` returns nullptr | Whether the SDK has `initialService` successfully | Must be successfully initialized before `create()` |
+| `connect()` has been at `kConnecting` | 1. The error code <br>2 pushed by ConnectCallback. SHM file permission <br>3. Is the motionServer on the robot side running? | `kRpcAcquireRejected` → The control right is occupied by others; `kMasterSwitchFailed` → Switch to the motion control master Failed (the peer is still operating and controlling) |
+| After `setMotionEnable(true)`, the state does not cut `kPrepared` | 1. `getLastError()` gets the error code <br>2. ConnectCallback whether to report `kPrepareRejected` | The robot side motor power-on process is slow (joint self-test + calibration), you may need to wait a few seconds to dozens of seconds |
+| `getLatestObservation` frequently returns false | 1. Is the current state `kPrepared`<br>2. Is the observed frequency (observedHz) set too high and exceeds the hardware capability | The on-board SHM mode should hardly lose; continuous loss indicates that the frequency exceeds the hardware capability or the server is abnormal |
+| `sendControl` returns false, state displays `kPrepared` | `getLastError()` value; whether `motorNum` is legal | `kSessionExpired` → The server session is invalid, waiting for automatic reconnection; `kInvalidArgument` → action.motorNum exceeds [1, kLowLevelMaxMotorNum] |
+| `MotorObserved.error` non-0 | See §4.4.2 `MotorDeviceErrno` enumeration | `0~6`/`59`/`60`/`63` is the fault reported by the motor; `64+` is the status detected by the SDK/server (such as `motorControlOffline`) |
+| **Silent no response** (timeout for any interface) | DDS QoS incompatibility | Client/server IDL or Cyclone DDS versions are inconsistent; use `ddsperf sanity` for minimum handshake |
 
-### 8.3 打开 SDK 内部日志
+### 8.3 Open SDK internal log
 
 ```cpp
 IMotionSdkService::instance()->setLogCallback([](IMotionSdkService::LogLevel lv,
@@ -1029,6 +1015,6 @@ IMotionSdkService::instance()->setLogCallback([](IMotionSdkService::LogLevel lv,
 });
 ```
 
-不注册 callback 时 SDK 默认把日志输出到 `stdout`。生产环境建议接进自家日志系统集中查看。
+When the callback is not registered, the SDK outputs the log to `stdout` by default. For production environments, it is recommended to connect to your own log system for centralized viewing.
 
 ---

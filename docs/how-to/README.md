@@ -1,46 +1,48 @@
 # How-to Guides
 
-How-to 文档面向一个明确的开发任务：先说明目标和前置条件，再给出最小步骤、成功标准和下一步项目入口。
+**English** | [简体中文](README.zh-CN.md)
 
-## 第一步：选择控制模式
+Each guide addresses a specific development task. It defines the goal and prerequisites, provides a minimal procedure, and states observable success criteria and the next project entry point.
 
-| 目标 | 控制模式 | 导读 |
+## Step 1: Choose a Control Mode
+
+| Goal | Control mode | Guide |
 |---|---|---|
-| 使用机器人内置动作能力，不单独控制每个关节 | High-level | [High-level：使用机器人内置动作](high-level-control.md) |
-| 自己训练或运行控制策略，直接控制关节位置或扭矩 | Low-level | [Low-level：自定义关节控制策略](low-level-control.md) |
+| Use built-in motion capabilities without controlling individual joints | High-level | [Use built-in robot actions](high-level-control.md) |
+| Train or run your own controller and directly command joint position or torque | Low-level | [Run a custom joint-control policy](low-level-control.md) |
 
-## 第二步：在控制模式内选择实现方式
+## Step 2: Choose an Implementation
 
-| 控制模式 | 实现方式 | 入口 |
+| Control mode | Implementation | Entry point |
 |---|---|---|
 | High-level | C++ / Python SDK | `MotionHighLevelClient` → [`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) / [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py) |
 | High-level | ROS 2 | `uniubi_motion_bridge` → [`uniubi_robot_msgs`](https://github.com/uniubi-ai/uniubi_robot_msgs) → [`uniubi_ros2`](https://github.com/uniubi-ai/uniubi_ros2) |
 | Low-level | C++ / Python SDK | `MotionLowLevelClient` → [`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) / [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py) |
 
-关节级 Low-level 控制统一使用 SDK；ROS 2 Motion Bridge 不提供等价的关节级控制入口。
+ROS 2 Motion Bridge does not provide an equivalent joint-level Low-level interface.
 
-## 配套导读
+## Supporting Guides
 
-| 任务 | 导读 | 适用阶段 |
+| Task | Guide | When to use it |
 |---|---|---|
-| 确认设备 IP、端口和大脑访问方式 | [设备网络与大脑访问](../core-concepts/device-network.md) | 连接真实机器人之前 |
-| 准备构建和安装环境 | [构建、安装和交叉编译](../BUILD.md) | 进入 SDK 或 ROS 2 之前 |
-| SDK 通用准备 | [SDK 通用准备](sdk-first-use.md) | 已选 High-level 或 Low-level，准备使用 SDK |
-| 编写 ROS 2 业务节点 | [启动并验证 Motion bridge](ros2-motion-bridge.md) | 已选择 High-level + ROS 2 |
-| 训练、导出和回放策略 | [训练与策略回放](train-export-replay.md) | Low-level 策略开发 |
-| 没有真机，先验证 SDK 链路 | [Mock / Sim2Sim](mock-sim2sim.md) | SDK 链路验证 |
+| Confirm device addresses, exposed ports, and compute-module access | [Device network and compute-module access](../core-concepts/device-network.md) | Before connecting to a real robot |
+| Prepare the build environment | [Build, installation, and cross-compilation](../BUILD.md) | Before SDK or ROS 2 development |
+| Prepare an SDK project | [SDK first use](sdk-first-use.md) | After selecting High-level or Low-level SDK development |
+| Write a ROS 2 application node | [Start and validate Motion Bridge](ros2-motion-bridge.md) | After selecting High-level + ROS 2 |
+| Train, export, and replay a policy | [Policy training and replay](train-export-replay.md) | During Low-level policy development |
+| Validate the SDK path without hardware | [Mock / Sim2Sim](mock-sim2sim.md) | Before real-robot SDK testing |
 
-## How-to 的统一写法
+## Guide Structure
 
-每篇导读按以下顺序组织：
+Each guide should contain:
 
-1. **目标和范围**：说明解决什么问题，不解决什么问题。
-2. **前置条件**：系统、架构、依赖仓库、网络和权限。
-3. **最小步骤**：可以直接复制执行的命令或操作。
-4. **预期结果**：日志、topic、文件或状态应该是什么。
-5. **成功标准**：明确什么算完成。
-6. **安全与清理**：停止动作、释放控制权、清理进程或构建目录。
-7. **失败排查**：按现象映射到环境、版本、QoS、设备 ID 或 ABI。
-8. **继续阅读**：链接到 Core Concepts、API Reference 和对应仓库 README。
+1. **Goal and scope**
+2. **Prerequisites**
+3. **Minimal procedure**
+4. **Expected results**
+5. **Success criteria**
+6. **Safety and cleanup**
+7. **Troubleshooting**
+8. **Next steps**
 
-How-to 的每一步都应绑定一个可观察的验证结果，避免只写“执行命令”而没有判断标准。
+Every procedure should include an observable result so that developers can distinguish successful execution from a command that merely returned.

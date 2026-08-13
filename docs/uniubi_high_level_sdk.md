@@ -1,49 +1,51 @@
-# 宇泛智能机器狗高级控制 SDK 接口手册
+# Uniubi Robot High-level SDK API Reference
 
-> SDK 入口类：`uniubi::RobotSdk::IMotionHighLevelClient`
-> C++ 头文件：`Include/MotionHighLevelClient.h`
+**English** | [简体中文](uniubi_high_level_sdk.zh-CN.md)
+
+> SDK entry class: `uniubi::RobotSdk::IMotionHighLevelClient`
+> C++ header file: `Include/MotionHighLevelClient.h`
 
 ---
 
-## 目录
+## Table of contents
 
-- [一、SDK 概述](#一sdk-概述)
+- [1. SDK overview](#1-sdk-overview)
 - [Quick Start](#quick-start)
-- [开发工程模板](#开发工程模板)
-- [二、枚举定义](#二枚举定义)
-- [三、回调定义](#三回调定义)
-  - [3.3 回调汇总](#33-回调汇总)
-- [四、接口定义](#四接口定义)
-  - [4.1 全局初始化与实例创建](#41-全局初始化与实例创建)
-  - [4.2 生命周期与控制权](#42-生命周期与控制权)
-  - [4.3 运控动作](#43-运控动作)
-  - [4.4 音频播放器](#44-音频播放器)
-  - [4.5 系统与设备](#45-系统与设备)
-  - [4.6 音视频通道](#46-音视频通道imediabusclient)
-  - [4.7 观测量数据面](#47-观测量数据面)
-- [五、C++ 使用示例](#五c-使用示例)
-- [六、Python SDK](#六python-sdk)
-  - [6.1 binding 覆盖范围](#61-当前-binding-覆盖范围已与-c-接口对齐)
-  - [6.2 退出死锁规避（必读）](#62--退出死锁规避必读)
-  - [6.3 Python 使用示例](#63-python-使用示例)
-- [七、注意事项](#七注意事项)
-- [八、调试与故障排查](#八调试与故障排查)
+- [Development project template](#development-project-template)
+- [2. Enumeration definitions](#2-enumeration-definitions)
+- [3. Callback definitions](#3-callback-definitions)
+- [3.3 Callback summary](#33-callback-summary)
+- [4. Interface reference](#4-interface-reference)
+- [4.1 Global initialization and instance creation](#41-global-initialization-and-instance-creation)
+- [4.2 Lifecycle and control ownership](#42-lifecycle-and-control-ownership)
+- [4.3 Motion-control actions](#43-motion-control-actions)
+- [4.4 Audio player](#44-audio-player)
+- [4.5 System and device](#45-system-and-device)
+- [4.6 Audio and video channels](#46-audio-and-video-channels-imediabusclient)
+- [4.7 Observation data path](#47-observation-data-path)
+- [5. C++ usage examples](#5-c-usage-examples)
+- [6. Python SDK](#6-python-sdk)
+- [6.1 Binding coverage](#61-current-binding-coverage-aligned-with-the-c-interface)
+- [6.2 Exit deadlock avoidance (must read)](#62-exit-deadlock-avoidance-must-read)
+- [6.3 Python usage examples](#63-python-usage-examples)
+- [7. Important considerations](#7-important-considerations)
+- [8. Debugging and troubleshooting](#8-debugging-and-troubleshooting)
 
 ---
 
-## 一、SDK 概述
+## 1. SDK overview
 
-- 只有控制面，状态/数据查询走 query 接口；事件订阅通过 `EventCallback`
-- 控制权由 `startControl` 显式获取，SDK 内部周期续约维持
-- 直到 `releaseControl` / `disconnect` 主动释放，或服务端 session 超时被动失效
-- 协议字段编码：UTF-8 JSON 字符串
-- 支持直接部署在机器人大脑主板上开发自有应用（板内模式），也支持外部主机远端接入
+- Control commands use the control plane, status and data are obtained through query interfaces, and events are delivered through `EventCallback`.
+- Control ownership is acquired explicitly with `startControl` and maintained by periodic SDK lease renewal.
+- Ownership remains active until `releaseControl()` or `disconnect()` releases it, or until the server session expires.
+- Protocol field encoding: UTF-8 JSON string
+- Supports applications deployed directly on the robot's compute board (onboard mode) and remote access from external hosts.
 
 ---
 
 ## Quick Start
 
-最小运行流程（完整版本见 §五）：
+Minimal runnable flow (see §5 for the complete example):
 
 **C++**
 
@@ -58,12 +60,12 @@ using HLState = IMotionHighLevelClient::HighLevelState;
 
 int main() {
     auto svc = IMotionSdkService::instance();
-    svc->setNetworkInterface("eth0");        // 默认 eth0；如机器没有 eth0 必须改成实际网卡（板内可省略）
+    svc->setNetworkInterface("eth0");        // Default eth0; use the actual interface if absent (optional onboard)
     svc->initialService(nullptr, "myApp");
 
-    auto client = IMotionHighLevelClient::create();  // 板内单设备
-    client->connect();                              // 进入高级模式
-    client->startControl(/*timeout=*/10000);        // 请求控制权
+    auto client = IMotionHighLevelClient::create();  // Onboard single-device mode
+    client->connect();                              // Enter High-level mode
+    client->startControl(/*timeout=*/10000);        // Request control ownership
     while (client->getState() != static_cast<int32_t>(HLState::kControlled))
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
@@ -84,9 +86,9 @@ int main() {
 import time
 import robot_motion_sdk as sdk
 
-sdk.service.set_network_interface("eth0")       # 默认 eth0；机器无 eth0 时改成实际网卡
+sdk.service.set_network_interface("eth0")       # Default eth0; use the actual interface if absent
 sdk.service.initial(None, "myApp")
-client = sdk.MotionHighLevelClient()             # 板内单设备
+client = sdk.MotionHighLevelClient()             # Onboard single-device mode
 try:
     client.connect()
     client.start_control(timeout_ms=10000)
@@ -102,35 +104,35 @@ finally:
     sdk.service.shutdown()
 ```
 
-> Python 退出必须走 `try/finally`，原因详见 [§6.2](#62--退出死锁规避必读)。
+> Python must exit via `try/finally`. For details, see [§6.2](#62-exit-deadlock-avoidance-must-read).
 
 ---
 
-## 开发工程模板
+## Development project template
 
-最小可起跑的项目模板，开发者照着复制 + 写自己的应用代码即可编译运行。
+This minimal project template can be copied as a starting point for an application.
 
-> 完整构建说明（含交叉编译 / wheel 打包 / Troubleshooting）参见 [`BUILD.md`](BUILD.md)。
+> For complete build instructions (including cross-compilation/wheel packaging/Troubleshooting), see [`BUILD.md`](BUILD.md).
 
-### 依赖
+### Dependencies
 
-| 依赖 | 来源 | 说明 |
+| Dependencies | Source | Description |
 |---|---|---|
-| `librobotMotionSdk.so` | SDK 仓库 `Lib/<arch>/` | 预编译运行库，按目标架构选 |
-| 公开头 | SDK 仓库 `Include/` | `MotionSdkService.h` / `MotionHighLevelClient.h` / `MotionSdkProtocol.h` |
-| 编译器 | g++ ≥ 9（支持 C++14） | |
-| 运行时基础库 | 目标机预装（标准动态库路径） | 不需要客户额外装 Cyclone DDS —— 已链接进 SDK .so |
+| `librobotMotionSdk.so` | SDK package `Lib/<arch>/` | Precompiled runtime library selected for the target architecture |
+| Public headers | SDK package `Include/` | `MotionSdkService.h` / `MotionHighLevelClient.h` / `MotionSdkProtocol.h` |
+| Compiler | g++ ≥ 9 (supports C++14) | |
+| Runtime basic library | Pre-installed on target machine (standard dynamic library path) | No need for customers to install Cyclone DDS additionally - already linked into SDK .so |
 
-### 工程目录
+### Project directory
 
 ```
 my_robot_app/
 ├── CMakeLists.txt
 └── src/
-    └── main.cpp             ← 用户应用代码（参考 §五 完整示例）
+    └── main.cpp             ← Application code (see the complete example in §5)
 ```
 
-### CMakeLists.txt 样例
+### CMakeLists.txt sample
 
 ```cmake
 cmake_minimum_required(VERSION 3.16)
@@ -139,10 +141,10 @@ project(my_robot_app CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 1) 指定 SDK 安装前缀（默认 /opt/uniubi/）
+# 1) Set the SDK installation prefix (default: /opt/uniubi/)
 set(UNIUBI_SDK_ROOT "/path/to/uniubi_sdk" CACHE PATH "Uniubi SDK install root")
 
-# 2) 按目标架构自动选 Lib 子目录（x86_64 / aarch64 / i386）
+# 2) Select the Lib subdirectory for the target architecture (x86_64 / aarch64 / i386)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
     set(ARCH_DIR "x86_64")
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
@@ -151,7 +153,7 @@ else()
     set(ARCH_DIR "i386")
 endif()
 
-# 3) 定位 SDK .so 与公开头
+# 3) Locate the SDK shared library and public headers
 find_library(SDK_LIB robotMotionSdk
              PATHS ${UNIUBI_SDK_ROOT}/Lib/${ARCH_DIR}
              NO_DEFAULT_PATH REQUIRED)
@@ -161,392 +163,392 @@ target_include_directories(my_robot_app PRIVATE ${UNIUBI_SDK_ROOT}/Include)
 target_link_libraries(my_robot_app PRIVATE ${SDK_LIB} pthread)
 ```
 
-### 构建 + 运行
+### Build + Run
 
 ```bash
 mkdir -p build && cd build
 cmake -DUNIUBI_SDK_ROOT=/path/to/uniubi_sdk ..
 make -j$(nproc)
 
-# 运行前确保 SDK .so 在动态库路径
+# Ensure the SDK shared library is on the runtime library path
 export LD_LIBRARY_PATH=/path/to/uniubi_sdk/Lib/$(uname -m):$LD_LIBRARY_PATH
-sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./my_robot_app       # 默认网卡 eth0
-sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./my_robot_app wlan0 # 用 wlan0 网卡（仅远端模式）
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./my_robot_app       # Default interface: eth0
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./my_robot_app wlan0 # Use wlan0 (remote mode only)
 ```
 
-当前设备运行 SDK 程序需要 root 权限。构建不需要 `sudo`；运行时显式传入 `LD_LIBRARY_PATH`，避免 `sudo` 清理当前用户环境后找不到 SDK 动态库。
+The current device runtime requires root privileges for SDK applications. Building does not require `sudo`. Pass `LD_LIBRARY_PATH` explicitly at runtime because `sudo` may sanitize the current user's environment and otherwise hide the SDK shared library.
 
 ---
 
-## 二、枚举定义
+## 2. Enumeration definitions
 
-### 2.1 `HighLevelState` —— 客户端状态
+### 2.1 `HighLevelState` — Client state
 
-| 值 | 含义 |
+| Value | Meaning |
 |---|---|
-| `kDisconnected` (0) | 初始 / `disconnect()` 后 |
-| `kConnected` (1) | SDK 就绪但未持有控制权 |
-| `kControlled` (2) | 已通过 `startControl()` 取得控制权，可下发动作 |
+| `kDisconnected` (0) | Initial state or state after `disconnect()` |
+| `kConnected` (1) | SDK connected without control ownership |
+| `kControlled` (2) | Control acquired through `startControl()`; actions may be issued |
 
-### 2.2 `HighLevelError` —— 失败原因
+### 2.2 `HighLevelError` — Failure reason
 
-| 值 | 含义 |
+| Value | Meaning |
 |---|---|
-| `kNone` | 无错 |
-| `kRpcConnectFailed` | SDK 未初始化 / 通信通道未就绪 |
-| `kRpcAcquireRejected` | `startControl` 被拒（被他人占 / 整体超时） |
-| `kRpcCallFailed` | RPC 调用失败（含超时 / 通道断 / 编解码错 / id 不匹配等）|
-| `kSessionExpired` | lease 到期，服务端回收控制权 |
-| `kSessionRevoked` | 被另一方接管 / sessionId 失配 |
-| `kNotConnected` | 未 connect 即调需要连接的接口 |
-| `kNotControlled` | 未持权即调动作类接口 |
-| `kDataNotUpdate` | 观测量数据面未就绪（如 `getPowerInfo` 新鲜度窗口内无数据） |
-| `kActionRejected` | RPC 动作被服务端拒 |
-| `kInvalidParam` | 入参非法（如动作参数 JSON 解析失败） |
+| `kNone` | No error |
+| `kRpcConnectFailed` | SDK not initialized or communication channel not ready |
+| `kRpcAcquireRejected` | `startControl` rejected because control is held elsewhere or the overall timeout elapsed |
+| `kRpcCallFailed` | RPC failure, including timeout, channel disconnection, codec error, or ID mismatch |
+| `kSessionExpired` | Lease expired and the server reclaimed control |
+| `kSessionRevoked` | Control was taken over by another party or the session ID did not match |
+| `kNotConnected` | The called interface requires a connected client |
+| `kNotControlled` | The called action interface requires control ownership |
+| `kDataNotUpdate` | Observation data is not ready, for example because `getPowerInfo` found no data in the freshness window |
+| `kActionRejected` | RPC action rejected by server |
+| `kInvalidParam` | Illegal input parameter (such as action parameter JSON parsing failed) |
 
 ---
 
-## 三、回调定义
+## 3. Callback definitions
 
-### 3.1 `ConnectCallback` —— 控制权变化
+### 3.1 `ConnectCallback` — Control-state changes
 
 ```cpp
 using ConnectCallback = std::function<void(HighLevelState state, HighLevelError error)>;
 ```
 
-回调由 SDK 内部线程触发。典型时序：
+Callbacks run on SDK internal threads. Typical events are:
 
-| 触发场景 | state | error |
+| Trigger | State | Error |
 |---|---|---|
-| `startControl` 成功 | `kControlled` | `kNone` |
-| 自己 `releaseControl` 完成 | `kConnected` | `kNone` |
-| `startControl` 整体超时 | `kConnected` | `kRpcAcquireRejected` |
-| lease 到期 | `kConnected` | `kSessionExpired` |
-| 被另一方接管 | `kConnected` | `kSessionRevoked` |
+| `startControl` succeeds | `kControlled` | `kNone` |
+| The client completes `releaseControl` | `kConnected` | `kNone` |
+| Overall `startControl` timeout | `kConnected` | `kRpcAcquireRejected` |
+| Lease expires | `kConnected` | `kSessionExpired` |
+| Another party takes control | `kConnected` | `kSessionRevoked` |
 
-### 3.2 `EventCallback` —— 业务事件
+### 3.2 `EventCallback` — Application events
 
 ```cpp
 using EventCallback = std::function<void(const std::string& topic, const std::string& payloadJson)>;
 ```
 
-事件派发线程触发。`connect()` 时 SDK 内部订阅以下事件：
+The event-dispatch thread invokes this callback. After `connect()`, the SDK subscribes internally to:
 
-| topic | 用途 |
+| topic | purpose |
 |---|---|
-| `statistics/play_list` | 音频播放状态变化 |
-| `statistics/device_status` | 设备状态变化（电池/网络） |
+| `statistics/play_list` | Audio playback status changes |
+| `statistics/device_status` | Device status changes (battery/network) |
 
-> 控制权变化由 SDK 内部消费并体现在 `HighLevelState`，**不通过此回调上抛**。
+> The SDK consumes control-ownership changes internally and reflects them in `HighLevelState`; they are **not delivered through this callback**.
 
-### 3.3 回调汇总
+### 3.3 Callback summary
 
-SDK 暴露的回调，注册时机和用途见下表。
+The table below summarizes the SDK callbacks, their purpose, and their registration interfaces.
 
-| 回调 | 用途 | 注册接口 |
+| Callback | Purpose | Registration interface |
 |---|---|---|
-| `LogCallback` | 接收 SDK 内部日志输出（调试 / 运维可重定向到自家日志框架） | `IMotionSdkService::setLogCallback` |
-| `DeviceDiscover` | 多设备发现期间，每收到一台机器人响应触发一次（上抛 SN + 设备详情 JSON） | `IMotionSdkService::setDiscoverCallback` |
-| `ConnectCallback` | 控制权 / 连接状态变化（建联 / 失权 / 重连等），驱动调用方状态机 | `IMotionHighLevelClient::setConnectCallback` |
-| `EventCallback` | 服务端主动推送的业务事件（音频状态、设备状态等） | `IMotionHighLevelClient::setEventCallback` |
-| `MotionObservedCallback` | 运控观测量 `LowLevelMotionObserved`（含 power），需先 `setObservedEnable` 开启 | `IMotionHighLevelClient::setMotionObservedCallback` |
-| `SensorObservedCallback` | 完整传感器观测 `SensorObserved`（GPS / UWB / Walk 里程计），需先开启 `sensorEnable` | `IMotionHighLevelClient::setSensorObservedCallback` |
-| `RawAudioFrameCallback` | 接收音频原始帧 `AudioFrame`，回调参数 `(channel, frame)` | `IMediaBusClient::startRawAudioFrame` |
-| `RawVideoFrameCallback` | 接收视频原始帧 `VideoFrame`，回调参数 `(channel, frame)` | `IMediaBusClient::startRawVideoFrame` |
-| `EncodedVideoFrameCallback` | 接收视频编码帧 `EncodedVideoFrame`，回调参数 `(channel, frame)` | `IMediaBusClient::startEncodedVideoFrame` |
+| `LogCallback` | Receive SDK logs for redirection into the application's logging framework | `IMotionSdkService::setLogCallback` |
+| `DeviceDiscover` | Receive one callback per robot response during multi-device discovery, with the SN and device-details JSON | `IMotionSdkService::setDiscoverCallback` |
+| `ConnectCallback` | Receive control-ownership and connection-state changes to drive the caller's state machine | `IMotionHighLevelClient::setConnectCallback` |
+| `EventCallback` | Business events actively pushed by the server (audio status, device status, etc.) | `IMotionHighLevelClient::setEventCallback` |
+| `MotionObservedCallback` | Receive `LowLevelMotionObserved` motion observations, including power; enable them first with `setObservedEnable` | `IMotionHighLevelClient::setMotionObservedCallback` |
+| `SensorObservedCallback` | Receive complete `SensorObserved` data (GPS / UWB / Walk odometry); enable `sensorEnable` first | `IMotionHighLevelClient::setSensorObservedCallback` |
+| `RawAudioFrameCallback` | Receive raw `AudioFrame` data as `(channel, frame)` | `IMediaBusClient::startRawAudioFrame` |
+| `RawVideoFrameCallback` | Receive raw `VideoFrame` data as `(channel, frame)` | `IMediaBusClient::startRawVideoFrame` |
+| `EncodedVideoFrameCallback` | Receive encoded `EncodedVideoFrame` data as `(channel, frame)` | `IMediaBusClient::startEncodedVideoFrame` |
 
-#### 回调内严禁阻塞
+#### Blocking is strictly prohibited within callbacks
 
-**所有回调函数体内严禁执行任何阻塞操作 —— 回调由 SDK / 媒体数据线程触发，阻塞会直接把内部线程卡住**：
+**Never block inside a callback. Callbacks run on SDK or media threads, so blocking also blocks the internal thread:**
 
-- ❌ 不能 `sleep` / 等待 mutex / 等待 condvar
-- ❌ 不能调任何同步 RPC 接口（`startControl` / `startAction` / `queryXxx` / 等）
-- ❌ 不能做磁盘 IO / 网络 IO / 大块内存分配
-- ❌ 不能 `disconnect()` / `shutdown()` 本对象
-- ❌ 媒体帧回调里不要直接长时间编码/转码/落盘；需要保存帧时建议把必要元数据和数据引用/拷贝投递给业务线程处理
+- ❌ Do not `sleep`, wait for a mutex, or wait on a condition variable.
+- ❌ Do not call synchronous RPC interfaces such as `startControl`, `startAction`, or `queryXxx`.
+- ❌ Do not perform disk I/O, network I/O, or large allocations.
+- ❌ Do not call `disconnect()` or `shutdown()` on the object.
+- ❌ Do not perform lengthy encoding, transcoding, or frame output in a media callback. Hand the required metadata and a data reference or copy to an application worker thread.
 
-**视频原始帧访问必须按 plane + stride**：`VideoFrame` 的物理/虚拟内存布局由平台决定，特别是 NVIDIA 平台可能多平面且不连续。不要把 `frame.data()` 当作整张图的连续内存直接按 `width * height * bpp` 读取；应根据 `VideoFrameInfo.pixelFormat` 判断平面数量，再按 `virAddr[plane] + row * stride[plane]` 逐行访问有效宽度。
+**Access raw video by plane and stride.** The platform determines the physical and virtual layout of `VideoFrame`; NVIDIA platforms in particular may use non-contiguous planes. Do not treat `frame.data()` as one contiguous `width * height * bpp` image. Determine the plane count from `VideoFrameInfo.pixelFormat`, then use `virAddr[plane] + row * stride[plane]` to read the valid width row by row.
 
-内部线程被卡死后果是连锁的：事件投递停摆、状态机不再推进、心跳超时被服务端踢线、重连流程也无法启动。
+Blocking an internal thread can stop event delivery, prevent state-machine progress, cause heartbeat expiry and server-side disconnection, and prevent reconnection.
 
-**正确做法**：在回调里只做"轻量记录 / 通知"：
+**Correct approach:** perform only lightweight state recording or notification in the callback:
 
 ```cpp
 client->setConnectCallback([&](HighLevelState s, HighLevelError e) {
-    /// ✓ 写一个 atomic 标志
+    /// ✓ Update an atomic flag
     mLastState.store(s);
-    /// ✓ post 一个信号量 / notify_one 一个 condvar 给业务线程
+    /// ✓ Post a semaphore or notify an application-thread condition variable
     mStateChangedCv.notify_one();
-    /// ✓ enqueue 一个事件到业务队列，让 worker 线程处理
+    /// ✓ Enqueue an event for a worker thread
     mEventQueue.push({s, e});
 });
 ```
 
-业务线程感知到信号后再做实际处理（包括反调 SDK 接口、IO、计算等）。
+The application thread performs the actual SDK calls, I/O, and computation after receiving the notification.
 
 ---
 
-## 四、接口定义
+## 4. Interface reference
 
-### 4.1 全局初始化与实例创建
+### 4.1 Global initialization and instance creation
 
-SDK 的 RPC 控制面与事件订阅基于 [Eclipse Cyclone DDS](https://cyclonedds.io/) 实现。DDS 拓扑（domain、QoS profile、客户端 / 事件订阅声明）由 SDK 内部构造，**调用方无需准备 JSON 配置或 XML 文件**。开发者只需通过下面几个 setter 在 `initialService` 之前传入必要参数。
+The SDK implements its RPC control plane and event subscriptions with [Eclipse Cyclone DDS](https://cyclonedds.io/). It constructs the DDS topology internally, including the domain, QoS profile, and client/event subscriptions, so **callers do not need to provide JSON configuration or XML files**. Set the required parameters through the following methods before `initialService()`.
 
-#### 4.1.1 全局初始化
+#### 4.1.1 Global initialization
 
 ```cpp
 bool IMotionSdkService::initialService(const char* file, const char* server, uint32_t timeout = 30);
 ```
 
-| 参数 | 类型 | 说明 |
+| Parameters | Type | Description |
 |---|---|---|
-| `file` | `const char*` | 预留：JSON 配置文件路径。当前 SDK 默认 DDS 配置已内置，传 `nullptr` 即可 |
-| `server` | `const char*` | 应用标识，用于 RPC / 日志区分多实例（如 `"myAppHighLevel"`），调用方自定义 |
-| `timeout` | `uint32_t` | 等待系统环境就绪的超时（**秒**，默认 30）。板内模式下若 SDK 比系统环境先起，可能需要等待；超时未就绪返回 `false` |
+| `file` | `const char*` | Reserved JSON configuration path. The SDK includes its default DDS configuration; pass `nullptr` |
+| `server` | `const char*` | Application identifier, used for RPC/log to distinguish multiple instances (such as `"myAppHighLevel"`), customized by the caller |
+| `timeout` | `uint32_t` | Timeout while waiting for the system environment (**seconds**, default 30). Onboard startup may require this wait if the SDK starts before the system services; returns `false` if readiness is not reached in time |
 
-进程级一次性初始化，必须在创建任何 client 之前调用。返回 `true` 表示初始化成功。
+This process-wide initialization must run once before creating any client. A return value of `true` indicates success.
 
 ```cpp
-/// SDK 版本字符串，格式："<semver> (commit <git-short-sha>)"，如 "1.0.0 (commit <sha>)"
-/// 任意时刻可调，无需先 initialService；可用于运行时日志 / bug 上报 / 兼容性检查
+/// SDK version string: "<semver> (commit <git-short-sha>)", e.g. "1.0.0 (commit <sha>)"
+/// Available at any time without initialService; use it in runtime logs, bug reports, and compatibility checks
 static const char* version();
 ```
 
-> **版本兼容性**：SDK 与机器人侧约定走 OMG XTYPES `@appendable`（IDL 字段可追加，向后兼容）。若 SDK 与机器人版本严重不一致，典型现象是 RPC 调用**静默无响应**（DDS 报 `RequestedIncompatibleQos` 但不抛错）。出现这种现象时把 `version()` 输出贴到故障报告里。
+> **Version compatibility:** The SDK and robot runtime use OMG XTypes `@appendable`, allowing backward-compatible IDL field additions. A severe version mismatch commonly appears as a silent RPC with no response: DDS reports `RequestedIncompatibleQos` without throwing an exception. Include the `version()` output in the fault report when this occurs.
 
-#### 4.1.2 setter / 查询接口（必须在 `initialService` 之前调用）
+#### 4.1.2 Setters and queries (call before `initialService`)
 
 ```cpp
-/// 注册日志回调
+/// Register the log callback
 void setLogCallback(LogCallback cb);
 
-/// 多设备场景下指定 SDK 使用的网络接口（如 "eth0"、"wlan0"）
-/// 板内单设备模式忽略；远端模式不指定时由 Cyclone DDS 自动选择
+/// Select the SDK network interface in multi-device mode (e.g. "eth0" or "wlan0")
+/// Ignored in onboard single-device mode; Cyclone DDS selects automatically if unset remotely
 void setNetworkInterface(const char* iface);
 
-/// 多设备场景下注册设备发现回调
-/// cb(sn, infoJson) —— infoJson 是设备详情 JSON 字符串，典型字段见下方
+/// Register the device-discovery callback for multi-device mode
+/// cb(sn, infoJson): infoJson is a device-details JSON string; typical fields are listed below
 void setDiscoverCallback(DeviceDiscover cb);
 
-/// 查询当前部署是否多设备
-///   板内（SDK 与机器人同机）→ false
-///   远端主机 / 多机器人      → true
+/// Return whether the current deployment is multi-device
+///   Onboard (SDK and robot on the same machine) -> false
+///   Remote host / multiple robots               -> true
 bool isMultiDevice() const;
 
-/// 主动发起一次设备发现（非阻塞）
-///   - 当前已有发现窗口未过期 → 延长窗口到至少 timeoutMs
-///   - 窗口已过期            → 开新窗口
-/// 期间收到的每条机器人响应通过 setDiscoverCallback 注册的回调上抛
+/// Start one non-blocking device-discovery window
+///   - If a discovery window is active, extend it to at least timeoutMs
+///   - If the previous window expired, open a new one
+/// Each robot response is delivered through the callback registered by setDiscoverCallback
 bool discoverDevices(uint32_t timeoutMs = 10000);
 ```
 
-##### `setDiscoverCallback` 回调参数 `info` 的 schema
+##### `setDiscoverCallback` callback parameter `info` schema
 
-`info` 是 JSON 字符串，调用方自行 `parse`。典型字段：
+`info` is a JSON string that the caller parses. Typical fields are:
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `version` | string | 整机软件版本 |
-| `brainVersion` | string | 大脑（高层算法）版本 |
-| `deviceCP` | string | 主控芯片标识 |
-| `deviceModel` | string | 设备型号 |
-| `productDate` | string | 出厂日期 |
-| `network` | object | 网络状态（同 `querySystemStatus.network`，含 `ether` / `hotspot` / `mobile` / `wlan` 子对象） |
+| `version` | string | Robot software version |
+| `brainVersion` | string | High-level algorithm version |
+| `deviceCP` | string | Main control chip identification |
+| `deviceModel` | string | Device model |
+| `productDate` | string | Production date |
+| `network` | object | Network status (same as `querySystemStatus.network`, including `ether` / `hotspot` / `mobile` / `wlan` sub-objects) |
 
-> 设备版本演进可能新增字段；客户端遇未知字段宽容透传（不解析也不报错）。完整 `network` 子结构参见 [§4.5.1 querySystemStatus](#451-querysystemstatus-出参字段)。
+> New fields may be added as device software evolves. Clients must tolerate unknown fields without treating them as errors. See [§4.5.1 `querySystemStatus`](#451-querysystemstatus-parameter-field) for the complete `network` structure.
 
-##### 关于 `setNetworkInterface`
+##### About `setNetworkInterface`
 
-远端模式下 SDK 在 `/tmp/motion_sdk_host_<pid>.xml` 自动渲染 Cyclone DDS QoS profile（`shutdown` 时清理）。该 profile 决定 DDS 走哪张网卡：
+In remote mode, the SDK generates a Cyclone DDS QoS profile at `/tmp/motion_sdk_host_<pid>.xml` and removes it during `shutdown()`. This profile selects the network interface used by DDS:
 
-- **默认值** `"eth0"` —— 不调 `setNetworkInterface` 时 SDK 用 eth0 渲染 profile。`<NetworkInterface name="eth0" priority="3" multicast="default" presence_required="true" />`。`presence_required="true"` 表示该网卡若不存在 SDK 启动直接失败（早期暴露问题）
-- **调** `setNetworkInterface("wlan0")` 等 → 覆盖默认值，按你指定的网卡名渲染
-- 主机如果没有 `eth0`（比如笔记本只有 `wlan0` / `enp3s0`），**必须显式 setNetworkInterface 否则起不来**
+- **Default:** without `setNetworkInterface`, the generated profile uses `eth0`: `<NetworkInterface name="eth0" priority="3" multicast="default" presence_required="true" />`. With `presence_required="true"`, SDK startup fails immediately if that interface does not exist, exposing configuration problems early.
+- Calling `setNetworkInterface("wlan0")`, for example, overrides the default and generates the profile for that interface.
+- If the host has no `eth0`, such as a laptop with only `wlan0` or `enp3s0`, **call `setNetworkInterface` explicitly or startup will fail**.
 
-##### 如何查询本机可用网卡
+##### How to query the available network cards of this machine
 
-在跑 SDK 的主机上选合适的网卡名（必须是**实际连接到机器人所在网段**的那个）：
+Select the appropriate network card name on the host running the SDK (must be the one actually connected to the network segment where the robot is located):
 
 ```bash
-# 方法 1：推荐，列出所有 interface 名 + 状态
+# Method 1 (recommended): list all interface names and states
 ip -br link
 #  lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
 #  eth0             UP             aa:bb:cc:dd:ee:ff <BROADCAST,MULTICAST,UP>
 #  wlan0            UP             aa:bb:cc:dd:ee:01 <BROADCAST,MULTICAST,UP>
 
-# 方法 2：看 IP 地址 + 路由，确认哪个网卡能到机器人
+# Method 2: inspect addresses and routes to identify the robot-facing interface
 ip -br addr
 ip route
 
-# 方法 3：旧系统兼容
+# Method 3: compatibility with older systems
 ifconfig -s
 
-# 方法 4：内核侧文件枚举
+# Method 4: enumerate kernel network devices
 ls /sys/class/net/
 ```
 
-挑选规则：
-1. 状态必须是 `UP`
-2. 必须有 IP 且与机器人在同一 LAN（或路由可达）
-3. 推荐用有线网卡（`eth*` / `enp*`）；wifi（`wlan*`）多播稳定性差，且漫游时 DDS discovery 可能丢
-4. **不能用** `lo`（回环）—— 除非 SDK 与机器人同机部署（那个场景属于板内模式，用不到 setNetworkInterface）
+Selection criteria:
+1. The status must be `UP`
+2. Must have an IP and be in the same LAN as the robot (or the route is reachable)
+3. Prefer a wired interface (`eth*` / `enp*`). Wi-Fi (`wlan*`) multicast may be less stable, and DDS discovery can be lost during roaming.
+4. **Do not use** `lo` (loopback), except when the SDK and robot runtime share one machine; that is onboard mode and does not require `setNetworkInterface`.
 
-把挑出的名字直接传给 `setNetworkInterface("eth0")` 即可。
+Just pass the selected name directly to `setNetworkInterface("eth0")`.
 
-##### 多设备场景下完整流程
+##### Complete process in multi-device scenario
 
 ```cpp
 auto svc = IMotionSdkService::instance();
 
-/// 1. 在 initialService 之前注册回调 + 网卡（必须的顺序）
+/// 1. Register callbacks and select the interface before initialService (required order)
 svc->setLogCallback(...);
 svc->setNetworkInterface("eth0");
 svc->setDiscoverCallback([](const std::string& sn, const std::string& info) {
-    /// 用户自己维护设备表：解析 info（JSON 字符串）拿到 deviceModel / network / version 等
+    /// Maintain an application device table by parsing deviceModel, network, version, etc. from info JSON
     printf("device online: sn=%s info=%s\n", sn.c_str(), info.c_str());
 });
 
-/// 2. 全局初始化
+/// 2. Initialize the global service
 svc->initialService(nullptr, "myApp");
 
-/// 3. 判断是否需要发现
+/// 3. Discover devices when required
 if (svc->isMultiDevice()) {
-    svc->discoverDevices(2000);     // 非阻塞；2s 内回调上抛在线设备
-    // ... 用户线程等 SN 收齐后选 target
+    svc->discoverDevices(2000);     // Non-blocking; callbacks report devices during the 2 s window
+    // ... application thread collects SNs and selects target
     auto client = IMotionHighLevelClient::create(target_sn);
 } else {
-    auto client = IMotionHighLevelClient::create();   // 板内单设备，create(bool)
+    auto client = IMotionHighLevelClient::create();   // Onboard single-device overload: create(bool)
 }
 ```
 
-#### 4.1.3 客户端实例创建
+#### 4.1.3 Client instance creation
 
-`create` 提供两个重载，分别对应板内单设备与远端按 SN 两种部署：
+`create` provides separate overloads for onboard single-device deployment and remote selection by SN:
 
 ```cpp
-/// 板内单设备：进程单例。asMaster 指定是否以 master 角色入会
+/// Onboard single-device process singleton; asMaster selects the master role
 static std::shared_ptr<IMotionHighLevelClient> create(bool asMaster = false);
 
-/// 远端多设备：按目标机器人 SN 创建
+/// Remote multi-device mode: create a client for the target robot SN
 static std::shared_ptr<IMotionHighLevelClient> create(std::string deviceId);
 ```
 
-| 重载 | 参数 | 说明 |
+| Overload | Parameters | Description |
 |---|---|---|
-| `create(bool asMaster = false)` | `asMaster` | **板内单设备**用，进程单例；`asMaster` 指定本端是否以 master 角色入会 |
-| `create(std::string deviceId)` | `deviceId` | **远端多设备**用，目标机器人 SN；空串会返回 `nullptr` |
+| `create(bool asMaster = false)` | `asMaster` | **Onboard single-device:** process singleton; `asMaster` selects whether the client joins with the master role |
+| `create(std::string deviceId)` | `deviceId` | **Remote multi-device:** target robot SN; an empty string returns `nullptr` |
 
-远端模式下 SDK 内部把 `deviceId` 作为路由字段塞进每个 RPC 请求，只有 SN 匹配的机器人响应；多个 HL client 各自持有自己的目标 SN，互不串扰。
+In remote mode, the SDK inserts `deviceId` into every RPC request for routing, and only the matching robot responds. Each High-level client retains its own target SN, preventing cross-talk between clients.
 
-##### 拿到 `deviceId` 的两种途径
+##### Two ways to get `deviceId`
 
-1. **通过 `discoverDevices` 在线搜索**：调 `setDiscoverCallback` 注册回调 + `discoverDevices(timeoutMs)` 主动扫，回调里拿到 SN。适合"客户端不预先知道有哪些机器人在网内"的场景（详见下面 §4.1.2 多设备完整流程）。
-2. **跳过搜索，直接用已知 SN 构造**：如果调用方已经通过**其他途径**（配置文件 / 用户输入 / 二维码扫描 / 资产管理系统 / 上一次会话保存的 SN 等）知道目标机器人 SN，**直接** `create(sn)` 即可，**不需要先调 `discoverDevices`**。
+1. **Discover online devices:** register `setDiscoverCallback`, call `discoverDevices(timeoutMs)`, and obtain each SN from the callback. Use this when the client does not know which robots are present.
+2. **Create directly from a known SN:** if the target SN comes from configuration, user input, a QR code, an asset-management system, or a previous session, call `create(sn)` directly. Calling `discoverDevices` first is unnecessary.
 
 ```cpp
-/// 场景：SN 来自用户配置 / 部署清单
-const std::string sn = loadDeviceSnFromConfig();   // 你的来源逻辑
+/// Example: obtain the SN from application configuration or a deployment manifest
+const std::string sn = loadDeviceSnFromConfig();   // Application-defined source
 auto client = IMotionHighLevelClient::create(sn);
 client->connect();
 ```
 
-后续 `connect` / `startControl` / 动作调用按正常流程走 —— SDK 通过 RPC 直接定位该 SN 的机器人。如果该 SN 在网内不存在或不响应，`connect` 失败时 `getLastError()` 会返 `kRpcCallFailed` / `kRpcConnectFailed`。
+Subsequent `connect`, `startControl`, and action calls follow the normal flow. The SDK routes RPCs directly to that SN. If the robot is absent or does not respond, a failed `connect` reports `kRpcCallFailed` or `kRpcConnectFailed` through `getLastError()`.
 
-### 4.2 生命周期与控制权
+### 4.2 Lifecycle and control ownership
 
-| 方法 | 状态要求 | 说明 |
+| Method | Status Requirements | Description |
 |---|---|---|
-| `bool connect(int32_t leaseMs = 0)` | 任意 | 进入高级模式。`leaseMs<=0` 时 SDK 默认 60000ms；有效范围 5s ~ 5min，超出按边界值替代。**注意 `leaseMs` 是 int32** |
-| `void disconnect()` | 任意 | 关闭连接与事件订阅 |
-| `bool startControl(uint32_t timeout = 10000)` | 已 connect | 异步请求控制权；`timeout` 是整体截止时间（ms） |
-| `bool releaseControl()` | `kControlled` | 异步释放，完成后状态切回 `kConnected` |
-| `int32_t getState() const` | 任意 | 当前 `HighLevelState` |
-| `int32_t getLastError() const` | 任意 | 读后清零的最后失败原因 |
-| `void setConnectCallback(ConnectCallback cb)` | `kDisconnected` | 必须 connect 前注册 |
-| `void setEventCallback(EventCallback cb)` | `kDisconnected` | 必须 connect 前注册 |
-| `IMediaBusClient::Ptr createMediaBusClient()` | 任意 | 创建音视频通道客户端（详见 §4.6） |
+| `bool connect(int32_t leaseMs = 0)` | Any | Enter High-level mode. For `leaseMs<=0`, the SDK uses 60000 ms. Values outside the valid 5 s to 5 min range are clamped. **`leaseMs` is `int32_t`** |
+| `void disconnect()` | Any | Close connection and event subscription |
+| `bool startControl(uint32_t timeout = 10000)` | Connected | Request control asynchronously; `timeout` is the overall deadline in milliseconds |
+| `bool releaseControl()` | `kControlled` | Asynchronous release, the state switches back to `kConnected` after completion |
+| `int32_t getState() const` | Any | Current `HighLevelState` |
+| `int32_t getLastError() const` | Any | Return the latest failure reason and clear it after reading |
+| `void setConnectCallback(ConnectCallback cb)` | `kDisconnected` | Must register before connect |
+| `void setEventCallback(EventCallback cb)` | `kDisconnected` | Must register before connect |
+| `IMediaBusClient::Ptr createMediaBusClient()` | Any | Create audio and video channel client (see §4.6 for details) |
 
-### 4.3 运控动作
+### 4.3 Motion-control actions
 
-#### 4.3.1 控制类（需 `kControlled`）
+#### 4.3.1 Control class (requires `kControlled`)
 
-| 方法 | 参数 |
+| Method | Parameters |
 |---|---|
-| `bool emergencyStop(uint32_t timeout = 5000)` | 急停 |
-| `bool recoveryStand(uint32_t timeout = 5000)` | 跌倒后恢复站立（自我翻正 + 起立）|
-| `bool startAction(const std::string& action, const std::string& paramsJson = "", uint32_t timeout = 5000)` | `action`：动作名；`paramsJson` 字段以 `getMotionCapabilities()` 返回的 `params` 列表为准，一次性动作可传 `""` |
-| `bool stopAction(uint32_t timeout = 5000)` | 停止当前动作 |
-| `bool setActionParams(const std::string& paramsJson = "", uint32_t timeout = 5000)` | 运行期调当前动作参数（不切动作）；可调字段由当前动作的 `params` 列表决定（见 `getMotionCapabilities`），**全量重写语义**（未传字段归 0）|
-| `bool damp(uint32_t timeout = 5000)` | 进入阻尼/慢沉（软卸力），关节低刚度可控下沉 |
-| `bool lieDown(uint32_t timeout = 5000)` | 趴下/卧倒 |
-| `bool standUp(uint32_t timeout = 5000)` | 站立 |
-| `bool move(float vx, float vy, float vyaw, uint32_t timeout = 5000)` | 行走：`vx` 前后线速度（正前进）、`vy` 左右线速度、`vyaw` 转向角速度；持续生效直到 `stopAction` 或后续动作/参数覆盖 |
+| `bool emergencyStop(uint32_t timeout = 5000)` | Emergency stop |
+| `bool recoveryStand(uint32_t timeout = 5000)` | Return to standing after falling (self-righting + standing up) |
+| `bool startAction(const std::string& action, const std::string& paramsJson = "", uint32_t timeout = 5000)` | `action`: action name; the `paramsJson` field is based on the `params` list returned by `getMotionCapabilities()`. One-time actions can be transmitted `""` |
+| `bool stopAction(uint32_t timeout = 5000)` | Stop current action |
+| `bool setActionParams(const std::string& paramsJson = "", uint32_t timeout = 5000)` | Update current action parameters without switching actions. The action's `params` list from `getMotionCapabilities` defines adjustable fields. Uses **full rewrite semantics**: omitted fields return to 0 |
+| `bool damp(uint32_t timeout = 5000)` | Enter damping/slow sinking (soft unloading force), low stiffness of the joint and controllable sinking |
+| `bool lieDown(uint32_t timeout = 5000)` | Lie down |
+| `bool standUp(uint32_t timeout = 5000)` | Stand |
+| `bool move(float vx, float vy, float vyaw, uint32_t timeout = 5000)` | Walking command: `vx` longitudinal velocity (positive forward), `vy` lateral velocity, and `vyaw` yaw rate; remains active until `stopAction` or a subsequent action/parameter update |
 
-**动作安全分级**
+**Action safety classification**
 
-- 推荐新手首次联调使用 `standUp()` / `lieDown()`，或 `startAction("standing")` / `startAction("laying")`。
-- `walking` / `move` / `bipedStand` / `handstand` / `waveBody` / `peakLoadStand` / `jumpFrontflip` / `jumpSideflip` / `jumpBackflip` / `jumpDoubleBackflip` / `jumpDoubleSideflip` / `damp` 属于高风险运动动作，应在空旷场地、机器人姿态稳定、具备人工接管条件时执行。
-- `emergencyStop`、音频播放/暂停/停止、音频文件增删、摄像头补光灯亮度设置不属于高风险运动动作，但仍要求调用方持有控制权或满足对应接口前置条件。
+- For initial hardware integration, begin with `standUp()` / `lieDown()` or `startAction("standing")` / `startAction("laying")`.
+- `walking` / `move` / `bipedStand` / `handstand` / `waveBody` / `peakLoadStand` / `jumpFrontflip` / `jumpSideflip` / `jumpBackflip` / `jumpDoubleBackflip` / `jumpDoubleSideflip` / `damp` are high-risk motion actions. Run them only in an open area with stable robot posture and manual takeover available.
+- `emergencyStop`, audio playback/pause/stop, audio-file management, and camera-light brightness are not high-risk motion actions, but their control-ownership and interface prerequisites still apply.
 
-#### 4.3.1.1 `walking` 动作参数（`startAction` / `setActionParams`）
+#### 4.3.1.1 `walking` action parameters (`startAction` / `setActionParams`)
 
-动作的可调参数由服务端动态下发 —— 调用方应通过 `getMotionCapabilities()` 查询每个动作的 `params` 列表（字段名 / `min` / `max` / `unit`），不应硬编码。一次性动作（如 `jumpBackflip`）通常无可调参数。
+The adjustable parameters of the action are dynamically issued by the server - the caller should query the `params` list of each action through `getMotionCapabilities()` (field name / `min` / `max` / `unit`) and should not be hard-coded. One-time actions (such as `jumpBackflip`) usually have no adjustable parameters.
 
-`walking` 一般配置如下（实际取值以 `getMotionCapabilities` 返回为准）：
+The general configuration of `walking` is as follows (the actual value is subject to the return of `getMotionCapabilities`):
 
-| paramsJson 字段 | 类型 | 含义 | 单位 |
+| paramsJson field | type | meaning | unit |
 |---|---|---|---|
-| `velocity`      | float | **偏航角速度**（yaw rate），正左转负右转 | rad/s |
-| `lineVelocityX` | float | 前后线速度，正前进负后退               | m/s   |
-| `lineVelocityY` | float | 侧向线速度，正右负左                   | m/s   |
+| `velocity` | float | **Yaw rate** (yaw rate), positive left turn and negative right turn | rad/s |
+| `lineVelocityX` | float | Longitudinal velocity, positive forward and negative backward | m/s |
+| `lineVelocityY` | float | Lateral velocity, positive right and negative left | m/s |
 
-字段名与 `getMotionCapabilities` 返回的 `params[].name` 一致，也与 `queryMotionState` 返回的字段一致 —— **同一套 key 贯穿三处**，调用方学一次即可。
+The field name is consistent with the `params[].name` returned by `getMotionCapabilities`, and also consistent with the field returned by `queryMotionState` - **The same set of keys runs through three places**, and the caller only needs to learn it once.
 
-**示例**：
+**Example**:
 
 ```json
-// 直行 0.5 m/s
+// Move forward at 0.5 m/s
 {"lineVelocityX": 0.5, "lineVelocityY": 0.0, "velocity": 0.0}
 
-// 原地左转 0.5 rad/s
+// Turn left in place at 0.5 rad/s
 {"lineVelocityX": 0.0, "lineVelocityY": 0.0, "velocity": 0.5}
 
-// setActionParams 是全量重写：要保留侧移/旋转的当前值，必须三个字段都重新传
+// setActionParams fully rewrites the parameters; resend all three fields to preserve existing values
 {"lineVelocityX": 0.8, "lineVelocityY": 0.0, "velocity": 0.0}
 ```
 
-**几条语义约定**：
+**Several semantic conventions**:
 
-- **全量重写**：`setActionParams` 跟 `startAction` 一样是**全量语义**——调用一次就用这次的 params 覆盖整套运行期参数，**未传字段归 0**。要保留 X 速度只改 yaw，必须三个字段都传齐
-- **范围由服务端限制**：超出 `getMotionCapabilities` 返回的 `min`/`max` 时被服务端 clamp 到边界；不会报错
-- **零速度不等于停止**：要停下来用 `stopAction()`，不要靠下发 `{lineVelocityX:0, lineVelocityY:0, velocity:0}`
-- **三个字段独立**：完整运动需三轴组合（如边走边转：`{lineVelocityX: 0.5, velocity: 0.3}`）
+- **Full rewrite**: `setActionParams` has the same **full semantics** as `startAction` - the entire set of runtime parameters will be covered with this params when called once, and **unpassed fields will be returned to 0**. To retain the X speed and only change yaw, all three fields must be passed
+- **The range is limited by the server**: When it exceeds the `min`/`max` returned by `getMotionCapabilities`, it will be clamped to the boundary by the server; no error will be reported
+- **Zero speed does not mean stop**: To stop, use `stopAction()`, do not rely on `{lineVelocityX:0, lineVelocityY:0, velocity:0}`
+- **Three fields are independent**: Complete movement requires a combination of three axes (such as walking and turning: `{lineVelocityX: 0.5, velocity: 0.3}`)
 
-**C++ 调用示例**：
+**C++ calling example**:
 
 ```cpp
-// 启动 walking 并立即设速度
+// Start walking and set velocity immediately
 client->startAction("walking", R"({"lineVelocityX":0.5,"lineVelocityY":0.0,"velocity":0.0})");
 
-// 运行期调速（全量重写，必须把要保留的字段都带上）
+// Adjust velocity at runtime (full rewrite; include every field that must be preserved)
 client->setActionParams(R"({"lineVelocityX":0.8,"lineVelocityY":0.0,"velocity":0.0})");
 
-// 停止
+// Stop
 client->stopAction();
 ```
 
-#### 4.3.2 查询类（需 `kConnected`）
+#### 4.3.2 Query class (requires `kConnected`)
 
-| 方法 | 出参 |
+| Method | Extract parameters |
 |---|---|
-| `bool queryMotionState(std::string& out, uint32_t timeout = 5000)` | 当前运控实际生效的动作 + 控制速度 JSON，schema 见下 |
-| `bool getMotionCapabilities(std::string& out, uint32_t timeout = 5000)` | 支持的高级动作集合（含按键组合 + 可调参数）JSON，schema 见下 |
-| `bool getMotorLayout(MotorLayout& layout, uint32_t timeout = 5000)` | 电机硬件布局（电机数 + 每电机 `limbNo`/`jointNo`/`name`）；`kConnected` 后即可调，SDK 内部缓存 |
+| `bool queryMotionState(std::string& out, uint32_t timeout = 5000)` | Current effective motion action and commanded velocity as JSON; see the schema below |
+| `bool getMotionCapabilities(std::string& out, uint32_t timeout = 5000)` | Supported advanced action collection (including key combinations + adjustable parameters) JSON, see the schema below |
+| `bool getMotorLayout(MotorLayout& layout, uint32_t timeout = 5000)` | Motor hardware layout (number of motors + `limbNo`/`jointNo`/`name` per motor); it can be adjusted after `kConnected`, SDK internal cache |
 
-##### `queryMotionState` 出参示例
+##### `queryMotionState` parameter output example
 
 ```json
-// 有活动动作
+// Active action
 {
   "action":        "walking",
   "velocity":       0.0,
@@ -554,22 +556,22 @@ client->stopAction();
   "lineVelocityY":  0.0
 }
 
-// 无活动动作（已 stopAction / 还没 startAction）
+// No active action (after stopAction or before startAction)
 {}
 ```
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |---|---|---|
-| `action`        | string | 当前生效的动作名（运控环最近一拍计算结果）|
-| `velocity`      | float  | 当前角速度（rad/s） |
-| `lineVelocityX` | float  | 当前前后线速度（m/s） |
-| `lineVelocityY` | float  | 当前横移线速度（m/s） |
+| `action` | string | Currently effective action name from the latest motion-control cycle |
+| `velocity` | float | Current angular velocity (rad/s) |
+| `lineVelocityX` | float | Current front and rear linear speed (m/s) |
+| `lineVelocityY` | float | Current traversing linear speed (m/s) |
 
-> 返回值与 `out` 是两层独立语义：
-> - `return false` → **RPC 层失败**（未 connect / RPC 超时 / 通道不可用），通过 `getLastError()` 取错误码
-> - `return true` → RPC 成功；若**无活动动作**，`out` 是空对象 `{}`（调用方据此判断"当前无可查询动作"，不要假设字段一定存在）
+> The return value and `out` are two independent layers of semantics:
+> - `return false` → **RPC layer failure** (not connected/RPC timeout/channel unavailable), get the error code through `getLastError()`
+> - `return true` → RPC successful; if **no active action**, `out` is an empty object `{}` (the caller determines "there is currently no query action" based on this, and do not assume that the field must exist)
 
-##### `getMotionCapabilities` 出参示例
+##### `getMotionCapabilities` parameter output example
 
 ```json
 {
@@ -612,54 +614,54 @@ client->stopAction();
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |---|---|---|
-| `actions[].name`    | string         | 动作名，传给 `startAction` 的 `action` 参数 |
-| `actions[].mapping.require` | array<string\> | 触发该动作必须按下的 `ButtonDefine` 名称 |
-| `actions[].mapping.axisRequire` | array<object\> | 额外轴值条件；每项含 `axis`、`min`、`max`，`axis` 为 `AxesDefine` 名称 |
-| `actions[].mapping.priority` | integer | 同一帧多个动作命中时的优先级，数值越大优先级越高 |
-| `actions[].mapping.exact` | bool | `true` 表示除 `require` 外不能有其它按钮同时按下 |
-| `actions[].mapping.minHoldTime` | number | 最小按住时间，当前映射为 `0` |
-| `actions[].params`  | array<object\> | 该动作可调的运行期参数（一次性动作没有此字段）|
-| `params[].name`     | string         | 参数字段名，用作 `startAction` / `setActionParams` 里 `params` JSON 的 key |
-| `params[].min/max`  | float          | 取值范围；超出会被服务端 clamp |
-| `params[].unit`     | string         | 单位（如 `"m/s"` / `"rad/s"`）；服务端未配置该字段时不输出 |
+| `actions[].name` | string | Action name, `action` parameter passed to `startAction` |
+| `actions[].mapping.require` | array<string\> | The `ButtonDefine` name that must be pressed to trigger this action |
+| `actions[].mapping.axisRequire` | array<object\> | Additional axis value conditions; each item contains `axis`, `min`, `max`, `axis` is the name of `AxesDefine` |
+| `actions[].mapping.priority` | integer | The priority when multiple actions hit in the same frame. The larger the value, the higher the priority |
+| `actions[].mapping.exact` | bool | `true` means that no other buttons except `require` can be pressed at the same time |
+| `actions[].mapping.minHoldTime` | number | Minimum hold time, currently mapped to `0` |
+| `actions[].params` | array<object\> | The adjustable runtime parameters of this action (one-time actions do not have this field) |
+| `params[].name` | string | Parameter field name, used as the key of `params` JSON in `startAction` / `setActionParams` |
+| `params[].min/max` | float | Value range; if exceeded, the server will clamp |
+| `params[].unit` | string | Unit (such as `"m/s"` / `"rad/s"`); it will not be output when the server does not configure this field |
 
-### 4.4 音频播放器
+### 4.4 Audio Player
 
-音频播放接口直接挂在主客户端上：
+The audio playback interface is directly hung on the main client:
 
 ```cpp
 client->startAudioPlay(R"({"list":[{"id":"1"}],"volume":50,"repeat":1})");
 ```
 
-#### 4.4.1 控制类（需 `kControlled`）
+#### 4.4.1 Control class (requires `kControlled`)
 
-| 方法 | 参数 | 备注 |
+| Method | Parameters | Remarks |
 |---|---|---|
-| `bool startAudioPlay(const std::string& paramsJson, uint32_t timeout = 5000)` | 见下表 | 复用 RPC，按字段决定语义 |
-| `bool stopAudioPlay(uint32_t timeout = 5000)` | — | 空参即停止 |
-| `bool pauseAudioPlay(uint32_t timeout = 5000)` | 内部传 `{"pause":true}` | 恢复用 `startAudioPlay` 的 resume 形态 |
-| `bool addAudioFile(const std::string& paramsJson, uint32_t timeout = 30000)` | `{"id":"custom_1","name":"hello.mp3","file":"/data/hello.mp3"}` 或 URL 形态 | 新增自定义音频文件 |
-| `bool deleteAudioFile(const std::string& paramsJson, uint32_t timeout = 5000)` | `{"id":"1"}` | id 为待删音频 ID |
+| `bool startAudioPlay(const std::string& paramsJson, uint32_t timeout = 5000)` | See the table below | Reuse RPC and determine semantics by field |
+| `bool stopAudioPlay(uint32_t timeout = 5000)` | — | Stop if empty parameters are used |
+| `bool pauseAudioPlay(uint32_t timeout = 5000)` | Internal transmission `{"pause":true}` | Resume form of `startAudioPlay` |
+| `bool addAudioFile(const std::string& paramsJson, uint32_t timeout = 30000)` | `{"id":"custom_1","name":"hello.mp3","file":"/data/hello.mp3"}` or URL form | Add custom audio file |
+| `bool deleteAudioFile(const std::string& paramsJson, uint32_t timeout = 5000)` | `{"id":"1"}` | id is the audio ID to be deleted |
 
-**`startAudioPlay.paramsJson` 形态**
+**`startAudioPlay.paramsJson` form**
 
-| 场景 | paramsJson |
+| scene | paramsJson |
 |---|---|
-| 启动播放列表 | `{"list":[{"id":"1"},{"id":"2"}],"volume":50,"repeat":1}` |
-| 调音量 | `{"volume":50}` |
-| 恢复播放 | `{"resume":true}` |
-| 修改重复次数 | `{"repeat":-1}` (`-1`=无限循环；`>0`=次数；`0` 无意义) |
+| Start playlist | `{"list":[{"id":"1"},{"id":"2"}],"volume":50,"repeat":1}` |
+| Adjust volume | `{"volume":50}` |
+| Resume playback | `{"resume":true}` |
+| Modify the number of repetitions | `{"repeat":-1}` (`-1`=infinite loop; `>0`=number of times; `0` is meaningless) |
 
-#### 4.4.2 查询类（需 `kConnected`）
+#### 4.4.2 Query class (requires `kConnected`)
 
-| 方法 | 入参 paramsJson | 出参 out（UTF-8 JSON） |
+| Method | Input parameter paramsJson | Output parameter out (UTF-8 JSON) |
 |---|---|---|
-| `bool queryAudioPlayDetail(std::string& out, uint32_t timeout = 5000)` | — | 见 4.4.2.1 |
-| `bool queryAudioPlayList(std::string& out, const std::string& paramsJson = "", uint32_t timeout = 5000)` | `{"type":"customVoice"}` | 见 4.4.2.2 |
+| `bool queryAudioPlayDetail(std::string& out, uint32_t timeout = 5000)` | — | See 4.4.2.1 |
+| `bool queryAudioPlayList(std::string& out, const std::string& paramsJson = "", uint32_t timeout = 5000)` | `{"type":"customVoice"}` | See 4.4.2.2 |
 
-##### 4.4.2.1 `queryAudioPlayDetail` 出参字段
+##### 4.4.2.1 `queryAudioPlayDetail` parameter field
 
 ```json
 {
@@ -675,19 +677,19 @@ client->startAudioPlay(R"({"list":[{"id":"1"}],"volume":50,"repeat":1})");
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |---|---|---|
-| `channel` | int | 播放通道，含义由设备侧定义 |
-| `playing` | bool | 是否处于播放中 |
-| `paused` | bool | 是否处于暂停态 |
-| `repeat` | int | 重复配置：`-1`=无限循环；`>0`=循环次数；`0` 无意义 |
-| `index` | int | 当前播放下标，从 0 开始 |
-| `count` | int | 当前播放列表总数 |
-| `volume` | int | 当前音量，范围 0~100 |
-| `currentId` | string | 当前播放音频 ID |
-| `list` | array<string\> | 当前播放列表，元素为音频 ID |
+| `channel` | int | Playback channel, the meaning is defined by the device side |
+| `playing` | bool | Whether it is playing |
+| `paused` | bool | Whether it is in paused state |
+| `repeat` | int | Repeat configuration: `-1`=infinite loop; `>0`=number of loops; `0` meaningless |
+| `index` | int | Current playback index, starting from 0 |
+| `count` | int | Total number of current playlists |
+| `volume` | int | Current volume, range 0~100 |
+| `currentId` | string | Currently playing audio ID |
+| `list` | array<string\> | Current playlist, the element is audio ID |
 
-##### 4.4.2.2 `queryAudioPlayList` 出参字段
+##### 4.4.2.2 `queryAudioPlayList` parameter field
 
 ```json
 {
@@ -705,24 +707,24 @@ client->startAudioPlay(R"({"list":[{"id":"1"}],"volume":50,"repeat":1})");
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |---|---|---|
-| `customVoice` | array<object\> | 音频文件数组，每项见下表 |
-| `customVoice[].id` | string | 音频 ID |
-| `customVoice[].name` | string | 音频名称 |
-| `customVoice[].duration` | int | 时长（秒） |
-| `customVoice[].size` | int | 文件大小（字节） |
-| `customVoice[].createAt` | int64 | 创建时间戳（毫秒） |
-| `customVoice[].describe` | string | 备注 |
-| `remaining` | int | 剩余可上传数量/容量配额，精确语义由设备侧定义 |
+| `customVoice` | array<object\> | Array of audio files, each item is shown in the table below |
+| `customVoice[].id` | string | Audio ID |
+| `customVoice[].name` | string | audio name |
+| `customVoice[].duration` | int | Duration (seconds) |
+| `customVoice[].size` | int | File size (bytes) |
+| `customVoice[].createAt` | int64 | Creation timestamp (milliseconds) |
+| `customVoice[].describe` | string | Remarks |
+| `remaining` | int | The remaining uploadable quantity/capacity quota, the precise semantics are defined by the device side |
 
-#### 4.4.3 播放状态实时上报（通过 `EventCallback`）
+#### 4.4.3 Real-time reporting of playback status (via `EventCallback`)
 
-| topic | payload 编码 |
+| topic | payload encoding |
 |---|---|
-| `statistics/play_list` | UTF-8 JSON 文本 |
+| `statistics/play_list` | UTF-8 JSON text |
 
-**payload 示例**：
+**payload example**:
 
 ```json
 {
@@ -739,15 +741,15 @@ client->startAudioPlay(R"({"list":[{"id":"1"}],"volume":50,"repeat":1})");
 }
 ```
 
-**字段**：同 4.4.2.1 `queryAudioPlayDetail` 出参；多一个 `event` 字段：
+**Field**: Same as 4.4.2.1 `queryAudioPlayDetail` parameter; one more `event` field:
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |---|---|---|
-| `event` | string | 事件名，具体枚举值由设备侧定义（如 `"changed"`） |
+| `event` | string | Event name, the specific enumeration value is defined by the device side (such as `"changed"`) |
 
-#### 4.4.4 音频原始帧订阅
+#### 4.4.4 Raw audio frame subscription
 
-音频原始帧已统一到 `IMediaBusClient`（见 §4.6），通过 `client->createMediaBusClient()` 拿到通道后 `startRawAudioFrame(channel, cb)` 订阅，帧类型为 MediaBus 的 `AudioFrame`：
+The original audio frame has been unified to `IMediaBusClient` (see §4.6). After getting the channel through `client->createMediaBusClient()`, subscribe to `startRawAudioFrame(channel, cb)`. The frame type is `AudioFrame` of MediaBus:
 
 ```cpp
 auto media = client->createMediaBusClient();
@@ -763,47 +765,47 @@ bool ok = media->startRawAudioFrame(0, [](int32_t channel, const AudioFrame& fra
            static_cast<unsigned long long>(info.timestamp),
            static_cast<unsigned long long>(info.sequence));
 
-    // PCM 数据：frame.data(), frame.size()
+    // PCM data: frame.data(), frame.size()
 });
 
-// 退出或不再需要时停止订阅
+// Stop the subscription before exit or when it is no longer needed
 media->stopRawAudioFrame(0);
 ```
 
-`AudioFrame` 继承自 `Uface::Media::MediaBuffer`：
+`AudioFrame` inherits from `Uface::Media::MediaBuffer`:
 
-| 字段 / 方法 | 说明 |
+| Field/Method | Description |
 |---|---|
-| `frame.data()` / `frame.size()` | 音频原始数据指针和字节数，通常为 PCM |
-| `frame.getFd()` | 若底层使用共享内存 / DMA，可返回关联 fd；无 fd 时由平台决定 |
-| `frame.getFrameInfo()` | 返回 `AudioFrameInfo` |
-| `AudioFrameInfo.sampleRate` | 采样率，如 8000 / 16000 |
-| `AudioFrameInfo.sampleFormat` | 采样位宽，如 8 / 16 |
-| `AudioFrameInfo.channelCount` | 声道数，常见 1 / 2 |
-| `AudioFrameInfo.dataType` | 数据类型，0 表示 PCM，1 表示 WAV |
-| `AudioFrameInfo.timestamp` / `sequence` | 时间戳与帧序号 |
+| `frame.data()` / `frame.size()` | Audio raw data pointer and number of bytes, usually PCM |
+| `frame.getFd()` | Associated file descriptor when the platform uses shared memory or DMA; availability is platform-dependent |
+| `frame.getFrameInfo()` | Return `AudioFrameInfo` |
+| `AudioFrameInfo.sampleRate` | Sampling rate, such as 8000 / 16000 |
+| `AudioFrameInfo.sampleFormat` | Sampling bit width, such as 8 / 16 |
+| `AudioFrameInfo.channelCount` | Number of channels, common 1 / 2 |
+| `AudioFrameInfo.dataType` | Data type, 0 means PCM, 1 means WAV |
+| `AudioFrameInfo.timestamp` / `sequence` | Timestamp and frame number |
 
-> `AudioFrame` 的数据生命周期由 SDK / MediaBus 管理。回调返回后如果业务线程还要使用数据，应自行拷贝 `frame.data()` 对应的 `frame.size()` 字节，或确认持有对象的生命周期满足使用要求。
+> SDK/MediaBus manages the `AudioFrame` lifetime. To use its data after the callback returns, copy `frame.size()` bytes from `frame.data()` during the callback. Do not retain a view unless its lifetime is explicitly guaranteed.
 
-### 4.5 系统与设备
+### 4.5 System and device
 
-| 方法 | 状态 | 说明 |
+| Method | Status | Description |
 |---|---|---|
-| `bool querySystemStatus(std::string& out, uint32_t timeout = 5000)` | `kConnected` | 出参 JSON，含 `battery` + `network` 两个子对象，见 4.5.1 |
-| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kConnected` | 开/停观测量上报（运控观测 + GPS），出参 `ret` 回带实际生效开关，见 §4.7 |
+| `bool querySystemStatus(std::string& out, uint32_t timeout = 5000)` | `kConnected` | Output parameter JSON, including two sub-objects `battery` + `network`, see 4.5.1 |
+| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kConnected` | Enable or disable motion and sensor observations; `ret` returns the switches actually in effect. See §4.7 |
 
-摄像头前灯亮度直接挂在主客户端上：
+The camera headlight brightness is directly hung on the main client:
 
 ```cpp
 client->setCameraLightBrightness(50);
 ```
 
-| 方法 | 状态 | 说明 |
+| Method | Status | Description |
 |---|---|---|
-| `bool getCameraLightBrightness(std::string& out, uint32_t timeout = 5000)` | `kControlled` | 查询摄像头前灯亮度，出参 `out` 为 JSON 字符串 |
-| `bool setCameraLightBrightness(int32_t brightness, uint32_t timeout = 5000)` | `kControlled` | 控制摄像头前灯亮度，`brightness` 取值 0~100（**`brightness` 仍是 int32**）|
+| `bool getCameraLightBrightness(std::string& out, uint32_t timeout = 5000)` | `kControlled` | Query the camera headlight brightness, the parameter `out` is a JSON string |
+| `bool setCameraLightBrightness(int32_t brightness, uint32_t timeout = 5000)` | `kControlled` | Control the brightness of the camera headlight, `brightness` has a value of 0~100 (**`brightness` is still int32**) |
 
-#### 4.5.1 `querySystemStatus` 出参字段
+#### 4.5.1 `querySystemStatus` fields
 
 ```json
 {
@@ -830,69 +832,69 @@ client->setCameraLightBrightness(50);
 }
 ```
 
-**`battery` 字段说明**：
+**`battery` field description**:
 
-| 字段 | 类型 | 单位 | 含义 |
+| Field | Type | Unit | Meaning |
 |---|---|---|---|
-| `abnormalStatus` | uint8 | — | 功率电路是否异常，非 0 表示异常 |
-| `statusCode` | uint16 | — | BMS 状态码，位掩码组合（见下表） |
-| `cycleCount` | uint16 | 次 | 电池累计充放电循环次数 |
-| `remainChargeTime` | uint16 | 分钟 | 剩余充电时间（充电中有效） |
-| `remainDischargeTime` | uint16 | 分钟 | 剩余放电时间（按当前负载估算） |
-| `power` | float | % | 当前电池电量百分比，范围 0~100 |
-| `health` | float | % | 电池健康度百分比，范围 0~100 |
-| `temperature` | float | °C | 电池温度，有符号浮点 |
-| `fullCharge` | float | mAh | 满充容量 |
-| `remaining` | float | mAh | 剩余容量 |
-| `current` | float | A | 当前充放电电流（正充电、负放电） |
-| `voltage` | float | V | 当前总电压 |
+| `abnormalStatus` | uint8 | — | Whether the power circuit is abnormal, non-0 means abnormal |
+| `statusCode` | uint16 | — | BMS status code, bit mask combination (see table below) |
+| `cycleCount` | uint16 | times | The cumulative number of battery charge and discharge cycles |
+| `remainChargeTime` | uint16 | Minutes | Remaining charging time (valid during charging) |
+| `remainDischargeTime` | uint16 | Minutes | Remaining discharge time (estimated based on current load) |
+| `power` | float | % | Current battery power percentage, range 0~100 |
+| `health` | float | % | Battery health percentage, range 0~100 |
+| `temperature` | float | °C | Battery temperature, signed float |
+| `fullCharge` | float | mAh | Full charge capacity |
+| `remaining` | float | mAh | remaining capacity |
+| `current` | float | A | Current charge and discharge current (positive charge, negative discharge) |
+| `voltage` | float | V | Current total voltage |
 
-**`battery.statusCode` 位掩码**（`statusCode & bit != 0` 表示对应保护位有效）：
+**`battery.statusCode` bit mask** (`statusCode & bit != 0` indicates that the corresponding protection bit is valid):
 
-| 位 | 值 | 含义 |
+| bit | value | meaning |
 |---|---|---|
-| bit0 | 0x0001 | pack 欠压保护 |
-| bit1 | 0x0002 | cell 欠压保护 |
-| bit2 | 0x0004 | pack 过压保护 |
-| bit3 | 0x0008 | cell 过压保护 |
-| bit4 | 0x0010 | 充电结束 |
-| bit5 | 0x0020 | 放电过流保护 |
-| bit6 | 0x0040 | 充电过流保护 |
-| bit7 | 0x0080 | 短路保护 |
-| bit8 | 0x0100 | 放电低温保护 |
-| bit9 | 0x0200 | 充电低温保护 |
-| bit10 | 0x0400 | 放电高温保护 |
-| bit11 | 0x0800 | 充电高温保护 |
-| bit12 | 0x1000 | MOS 高温保护 |
-| bit13 | 0x2000 | Cell 采集断线保护 |
-| bit14 | 0x4000 | Cell 电压失衡保护 |
-| bit15 | 0x8000 | Cell 电压失效保护 |
+| bit0 | 0x0001 | pack undervoltage protection |
+| bit1 | 0x0002 | cell under-voltage protection |
+| bit2 | 0x0004 | pack overvoltage protection |
+| bit3 | 0x0008 | cell overvoltage protection |
+| bit4 | 0x0010 | Charging ends |
+| bit5 | 0x0020 | Discharge overcurrent protection |
+| bit6 | 0x0040 | Charging overcurrent protection |
+| bit7 | 0x0080 | Short circuit protection |
+| bit8 | 0x0100 | Discharge low temperature protection |
+| bit9 | 0x0200 | Charging low temperature protection |
+| bit10 | 0x0400 | Discharge high temperature protection |
+| bit11 | 0x0800 | Charging high temperature protection |
+| bit12 | 0x1000 | MOS high temperature protection |
+| bit13 | 0x2000 | Cell collection disconnection protection |
+| bit14 | 0x4000 | Cell voltage imbalance protection |
+| bit15 | 0x8000 | Cell voltage failure protection |
 
-**`network.<iface>.status` 枚举值**：
+**`network.<iface>.status` enumeration value**:
 
-| 值 | 含义 |
+| Value | Meaning |
 |---|---|
-| `0` | 已连接 (connected) |
-| `1` | 未连接 (disconnected) |
-| `2` | 连接中 (connecting) |
+| `0` | Connected (connected) |
+| `1` | Not connected (disconnected) |
+| `2` | Connecting (connecting) |
 
-**`network.mobile.signalLevel` 枚举值**（仅 `mobile` 子对象有此字段）：
+**`network.mobile.signalLevel` enumeration value** (only `mobile` sub-object has this field):
 
-| 值 | 含义 |
+| Value | Meaning |
 |---|---|
-| `0` | 信号好（> 22dB） |
-| `2` | 信号中等（> 15dB） |
-| `3` | 信号差（≤ 15dB） |
+| `0` | Good signal (> 22dB) |
+| `2` | Moderate signal (> 15dB) |
+| `3` | Signal difference (≤ 15dB) |
 
-`network.mobile.simCardSta`：`true` 表示 SIM 卡已就绪，`false` 表示未插入 / 未识别。
+`network.mobile.simCardSta`: `true` means the SIM card is ready, `false` means not inserted/not recognized.
 
-#### 4.5.2 系统状态实时上报（通过 `EventCallback`）
+#### 4.5.2 Real-time reporting of system status (via `EventCallback`)
 
-| topic | payload 编码 | 触发 |
+| topic | payload encoding | trigger |
 |---|---|---|
-| `statistics/device_status` | UTF-8 JSON 文本 | 按需，仅推变化字段 |
+| `statistics/device_status` | UTF-8 JSON text | On demand, only push changed fields |
 
-**payload 示例**（仅 `network.ether.ipv4Addr` 变化时）：
+**payload example** (only when `network.ether.ipv4Addr` changes):
 
 ```json
 {
@@ -902,21 +904,21 @@ client->setCameraLightBrightness(50);
 }
 ```
 
-**字段**：与 4.5.1 `querySystemStatus` 出参同结构；服务端**只下推有变化的字段**，未变化字段不出现（不是 `null`）。调用方需做局部 merge / patch。
+**Fields:** the payload uses the same structure as §4.5.1. The server **publishes only changed fields**; unchanged fields are omitted rather than set to `null`. Callers must merge each payload as a partial update.
 
-### 4.6 音视频通道（`IMediaBusClient`）
+### 4.6 Audio and video channels (`IMediaBusClient`)
 
-音视频帧（视频原始帧 / 视频编码帧 / 音频原始帧）统一通过 `IMediaBusClient` 订阅。由 `client->createMediaBusClient()` 工厂分配，`setup()` 后即可订阅；**媒体订阅与控制权无关**，不需要 `startControl`。
+`IMediaBusClient` provides raw video, encoded video, and raw audio subscriptions. Obtain it through `client->createMediaBusClient()` and subscribe after `setup()`. **Media subscriptions are independent of motion control ownership**, so `startControl()` is not required.
 
 ```cpp
 auto media = client->createMediaBusClient();
 media->setup();
 
-// 查询音视频硬件布局（mic / camera / 编码器数量）
+// Query the media hardware layout (microphone, camera, and encoder counts)
 MediaLayout layout = {};
 media->getMediaLayout(layout);
 
-// 原始帧：VideoFrame
+// Raw frame: VideoFrame
 media->startRawVideoFrame(0, [](int32_t channel, const VideoFrame& frame) {
     const auto& info = frame.getFrameInfo();
     printf("video raw ch=%d size=%u %ux%u fmt=%d ts=%llu seq=%llu\n",
@@ -929,7 +931,7 @@ media->startRawVideoFrame(0, [](int32_t channel, const VideoFrame& frame) {
            static_cast<unsigned long long>(info.sequence));
 });
 
-// 编码帧：EncodedVideoFrame
+// Encoded frame: EncodedVideoFrame
 media->startEncodedVideoFrame(0, [](int32_t channel, const EncodedVideoFrame& frame) {
     const auto* info = reinterpret_cast<const Uface::Stream::FrameInfo*>(frame.getExtraData());
     printf("video encoded ch=%d size=%d frameType=0x%02x seq=%d\n",
@@ -950,128 +952,128 @@ media->stopRawVideoFrame(0);
 media->shutdown();
 ```
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `bool setup()` | 初始化媒体总线连接（订阅前必须先调用）|
-| `void shutdown()` | 断开媒体总线连接，停止所有订阅 |
-| `int32_t getLastError() const` | 最后一次失败原因（`MediaBusError`）|
-| `bool getMediaLayout(MediaLayout& layout)` | 查询音视频硬件布局（`micNum` / `cameraNum` / `videoEncoderNum`）|
-| `bool startRawVideoFrame(int32_t channel, RawVideoFrameCallback cb)` | 订阅视频原始帧；`cb` 为空返回 `false`，签名 `(int32_t channel, const VideoFrame&)` |
-| `void stopRawVideoFrame(int32_t channel)` | 停止订阅视频原始帧 |
-| `bool startEncodedVideoFrame(int32_t channel, EncodedVideoFrameCallback cb)` | 订阅视频编码帧；签名 `(int32_t channel, const EncodedVideoFrame&)`（**无 stream 参数**）|
-| `void stopEncodedVideoFrame(int32_t channel)` | 停止订阅视频编码帧 |
-| `bool startRawAudioFrame(int32_t channel, RawAudioFrameCallback cb)` | 订阅音频原始帧；签名 `(int32_t channel, const AudioFrame&)` |
-| `void stopRawAudioFrame(int32_t channel)` | 停止订阅音频原始帧 |
+| `bool setup()` | Initialize media bus connection (must be called before subscribing) |
+| `void shutdown()` | Disconnect the media bus and stop all subscriptions |
+| `int32_t getLastError() const` | Reason for the last failure (`MediaBusError`) |
+| `bool getMediaLayout(MediaLayout& layout)` | Query the audio and video hardware layout (`micNum` / `cameraNum` / `videoEncoderNum`) |
+| `bool startRawVideoFrame(int32_t channel, RawVideoFrameCallback cb)` | Subscribe to raw video frames; an empty `cb` returns `false`; signature `(int32_t channel, const VideoFrame&)` |
+| `void stopRawVideoFrame(int32_t channel)` | Stop a raw video subscription |
+| `bool startEncodedVideoFrame(int32_t channel, EncodedVideoFrameCallback cb)` | Subscribe to encoded video frames; signature `(int32_t channel, const EncodedVideoFrame&)` (**no stream parameter**) |
+| `void stopEncodedVideoFrame(int32_t channel)` | Stop an encoded video subscription |
+| `bool startRawAudioFrame(int32_t channel, RawAudioFrameCallback cb)` | Subscribe to raw audio frames; signature `(int32_t channel, const AudioFrame&)` |
+| `void stopRawAudioFrame(int32_t channel)` | Stop a raw audio subscription |
 
-`MediaBusError`（`getLastError` 返回值）：
+`MediaBusError` (`getLastError` return value):
 
-| 值 | 含义 |
+| Value | Meaning |
 |---|---|
-| `kNone` | 无错 |
-| `kNotSetup` | 未启动（未 `setup` 即调用订阅 / 查询接口）|
-| `kConfigLoadFailed` | 加载媒体配置失败 |
-| `kConfigInvalid` | 媒体配置缺少 `streamDefine` 等必填项 |
-| `kMediaInitFailed` | 初始化媒体流服务失败 |
-| `kMediaStartFailed` | 启动媒体流服务失败 |
-| `kInvalidChannel` | 通道号非法（< 0 或 ≥ 对应硬件数量）|
-| `kInvalidCallback` | 帧回调为空 |
-| `kSourceUnavailable` | 编码源不可用（创建失败 / 无视频轨）|
-| `kSourceStartFailed` | 编码源启动失败 |
+| `kNone` | No error |
+| `kNotSetup` | Not started (the subscription/query interface is called without `setup`) |
+| `kConfigLoadFailed` | Failed to load media configuration |
+| `kConfigInvalid` | The media configuration is missing required fields such as `streamDefine` |
+| `kMediaInitFailed` | Failed to initialize media streaming service |
+| `kMediaStartFailed` | Failed to start media streaming service |
+| `kInvalidChannel` | Illegal channel number (< 0 or ≥ corresponding hardware quantity) |
+| `kInvalidCallback` | Frame callback is empty |
+| `kSourceUnavailable` | Encoding source unavailable (creation failed / no video track) |
+| `kSourceStartFailed` | Failed to start encoding source |
 
-**`VideoFrame` 原始帧格式**
+**`VideoFrame` raw frame format**
 
-> **重要：视频帧数据必须按照 plane 和 stride 访问。** `width` / `height` 表示有效图像尺寸，`stride[plane]` 表示该平面每行实际跨距，通常大于等于有效行字节数；多平面格式还应使用对应 `virAddr[plane]`。不能假设 `frame.data()` 是完整连续图像，也不能按 `width * height` 一次性读完整帧。
+> **Important: Video frame data must be accessed according to plane and stride. ** `width` / `height` represents the effective image size, `stride[plane]` represents the actual span of each row of the plane, which is usually greater than or equal to the number of valid row bytes; multi-plane formats should also use the corresponding `virAddr[plane]`. It cannot be assumed that `frame.data()` is a complete continuous image, nor can `width * height` read the entire frame at one time.
 
-`VideoFrame` 继承自 `Uface::Media::MediaBuffer`：
+`VideoFrame` inherits from `Uface::Media::MediaBuffer`:
 
-| 字段 / 方法 | 说明 |
+| Field/Method | Description |
 |---|---|
-| `frame.data()` / `frame.size()` | 数据指针和字节数；部分平台可能只保证第 0 平面连续 |
-| `frame.getFd()` | 若底层使用共享内存 / DMA，可返回关联 fd；无 fd 时由平台决定 |
-| `frame.getFrameInfo()` | 返回 `VideoFrameInfo` |
-| `VideoFrameInfo.width` / `height` | 图像有效宽高 |
-| `VideoFrameInfo.pixelFormat` | 像素格式，见 `Uface::Media::MediaPixelFormat` |
-| `VideoFrameInfo.stride[3]` | 各平面水平跨距 / 每行实际跨度，单位字节 |
-| `VideoFrameInfo.virAddr[3]` | 各平面虚拟地址；多平面格式应优先按平面地址 + stride 读取 |
-| `VideoFrameInfo.timestamp` / `sequence` | 时间戳与帧序号 |
+| `frame.data()` / `frame.size()` | Data pointer and number of bytes; some platforms may only guarantee the continuity of the 0th plane |
+| `frame.getFd()` | If the underlying layer uses shared memory/DMA, the associated fd can be returned; if there is no fd, it is determined by the platform |
+| `frame.getFrameInfo()` | Return `VideoFrameInfo` |
+| `VideoFrameInfo.width` / `height` | Effective image width and height |
+| `VideoFrameInfo.pixelFormat` | Pixel format, see `Uface::Media::MediaPixelFormat` |
+| `VideoFrameInfo.stride[3]` | Horizontal span of each plane / actual span of each row, unit byte |
+| `VideoFrameInfo.virAddr[3]` | Virtual address of each plane; multi-plane format should be read first according to plane address + stride |
+| `VideoFrameInfo.timestamp` / `sequence` | Timestamp and frame number |
 
-访问方式示意：
+Access instructions:
 
 ```cpp
 const auto& info = frame.getFrameInfo();
 const uint8_t* y = info.virAddr[0] ? info.virAddr[0] : frame.data();
 for (uint32_t row = 0; row < info.height; ++row) {
     const uint8_t* line = y + static_cast<size_t>(row) * info.stride[0];
-    // 只处理有效宽度 info.width；不要把 stride padding 当作图像数据
+    // Process only the valid info.width; do not treat stride padding as image data
     processLine(line, info.width);
 }
 ```
 
-NVIDIA 平台的视频原始帧可能是多平面且内存不连续，保存 / 处理时务必按 `VideoFrameInfo.virAddr[plane]` 与 `stride[plane]` 逐平面逐行读取有效数据。完整处理逻辑见 `Examples/example_media_frames.cpp`。
+The original video frame of the NVIDIA platform may be multi-plane and the memory is not continuous. When saving/processing, be sure to read the valid data per plane and line by line according to `VideoFrameInfo.virAddr[plane]` and `stride[plane]`. See `Examples/example_media_frames.cpp` for complete processing logic.
 
-**`EncodedVideoFrame` 编码帧格式**
+**`EncodedVideoFrame` encoded frame format**
 
-视频编码帧使用 `EncodedVideoFrame`，该类型是 `Uface::Stream::CMediaFrame` 的 SDK 公开别名，不再额外封装 `VideoPacket`：
+Encoded video uses `EncodedVideoFrame`, the SDK's public alias for `Uface::Stream::CMediaFrame`; there is no additional `VideoPacket` wrapper:
 
-| 字段 / 方法 | 说明 |
+| Field/Method | Description |
 |---|---|
-| `frame.getBuffer()` / `frame.size()` | 编码数据指针和字节数 |
-| `frame.getFrameType()` | 帧类型，常见 `videoIFrame` / `videoPFrame` / `videoBFrame` / `imageFrame` |
-| `frame.getPts()` / `frame.getUtc()` / `frame.getSequence()` | PTS / UTC / 编码帧序号 |
-| `frame.getExtraData()` | `Uface::Stream::FrameInfo` 扩展头 |
-| `FrameInfo.detail.video.encode` | 编码类型，见 `Uface::Media::VideoEncode`，如 H264 / H265 / MJPEG / JPEG |
-| `FrameInfo.detail.video.width` / `height` | 编码图像宽高 |
-| `FrameInfo.detail.video.fpsNum` / `fpsDen` | 帧率分子 / 分母 |
+| `frame.getBuffer()` / `frame.size()` | Encoded data pointer and number of bytes |
+| `frame.getFrameType()` | Frame type, common `videoIFrame` / `videoPFrame` / `videoBFrame` / `imageFrame` |
+| `frame.getPts()` / `frame.getUtc()` / `frame.getSequence()` | PTS / UTC / Encoding frame number |
+| `frame.getExtraData()` | `Uface::Stream::FrameInfo` expansion head |
+| `FrameInfo.detail.video.encode` | Encoding type, see `Uface::Media::VideoEncode`, such as H264 / H265 / MJPEG / JPEG |
+| `FrameInfo.detail.video.width` / `height` | Encoded image width and height |
+| `FrameInfo.detail.video.fpsNum` / `fpsDen` | Frame rate numerator / denominator |
 
-完整 C++ 测试程序：`Examples/example_media_frames.cpp`。该示例同时订阅音频原始帧、视频原始帧、视频编码帧，并将前三类各 10 帧保存到 `/tmp/media_frame_dump`。
+The complete C++ test program is `Examples/example_media_frames.cpp`. It subscribes to raw audio, raw video, and encoded video simultaneously and saves ten frames of each stream to `/tmp/media_frame_dump`.
 
-### 4.7 观测量数据面
+### 4.7 Observation data path
 
-高级客户端可开启观测量上报，把运控观测（IMU + 电机 + 电源）和完整传感器观测（GPS + UWB + Walk 里程计）通过回调推给调用方。整体流程：
+High-level clients can enable observation reporting and receive motion observations (IMU, motors, and power) and complete sensor observations (GPS, UWB, and Walk odometry) through callbacks:
 
-1. 在 `connect` 前注册 `setMotionObservedCallback` / `setSensorObservedCallback`；
-2. 调 `setObservedEnable(json, ret)` 传 JSON 开关开启服务端推送；`ret` 回带当前实际生效的开关状态；
-3. 服务端按帧推送，运控观测经 `MotionObservedCallback` 上抛，传感器观测经 `SensorObservedCallback` 上抛；
-4. 调用方通过 `sensor.gps` / `sensor.uwb` / `sensor.odom` 读取对应数据，也可用 `getSensorObservation` 读取完整传感器缓存；
-5. 电源观测仍通过 `getPowerInfo` 读取最近一帧缓存。
+1. Register `setMotionObservedCallback` / `setSensorObservedCallback` before `connect`;
+2. Call `setObservedEnable(json, ret)` with the JSON switches; `ret` returns the switches currently in effect.
+3. The server publishes frames through `MotionObservedCallback` and `SensorObservedCallback`.
+4. The caller reads the corresponding data through `sensor.gps` / `sensor.uwb` / `sensor.odom`, and can also use `getSensorObservation` to read the complete sensor cache;
+5. Power observation still reads the latest frame buffer through `getPowerInfo`.
 
-| 方法 | 状态 | 说明 |
+| Method | Status | Description |
 |---|---|---|
-| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kConnected` | 观测量上报开关，`json` 为开关字段（如 `{"motionEnable":true,"sensorEnable":true}`）；出参 `ret` 回带当前实际生效的开关 JSON。服务端 hook 不做鉴权 |
-| `void setMotionObservedCallback(MotionObservedCallback cb)` | 任意 | 注册运控观测量回调，签名 `void(const LowLevelMotionObserved&)`（含 power）|
-| `void setSensorObservedCallback(SensorObservedCallback cb)` | `kDisconnected` | 注册完整传感器观测回调，签名 `void(const SensorObserved&)`；数据包含 GPS、UWB 和里程计 |
-| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout = 5000)` | `kConnected` | 读取完整传感器观测缓存，不发 RPC；`timeout` 是数据新鲜度窗口（ms）|
-| `bool getPowerInfo(PowerObserved* power, uint32_t timeout)` | `kConnected` | 取最近一帧电源观测；**需先 `setObservedEnable({"motionEnable":true})` 开启运控观测**（电源量随运控观测帧上报），否则窗口内无数据恒返 `false`。`timeout` 是**新鲜度窗口（微秒，us）**：仅当最近 `timeout` us 内有观测数据才返回 `true`，否则返回 `false`（`getLastError()` → `kDataNotUpdate`）|
+| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kConnected` | Observation reporting switch, `json` is the switch field (such as `{"motionEnable":true,"sensorEnable":true}`); the output parameter `ret` returns the currently effective switch JSON. Server-side hook does not perform authentication |
+| `void setMotionObservedCallback(MotionObservedCallback cb)` | Any | Register the motion-observation callback with signature `void(const LowLevelMotionObserved&)`, including power |
+| `void setSensorObservedCallback(SensorObservedCallback cb)` | `kDisconnected` | Register full sensor observation callback, signature `void(const SensorObserved&)`; data includes GPS, UWB and odometry |
+| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout = 5000)` | `kConnected` | Read the complete sensor observation cache without sending RPC; `timeout` is the data freshness window (ms) |
+| `bool getPowerInfo(PowerObserved* power, uint32_t timeout)` | `kConnected` | Read the latest power observation. **First enable motion observations with `setObservedEnable({"motionEnable":true})`**, because power is carried in motion-observation frames. Without fresh data the method returns `false`. `timeout` is the **freshness window in microseconds (us)**; data newer than this window returns `true`, otherwise `false` with `getLastError()` → `kDataNotUpdate` |
 
-`setObservedEnable` 入参 JSON 开关字段：
+`setObservedEnable` input parameter JSON switch field:
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `motionEnable` | bool | 开启后推送运控观测（IMU + 电机 + 电源），经 `setMotionObservedCallback` 回调上抛 |
-| `sensorEnable` | bool | 开启后推送传感器观测（GPS + UWB + Walk 里程计），经 `setSensorObservedCallback` 回调上抛 |
+| `motionEnable` | bool | Enable motion observations (IMU + motors + power) delivered to `setMotionObservedCallback` |
+| `sensorEnable` | bool | Enable sensor observations (GPS + UWB + Walk odometry) delivered to `setSensorObservedCallback` |
 
-**观测量数据类型**（字段以 `MotionSdkProtocol.h` 为准）：
+**Observation data type** (fields are subject to `MotionSdkProtocol.h`):
 
-- `LowLevelMotionObserved`：`systemSta` / `motorNum` / `imu`（`IMUObserved`）/ `trc`（`TRCStickFrame`）/ `power`（`PowerObserved`）/ `motors[]`（`MotorObserved`）。各子结构字段语义参见低级 SDK 手册。
-- `MotionOdometry`：`position[0:2]` 是当前 `epoch` 原点下的累计平面位置，`velocity[0:2]` 是机器人本体系模型预测速度；`yaw` / `yawSpeed` 分别为累计偏航角和偏航角速度。该里程计仅在 Walk 行走模式下可用。退出 Walk 时保留当前区间末值并将 `valid` 置为 false；再次进入 Walk 时自动建立新原点并递增 `epoch`。`position[2]` / `velocity[2]` 当前固定为 `0`，不得解释为高度或垂直速度。
-- 对外发布频率由 `motionCapacity` 中 walking 动作的 `odometry.publishFrequencyHz` 配置，缺省为 `50 Hz`；模型推理与内部积分频率不受该配置影响。
-- `SensorObserved.gps`（`GPSFrame`）：`valid`（1=有效）/ `speed`（km/h）/ `level`（信号等级，见 `GPSSignalLevel`）/ `rssi`（信号强度原始值，单位 dbm）/ `point`（`GEOGPoint`，含 `lat` / `lng`，单位 deg）。
-- `PowerObserved`：`power`（电量 %）/ `health`（健康度 %）/ `temper`（电池温度 ℃）/ `chargeCurrent`（实时电流 A）/ `chargeVoltage`（当前总电压 V）。
+- `LowLevelMotionObserved`: `systemSta`/`motorNum`/`imu` (`IMUObserved`)/`trc` (`TRCStickFrame`)/`power` (`PowerObserved`)/ `motors[]` (`MotorObserved`). For the semantics of each substructure field, please refer to the low-level SDK manual.
+- `MotionOdometry`: `position[0:2]` is the cumulative plane position under the current `epoch` origin, `velocity[0:2]` is the speed predicted by the robot system model; `yaw` / `yawSpeed` are the cumulative yaw angle and yaw angular velocity respectively. The odometer is only available in Walk mode. When exiting Walk, retain the end value of the current interval and set `valid` to false; when entering Walk again, automatically establish a new origin and increment `epoch`. `position[2]` / `velocity[2]` is currently fixed to `0` and should not be interpreted as altitude or vertical speed.
+- The external publishing frequency is configured by `odometry.publishFrequencyHz` of the walking action in `motionCapacity`, and the default is `50 Hz`; model inference and internal integration frequency are not affected by this configuration.
+- `SensorObserved.gps` (`GPSFrame`): `valid` (1=valid)/`speed` (km/h)/`level` (signal level, see `GPSSignalLevel`)/`rssi` (original value of signal strength, unit dbm)/ `point` (`GEOGPoint`, including `lat` / `lng`, unit deg).
+- `PowerObserved`: `power` (power %) / `health` (health %) / `temper` (battery temperature ℃) / `chargeCurrent` (real-time current A) / `chargeVoltage` (current total voltage V).
 
 ```cpp
 client->setMotionObservedCallback([](const LowLevelMotionObserved& obs) {
-    // ✓ 轻量记录 / 投递业务线程；回调内严禁阻塞
+    // ✓ Record lightweight state or notify an application thread; never block here
 });
 client->setSensorObservedCallback([](const SensorObserved& sensor) {
     const GPSFrame& gps = sensor.gps;
     const MotionOdometry& odom = sensor.odom;
-    // ✓ 回调内只做轻量处理；GPS、UWB 和里程计统一从 sensor 读取
+    // ✓ Keep callback work lightweight; read GPS, UWB, and odometry from sensor
     printf("gps=%u epoch=%u x=%.3f y=%.3f yaw=%.3f valid=%u\n",
            gps.valid, odom.epoch, odom.position[0], odom.position[1], odom.yaw, odom.valid);
 });
 std::string observedState;
 client->setObservedEnable(R"({"motionEnable":true,"sensorEnable":true})", observedState);
-// observedState 回带当前实际生效的开关，如 {"motionEnable":true,"sensorEnable":true}
+// observedState returns the switches currently in effect, e.g. {"motionEnable":true,"sensorEnable":true}
 
 PowerObserved power = {};
 if (client->getPowerInfo(&power, /*timeout_us=*/200000)) {
@@ -1081,9 +1083,9 @@ if (client->getPowerInfo(&power, /*timeout_us=*/200000)) {
 
 ---
 
-## 五、C++ 使用示例
+## 5. C++ usage examples
 
-完整可运行示例：`Examples/example_highlevel.cpp`（同目录有对应 `CMakeLists.txt`）
+Complete runnable example: `Examples/example_highlevel.cpp` (corresponding `CMakeLists.txt` in the same directory)
 
 ```cpp
 #include <chrono>
@@ -1119,7 +1121,7 @@ static void onEvent(const std::string& topic, const std::string& payload) {
 
 int main(int argc, char** argv) {
     auto svc = IMotionSdkService::instance();
-    svc->setNetworkInterface(argc > 1 ? argv[1] : "eth0");   // 远端/多设备指定网卡；板内忽略
+    svc->setNetworkInterface(argc > 1 ? argv[1] : "eth0");   // Select remotely; ignored onboard
 
     if (!svc->initialService(nullptr, "myAppHighLevel")) return 1;
 
@@ -1133,17 +1135,17 @@ int main(int argc, char** argv) {
     client->setConnectCallback(&onConnect);
     client->setEventCallback(&onEvent);
 
-    if (!client->connect()) {                          // SDK 默认 60s lease
+    if (!client->connect()) {                          // SDK default lease: 60 s
         IMotionSdkService::instance()->shutdown();
         return 1;
     }
 
-    // 不持权可调的查询
+    // Queries that do not require control ownership
     std::string caps, sysStatus;
     client->getMotionCapabilities(caps);
     client->querySystemStatus(sysStatus);
 
-    // 取控制权
+    // Acquire control ownership
     if (!client->startControl(10000)) {
         client->disconnect();
         IMotionSdkService::instance()->shutdown();
@@ -1152,7 +1154,7 @@ int main(int argc, char** argv) {
     while (client->getState() != IMotionHighLevelClient::kControlled)
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-    // 动作 + 音频 + 数据上报
+    // Motion, audio, and observation reporting
     client->startAction("walking", "");
     std::this_thread::sleep_for(std::chrono::seconds(5));
     client->stopAction();
@@ -1167,7 +1169,7 @@ int main(int argc, char** argv) {
     std::this_thread::sleep_for(std::chrono::seconds(2));
     client->setObservedEnable(R"({"motionEnable":false,"sensorEnable":false})", observedState);
 
-    // 退出 —— 显式 release + disconnect + shutdown
+    // Exit with explicit release, disconnect, and shutdown
     client->releaseControl();
     client->disconnect();
     IMotionSdkService::instance()->shutdown();
@@ -1175,32 +1177,32 @@ int main(int argc, char** argv) {
 }
 ```
 
-### 5.2 媒体帧订阅示例
+### 5.2 Media frame subscription example
 
-完整可运行示例：`Examples/example_media_frames.cpp`。
+Full runnable example: `Examples/example_media_frames.cpp`.
 
 ```bash
-# config 省略或传 "-" 时使用 SDK 内置 MediaBus 配置
+# Omit config or pass "-" to use the SDK's built-in MediaBus configuration
 sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
   ./example_media_frames [config|-] [client_id] [device_id|-] [video_channel] [audio_channel] [stream] [seconds] [network_iface|-]
 
-# 常用：订阅 channel=0、audio_channel=0、主码流，运行 10 秒
+# Typical: subscribe to channel=0, audio_channel=0, and the main stream for 10 seconds
 sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
   ./example_media_frames - mediaFrameExample - 0 0 0 10 eth0
 ```
 
-输出内容：
+Output content:
 
-- 通过 `client->createMediaBusClient()` 创建通道并 `setup()`
-- 订阅 `VideoFrame` 原始视频帧（`startRawVideoFrame`）
-- 订阅 `EncodedVideoFrame` 视频编码帧（`startEncodedVideoFrame`，回调签名 `(channel, frame)`）
-- 订阅 `AudioFrame` 音频原始帧（`startRawAudioFrame`）
-- 默认保存前三类各 10 帧到 `/tmp/media_frame_dump`
-- raw video 保存逻辑按 `virAddr[] + stride[]` 逐平面逐行写入，兼容 NVIDIA 非连续内存
+- Create channel via `client->createMediaBusClient()` and `setup()`
+- Subscribe to `VideoFrame` original video frame (`startRawVideoFrame`)
+- Subscribe to encoded `EncodedVideoFrame` data (`startEncodedVideoFrame`, callback signature `(channel, frame)`)
+- Subscribe to raw `AudioFrame` data (`startRawAudioFrame`)
+- By default, 10 frames of each of the first three categories are saved to `/tmp/media_frame_dump`
+- raw video save logic is written plane by plane and line by line according to `virAddr[] + stride[]`, compatible with NVIDIA non-contiguous memory
 
-### 5.3 多设备示例（远端模式）
+### 5.3 Multi-device example (remote mode)
 
-跟 §五.1（单设备）不同的两个点：用 `discoverDevices` 收集网上的 SN，用具体 SN 创建 client。
+There are two differences from §5.1 (single device): use `discoverDevices` to collect SNs on the Internet, and use specific SNs to create clients.
 
 ```cpp
 #include <chrono>
@@ -1217,7 +1219,7 @@ int main(int argc, char** argv) {
     auto svc = IMotionSdkService::instance();
     svc->setNetworkInterface(argc > 1 ? argv[1] : "eth0");
 
-    /// 1) 收集发现到的 SN（回调里只做轻量记录，不能阻塞）
+    /// 1) Collect discovered SNs; callbacks record lightweight state only and never block
     std::mutex devMutex;
     std::vector<std::string> devices;
     svc->setDiscoverCallback([&](const std::string& sn, const std::string& info) {
@@ -1236,7 +1238,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    /// 2) 发起一次发现，2s 内收集所有响应
+    /// 2) Start discovery and collect responses for 2 seconds
     svc->discoverDevices(2000);
     std::this_thread::sleep_for(std::chrono::milliseconds(2100));
 
@@ -1249,7 +1251,7 @@ int main(int argc, char** argv) {
     }
     printf("found %zu device(s)\n", snapshot.size());
 
-    /// 3) 对每台机器人各开一个 HL client，并发执行
+    /// 3) Create one High-level client per robot and run them concurrently
     std::vector<std::shared_ptr<IMotionHighLevelClient>> clients;
     for (const auto& sn : snapshot) {
         auto c = IMotionHighLevelClient::create(sn);
@@ -1258,7 +1260,7 @@ int main(int argc, char** argv) {
         clients.push_back(c);
     }
 
-    /// 4) 各自独立操作（每个 client 内部 deviceId 已绑定，互不串扰）
+    /// 4) Operate independently; each client is bound to its own deviceId
     for (auto& c : clients) {
         c->startControl(10000);
     }
@@ -1270,7 +1272,7 @@ int main(int argc, char** argv) {
 
     std::this_thread::sleep_for(std::chrono::seconds(5));
 
-    /// 5) 退出 —— 各 client 各自 release + disconnect
+    /// 5) Release and disconnect each client before exit
     for (auto& c : clients) {
         c->stopAction();
         c->releaseControl();
@@ -1283,105 +1285,105 @@ int main(int argc, char** argv) {
 
 ---
 
-## 六、Python SDK
+## 6. Python SDK
 
-模块：`robot_motion_sdk`，源码 `Python/`
-- pybind11 binding：`Python/src/MotionSdkPython.cpp`
-- Python wrapper：`Python/robot_motion_sdk/__init__.py`
-- pybind11 依赖：`Python/ThirdParty/pybind11/`
+Module: `robot_motion_sdk`, source code `Python/`
+- pybind11 binding: `Python/src/MotionSdkPython.cpp`
+- Python wrapper: `Python/robot_motion_sdk/__init__.py`
+- pybind11 dependency: `Python/ThirdParty/pybind11/`
 
-### 6.1 当前 binding 覆盖范围（已与 C++ 接口对齐）
+### 6.1 Current binding coverage (aligned with the C++ interface)
 
-**全局服务（`sdk.service` —— 对应 `IMotionSdkService` 单例）：**
+**Global service (`sdk.service`, corresponding to the `IMotionSdkService` singleton):**
 
-| C++ 接口 | Python wrapper |
+| C++ interface | Python wrapper |
 |---|---|
-| `version()` | `sdk.service.version()` —— 返回 SDK 版本字符串 |
-| `setLogCallback` | `sdk.service.set_log_callback(cb)`；签名 `(level: LogLevel, msg: str) -> None` |
-| `setNetworkInterface` | `sdk.service.set_network_interface(iface: str)` —— 远端/多设备指定网卡，板内忽略 |
-| `setDiscoverCallback` | `sdk.service.set_discover_callback(cb)`；签名 `(sn: str, info_json: str) -> None` |
+| `version()` | `sdk.service.version()` —— Returns the SDK version string |
+| `setLogCallback` | `sdk.service.set_log_callback(cb)`; signature `(level: LogLevel, msg: str) -> None` |
+| `setNetworkInterface` | `sdk.service.set_network_interface(iface: str)` — select the remote/multi-device network interface; ignored onboard |
+| `setDiscoverCallback` | `sdk.service.set_discover_callback(cb)`; signature `(sn: str, info_json: str) -> None` |
 | `isMultiDevice` | `sdk.service.is_multi_device() -> bool` |
-| `discoverDevices` | `sdk.service.discover_devices(timeout_ms=10000) -> bool`（非阻塞） |
+| `discoverDevices` | `sdk.service.discover_devices(timeout_ms=10000) -> bool` (non-blocking) |
 | `initialService` | `sdk.service.initial(file_or_none, server_name, timeout=30)` |
 | `shutdown` | `sdk.service.shutdown()` |
 
-**HighLevel client（`sdk.MotionHighLevelClient` —— 对应 `IMotionHighLevelClient`）：**
+**High-level client (`sdk.MotionHighLevelClient`, corresponding to `IMotionHighLevelClient`):**
 
-| C++ 接口 | Python wrapper |
+| C++ interface | Python wrapper |
 |---|---|
-| `create(asMaster=false)` / `create(deviceId)` | `MotionHighLevelClient(device_id="", as_master=False)` 构造；板内空串（按 `as_master` 协商主从）、远端必传 SN |
+| `create(asMaster=false)` / `create(deviceId)` | `MotionHighLevelClient(device_id="", as_master=False)` constructor; use an empty ID onboard (role selected by `as_master`), while remote mode requires an SN |
 | `connect / disconnect` | `connect(lease_ms=0)` / `disconnect()` |
 | `startControl / releaseControl` | `start_control(timeout_ms=10000)` / `release_control()` |
-| `getState / getLastError` | `get_state()` / `get_last_error()`（返回 enum） |
+| `getState / getLastError` | `get_state()` / `get_last_error()` (return enum) |
 | `emergencyStop / recoveryStand` | `emergency_stop(timeout_ms=5000)` / `recovery_stand(timeout_ms=5000)` |
 | `damp / standUp / lieDown / move` | `damp()` / `stand_up()` / `lie_down()` / `move(vx, vy, vyaw, timeout_ms=5000)` |
-| `startAction / stopAction / setActionParams` | `start_action(action, params=None, ...)` / `stop_action()` / `set_action_params(params=None)`；`params` 接 Python dict，binding 内部转 JSON |
-| `queryMotionState / getMotionCapabilities / querySystemStatus` | `query_motion_state()` / `get_motion_capabilities()` / `query_system_status()`；返回 Python dict（自动 json.loads） |
-| `getMotorLayout` | `get_motor_layout(timeout_ms=5000)`；返回 `sdk.MotorLayout`，失败 `None` |
-| `setObservedEnable` | `set_observed_enable(params=None, timeout_ms=5000)`；`params` 接 dict（如 `{"motionEnable":True,"sensorEnable":True}`），成功返回当前实际开关 dict、失败返回 `None` |
-| `getPowerInfo` | `get_power_info(timeout_us=5000)`；`timeout_us` 是新鲜度窗口（微秒），返回 `sdk.PowerObserved` 或 `None` |
-| `getSensorObservation` | `get_sensor_observation(timeout_ms=5000)`；读取完整传感器缓存，返回 `sdk.SensorObserved` 或 `None` |
-| `setMotionObservedCallback` | `set_motion_observed_callback(cb)`；签名 `(obs: sdk.LowLevelMotionObserved)` |
-| `setSensorObservedCallback` | `set_sensor_observed_callback(cb)`；须在 `connect()` 前注册，签名 `(sensor: sdk.SensorObserved)` |
-| `getCameraLightBrightness / setCameraLightBrightness` | `get_camera_light_brightness()`（返回 dict / None）/ `set_camera_light_brightness(brightness)`；`brightness` 取值 0~100 |
+| `startAction / stopAction / setActionParams` | `start_action(action, params=None, ...)` / `stop_action()` / `set_action_params(params=None)`; `params` connects to Python dict, binding internally converts to JSON |
+| `queryMotionState / getMotionCapabilities / querySystemStatus` | `query_motion_state()` / `get_motion_capabilities()` / `query_system_status()`; return Python dict (automatic json.loads) |
+| `getMotorLayout` | `get_motor_layout(timeout_ms=5000)`; return `sdk.MotorLayout`, failure `None` |
+| `setObservedEnable` | `set_observed_enable(params=None, timeout_ms=5000)`; `params` accepts a dict such as `{"motionEnable":True,"sensorEnable":True}` and returns the effective switch dict on success or `None` on failure |
+| `getPowerInfo` | `get_power_info(timeout_us=5000)`; `timeout_us` is the freshness window (microseconds), return `sdk.PowerObserved` or `None` |
+| `getSensorObservation` | `get_sensor_observation(timeout_ms=5000)`; Read the complete sensor buffer and return `sdk.SensorObserved` or `None` |
+| `setMotionObservedCallback` | `set_motion_observed_callback(cb)`; signature `(obs: sdk.LowLevelMotionObserved)` |
+| `setSensorObservedCallback` | `set_sensor_observed_callback(cb)`; register before `connect()`; signature `(sensor: sdk.SensorObserved)` |
+| `getCameraLightBrightness / setCameraLightBrightness` | `get_camera_light_brightness()` (return dict / None) / `set_camera_light_brightness(brightness)`; `brightness` value 0~100 |
 | `startAudioPlay / stopAudioPlay / pauseAudioPlay` | `start_audio_play(params)` / `stop_audio_play()` / `pause_audio_play()` |
 | `addAudioFile / deleteAudioFile / queryAudioPlayDetail / queryAudioPlayList` | `add_audio_file(params)` / `delete_audio_file(params)` / `query_audio_play_detail()` / `query_audio_play_list(params=None)` |
-| `createMediaBusClient` | `create_media_bus_client()`；返回 `sdk.MediaBusClient`（见下表）|
-| `setConnectCallback` | `set_connect_callback(cb)` 或装饰器 `@client.on_connect`；签名 `(state, error)` |
-| `setEventCallback` | `set_event_callback(cb)` 或装饰器 `@client.on_event`；签名 `(topic: str, payload_json: str)` |
+| `createMediaBusClient` | `create_media_bus_client()`; returns `sdk.MediaBusClient` (see below) |
+| `setConnectCallback` | `set_connect_callback(cb)` or decorator `@client.on_connect`; signature `(state, error)` |
+| `setEventCallback` | `set_event_callback(cb)` or decorator `@client.on_event`; signature `(topic: str, payload_json: str)` |
 
-**MediaBus client（`sdk.MediaBusClient` —— 对应 `IMediaBusClient`，由 `create_media_bus_client()` 工厂分配）：**
+**MediaBus client (`sdk.MediaBusClient`, corresponding to `IMediaBusClient` and returned by `create_media_bus_client()`):**
 
-| C++ 接口 | Python wrapper |
+| C++ interface | Python wrapper |
 |---|---|
 | `setup / shutdown` | `setup()` / `shutdown()` |
-| `getMediaLayout` | `get_media_layout()`；返回 `sdk.MediaLayout` 或 `None` |
-| `startRawVideoFrame / stopRawVideoFrame` | `start_raw_video_frame(channel, callback)` / `stop_raw_video_frame(channel)`；回调签名 `(channel: int, frame: sdk.VideoFrame)` |
-| `startRawAudioFrame / stopRawAudioFrame` | `start_raw_audio_frame(channel, callback)` / `stop_raw_audio_frame(channel)`；回调签名 `(channel: int, frame: sdk.AudioFrame)` |
-| `startEncodedVideoFrame / stopEncodedVideoFrame` | `start_encoded_video_frame(channel, callback)` / `stop_encoded_video_frame(channel)`；回调签名 `(channel: int, frame: sdk.EncodedVideoFrame)` |
+| `getMediaLayout` | `get_media_layout()`; return `sdk.MediaLayout` or `None` |
+| `startRawVideoFrame / stopRawVideoFrame` | `start_raw_video_frame(channel, callback)` / `stop_raw_video_frame(channel)`; callback signature `(channel: int, frame: sdk.VideoFrame)` |
+| `startRawAudioFrame / stopRawAudioFrame` | `start_raw_audio_frame(channel, callback)` / `stop_raw_audio_frame(channel)`; callback signature `(channel: int, frame: sdk.AudioFrame)` |
+| `startEncodedVideoFrame / stopEncodedVideoFrame` | `start_encoded_video_frame(channel, callback)` / `stop_encoded_video_frame(channel)`; callback signature `(channel: int, frame: sdk.EncodedVideoFrame)` |
 
-**媒体帧类型**
+**Media frame types**
 
-| Python 类型 | 对应 C++ 类型 | 常用字段 / 方法 |
+| Python types | Corresponding C++ types | Common fields/methods |
 |---|---|---|
-| `sdk.AudioFrame` | `Uface::Media::AudioFrame` | `frame.data()`、`frame.size()`、`frame.get_fd()`、`frame.frame_info.sample_rate/sample_format/channel_count/timestamp/sequence` |
-| `sdk.VideoFrame` | `Uface::Media::VideoFrame` | `frame.data()`、`frame.size()`、`frame.get_fd()`、`frame.frame_info.width/height/pixel_format/stride/timestamp/sequence`、`frame.plane_view(plane)` |
-| `sdk.EncodedVideoFrame` | `Uface::Stream::CMediaFrame` | `frame.data()`、`frame.size()`、`frame.frame_type`、`frame.pts`、`frame.utc`、`frame.sequence`、`frame.frame_info`、`frame.video_info` |
-| `sdk.VideoFramePlaneView` | 视频平面只读视图 | `rows`、`row_bytes`、`row_view(row)`，用于按行读取非连续 / 带 stride 的原始视频 |
+| `sdk.AudioFrame` | `Uface::Media::AudioFrame` | `frame.data()`, `frame.size()`, `frame.get_fd()`, `frame.frame_info.sample_rate/sample_format/channel_count/timestamp/sequence` |
+| `sdk.VideoFrame` | `Uface::Media::VideoFrame` | `frame.data()`, `frame.size()`, `frame.get_fd()`, `frame.frame_info.width/height/pixel_format/stride/timestamp/sequence`, `frame.plane_view(plane)` |
+| `sdk.EncodedVideoFrame` | `Uface::Stream::CMediaFrame` | `frame.data()`, `frame.size()`, `frame.frame_type`, `frame.pts`, `frame.utc`, `frame.sequence`, `frame.frame_info`, `frame.video_info` |
+| `sdk.VideoFramePlaneView` | Video plane read-only view | `rows`, `row_bytes`, `row_view(row)`, used to read non-contiguous/original video with stride by row |
 
-Python API 不暴露 MediaBus Python 包，帧格式由 Motion SDK 自身封装；编码帧使用 `EncodedVideoFrame`，没有 `VideoPacket` Python 公共类型。`sdk.CMediaFrame` 保留为底层兼容别名。
+The Python API does not expose a separate MediaBus package; the Motion SDK provides the frame wrappers directly. Encoded frames use `EncodedVideoFrame`, with no public Python `VideoPacket` type. `sdk.CMediaFrame` remains as a Low-level compatibility alias.
 
-### 6.2 ⚠ 退出死锁规避（必读）
+### 6.2 ⚠ Exit deadlock avoidance (must read)
 
-**典型死锁场景**：
-- Python 主线程持有 GIL → 解释器 atexit 阶段开始 GC
-- GC 析构 `client` 触发 C++ 析构链 → 内部 `disconnect()` → 等待 SDK 内部线程结束
-- SDK 内部线程在 RPC 调用中，需要主线程释放 GIL 才能继续
-- SDK 内部线程持有的 Python 回调对象需要析构 —— 析构也需要 GIL
-- **主线程等内部线程结束 → 内部线程等 GIL → 死锁**
+**Typical deadlock sequence:**
+- The Python main thread holds the GIL while interpreter shutdown starts garbage collection.
+- Garbage collection destroys `client`, enters the C++ destruction chain, calls internal `disconnect()`, and waits for an SDK thread.
+- The SDK thread needs the GIL released before its RPC path can continue.
+- Destroying Python callback objects held by that SDK thread also requires the GIL.
+- **Main thread waits for internal thread to end → internal thread waits for GIL → deadlock**
 
-**规避做法**：
+**Avoidance**:
 
 ```python
-# ❌ 不要这样：靠 GC 析构
+# ❌ Incorrect: relying on garbage collection for destruction
 def main():
     client = sdk.MotionHighLevelClient()
     client.connect()
     ...
-    # 函数结束，client 进入 GC —— 死锁风险
+    # Function returns and client enters GC: deadlock risk
 
-# ✓ 正确：try/finally 显式释放
+# ✓ Correct: explicit cleanup with try/finally
 def main():
     client = sdk.MotionHighLevelClient()
     try:
         client.connect()
         ...
     finally:
-        client.disconnect()       # 主线程持 GIL，SDK binding 内部释放 GIL，内部线程才能继续完成清理
+        client.disconnect()       # The binding releases the GIL so SDK threads can complete cleanup
         sdk.service.shutdown()
 ```
 
-**SIGINT/SIGTERM 处理**：handler 内**只置位标志**，不做任何 IO / SDK 调用；在主循环检测标志后走 finally：
+**SIGINT/SIGTERM handling:** the handler must **only set a flag** and must not perform I/O or SDK calls. Let the main loop observe the flag and perform cleanup in `finally`:
 
 ```python
 _stop = False
@@ -1392,15 +1394,15 @@ signal.signal(signal.SIGINT, _on_signal)
 signal.signal(signal.SIGTERM, _on_signal)
 ```
 
-完整可运行示例：[`uniubi_robot_sdk_py/examples/example_highlevel.py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_highlevel.py)
+Full runnable example: [`uniubi_robot_sdk_py/examples/example_highlevel.py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_highlevel.py)
 
-### 6.3 Python 使用示例
+### 6.3 Python usage examples
 
-Python 示例参考 8 号狗 Orin 上验证过的交互控制台，与 C++ `example_highlevel` 保持一致：进程保持一个 High-level 连接和控制 lease，动作启动、参数修改和停止是相互独立的命令，程序不会自动执行动作。
+The Python example provides the interactive console verified on Dog No. 8's Orin and follows the same behavior as C++ `example_highlevel`: the process maintains a High-level connection and control lease; starting an action, updating parameters, and stopping are separate commands; and startup never triggers an action automatically.
 
-大脑上直接使用系统 `python3`。先将 Python SDK 安装到系统 Python，再以 root 权限运行示例。
+Use the system `python3` on the robot compute board. Install the Python SDK into that interpreter, then run the example with root privileges.
 
-首次连接使用只读模式：
+Use read-only mode for the first connection:
 
 ```bash
 sudo env \
@@ -1408,7 +1410,7 @@ sudo env \
   python3 examples/example_highlevel.py --read-only
 ```
 
-进入 CLI 后先做只读检查：
+After entering the CLI, do a read-only check:
 
 ```text
 highlevel> status
@@ -1417,7 +1419,7 @@ highlevel> sensor 5
 highlevel> odom 5
 ```
 
-需要控制时显式取权并执行动作：
+Acquire control explicitly before issuing actions:
 
 ```text
 highlevel> take
@@ -1428,9 +1430,9 @@ highlevel> release
 highlevel> quit
 ```
 
-`send` 到时后会清零 walking 三轴速度，但不会停止当前动作；只有 `stop` 调用 `stop_action()`。`quit`、EOF、SIGINT 和 SIGTERM 都会进入统一清理流程：关闭观测、清零 walking 速度、释放控制权、显式 `disconnect()`，最后 `service.shutdown()`，不依赖 Python GC。
+When `send` expires it clears all three walking velocities but does not stop the current action; only `stop` calls `stop_action()`. `quit`, EOF, SIGINT, and SIGTERM all use one cleanup path: disable observations, clear walking velocity, release control, call `disconnect()` explicitly, and finally call `service.shutdown()` without relying on Python garbage collection.
 
-完整命令以程序内 `help` 为准，完整源码见 [`uniubi_robot_sdk_py/examples/example_highlevel.py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_highlevel.py)。底层 API 的最小生命周期如下：
+Use the program's `help` command for the complete command set. The full source is [`uniubi_robot_sdk_py/examples/example_highlevel.py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_highlevel.py). The minimal underlying API lifecycle is:
 
 ```python
 import time
@@ -1457,7 +1459,7 @@ finally:
     sdk.service.shutdown()
 ```
 
-媒体帧订阅完整示例：`Python/examples/example_media_frames.py`。
+Complete example of media frame subscription: `Python/examples/example_media_frames.py`.
 
 ```bash
 export PYTHONPATH=$SDK_ROOT/Python:$PYTHONPATH
@@ -1466,7 +1468,7 @@ sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" PYTHONPATH="$PYTHONPATH" \
     [config|-] [client_id] [device_id|-] [video_channel] [audio_channel] [stream] [seconds] [network_iface|-]
 ```
 
-最小用法：
+Minimal usage:
 
 ```python
 import time
@@ -1492,60 +1494,60 @@ finally:
     sdk.service.shutdown()
 ```
 
-> Python 中 `frame.data()` 返回 `bytes` 拷贝；处理 NVIDIA 原始视频帧时推荐使用 `frame.plane_view(plane).row_view(row)` 按行读取，示例程序已实现保存逻辑。
+> In Python, `frame.data()` returns a `bytes` copy. For raw NVIDIA video frames, use `frame.plane_view(plane).row_view(row)` for row-wise access; the example implements the complete save path.
 
 ---
 
-## 七、注意事项
+## 7. Important considerations
 
-1. **回调注册时机**：`setConnectCallback` / `setEventCallback` 必须在 `connect()` 之前注册，连接之后注册的回调不会生效。
-2. **回调线程**：`ConnectCallback` 与 `EventCallback` 均在 SDK 内部线程触发；回调里反调 SDK 接口要保证可重入。
-3. **状态查询**：`getState()` / `getLastError()` 线程安全；`getLastError()` 读后清零。
-4. **lease 默认值**：`connect(0)` → 使用默认 60s；服务端将值限制在 5s ~ 5min 内，最终生效值由服务端确定。
-5. **持权判断**：动作类接口（`emergencyStop` / `startAction` / `stopAction` / 音频控制 / 摄像头灯）必须在 `kControlled` 状态下调，否则返 `false` + `kNotControlled`。
-6. **暂不对外提供的接口**：高层 SDK 当前交付版不暴露运控主控查询/切换能力；该能力会在大小脑服务契约补齐后再开放。
+1. **Callback registration timing**: `setConnectCallback` / `setEventCallback` must be registered before `connect()`. Callbacks registered after the connection will not take effect.
+2. **Callback thread**: `ConnectCallback` and `EventCallback` are both triggered in the SDK internal thread; the SDK interface in the callback must be reentrant.
+3. **Status Query**: `getState()` / `getLastError()` is thread safe; `getLastError()` is cleared after reading.
+4. **lease default value**: `connect(0)` → Use the default 60s; the server limits the value to 5s ~ 5min, and the final effective value is determined by the server.
+5. **Permission Judgment**: The action interface (`emergencyStop` / `startAction` / `stopAction` / audio control / camera light) must be adjusted down in the `kControlled` state, otherwise it will return to `false` + `kNotControlled`.
+6. **Interface not yet public:** The current High-level SDK does not expose motion-control master-role query or switching. This capability will be added after the High-level service contract is finalized.
 
 ---
 
-## 八、调试与故障排查
+## 8. Debugging and troubleshooting
 
-### 8.1 机器人侧最小验证（先验）
+### 8.1 Minimum robot-side verification
 
-调用 SDK 之前先把机器人侧的"对端"确认好，避免在客户端瞎找原因。
+Before calling the SDK, verify the robot-side service and network path so that server-side failures are not misdiagnosed as client problems.
 
-| 检查项 | 命令 / 方法 | 期望结果 |
+| Check items | Command/Method | Expected results |
 |---|---|---|
-| 网络可达 | `ping <机器人 IP>` | 有回包，延迟稳定 |
-| 网卡多播能力 | `ip -d link show <iface>` | flag 含 `MULTICAST,UP` |
-| DDS Discovery 流量 | `sudo tcpdump -i <iface> 'udp and (port 7400 or port 7401)'` | 客户端启动后能看到双向 SPDP 包 |
-| 防火墙 | `sudo iptables -L` / `ufw status` | 无规则阻断 UDP 多播 / port 7400+ |
+| The network is reachable | `ping <robot IP>` | There is a packet return and the delay is stable |
+| Network card multicast capability | `ip -d link show <iface>` | flag contains `MULTICAST,UP` |
+| DDS Discovery traffic | `sudo tcpdump -i <iface> 'udp and (port 7400 or port 7401)'` | The client can see bidirectional SPDP packets after starting |
+| Firewall | `sudo iptables -L` / `ufw status` | Block UDP multicast without rules / port 7400+ |
 
-机器人侧（如可登录设备）：
+Robot side (if the device can be logged in):
 
 ```bash
-# 1) 进程是否在跑
+# 1) Confirm the process is running
 ps -ef | grep robotServer
 
-# 2) DDS 发现端口监听
+# 2) Check DDS discovery ports
 sudo ss -lup | grep -E '7400|7401'
 
-# 3) 实时日志（路径以你们部署为准）
+# 3) Follow runtime logs (adapt the path to your deployment)
 journalctl -u robotServer -f
 ```
 
-### 8.2 SDK 端常见现象排查
+### 8.2 Troubleshooting common phenomena on the SDK side
 
-| 现象 | 检查项 | 解决思路 |
+| Phenomenon | Check items | Solution ideas |
 |---|---|---|
-| `initialService` 返回 false | 日志 `errorf` 输出 | 看错误码：`kRpcConnectFailed` → DDS 域起不来（网卡 / 多播 / domain id 不对） |
-| `discoverDevices` 触发后回调一次没进 | 1. 是否 setNetworkInterface 选了能到机器人的网卡<br>2. `isMultiDevice()` 是否返 true<br>3. 机器人侧 `robotServer.discoverDevice.request` topic 是否被订阅 | 多设备模式必须正确指定网卡；若 isMultiDevice 返 false 说明 SDK 自检成板内模式，不该走 discover 流程 |
-| `create(sn)` 返回 nullptr | SDK 自检成远端但 deviceId 传空 | 远端模式 deviceId 必须非空（板内才允许空） |
-| `connect()` 之后 state 一直停在 `kDisconnected` | 1. 看 ConnectCallback 推过来的 error 码<br>2. `tcpdump` 是否双向有包<br>3. 机器人侧 `checkDeviceId` 配的 SN 与你传的是否一致 | `kRpcConnectFailed` → DDS 通道 / robotServer RPC 还没起；deviceId 不匹配 → 机器人 filter 静默丢弃所有请求 |
-| `startControl` 后没切 `kControlled` | 1. ConnectCallback 是否报了 error<br>2. 是否被另一台 client 抢权 | `kRpcAcquireRejected` → 控制权被别人占 / acquireMode 超时；`kSessionRevoked` → 别人接管 |
-| 动作类接口（`startAction` / `setActionParams` / `stopAction`）返 false，state 显示 `kControlled` | `getLastError()` 取值 | `kSessionExpired` → lease 到期；`kSessionRevoked` → 被接管；`kActionRejected` → 服务端拒绝（按业务码处理）|
-| **静默无响应**（任何接口都 timeout） | DDS QoS 不兼容（最常见） | 客户端 / 服务端 IDL 版本或 Cyclone DDS 版本不一致；用 `ddsperf sanity` 做最小握手验证 |
+| `initialService` returns false | Log `errorf` output | See error code: `kRpcConnectFailed` → DDS domain cannot be started (network card/multicast/domain id is incorrect) |
+| `discoverDevices` The callback did not come in once after being triggered | 1. Whether setNetworkInterface has selected the network card <br>2 that can reach the robot. Whether `isMultiDevice()` returns true<br>3. Whether the `robotServer.discoverDevice.request` topic on the robot side is subscribed | The network card must be correctly specified in multi-device mode; if isMultiDevice returns false Description The SDK self-checks into on-board mode and should not go through the discover process |
+| `create(sn)` returns nullptr | SDK self-checks as remote but deviceId is passed empty | Remote mode deviceId must be non-empty (empty is allowed only on the board) |
+| After `connect()`, the state has stopped at `kDisconnected` | 1. Check the error code <br>2 pushed by ConnectCallback. Whether `tcpdump` has packets in both directions <br>3. Is the SN assigned to `checkDeviceId` on the robot side consistent with what you passed | `kRpcConnectFailed` → DDS channel / robotServer RPC has not started yet; deviceId does not match → robot filter silently discards all requests |
+| `startControl` did not transition to `kControlled` | 1. Error reported by `ConnectCallback`<br>2. Whether another client took control | `kRpcAcquireRejected` → control held elsewhere or acquisition timeout; `kSessionRevoked` → another client took over |
+| Action class interface (`startAction` / `setActionParams` / `stopAction`) returns false, state displays `kControlled` | `getLastError()` value | `kSessionExpired` → lease expires; `kSessionRevoked` → is taken over; `kActionRejected` → Rejected by the server (processed according to business code) |
+| **Silent no response** (timeout for any interface) | DDS QoS incompatibility (most common) | Client/server IDL versions or Cyclone DDS versions are inconsistent; use `ddsperf sanity` for minimum handshake verification |
 
-### 8.3 打开 SDK 内部日志
+### 8.3 Open SDK internal log
 
 ```cpp
 IMotionSdkService::instance()->setLogCallback([](IMotionSdkService::LogLevel lv,
@@ -1555,6 +1557,6 @@ IMotionSdkService::instance()->setLogCallback([](IMotionSdkService::LogLevel lv,
 });
 ```
 
-不注册 callback 时 SDK 默认把日志输出到 `stdout`。生产环境建议接进自家日志系统集中查看。
+When the callback is not registered, the SDK outputs the log to `stdout` by default. For production environments, it is recommended to connect to your own log system for centralized viewing.
 
 ---

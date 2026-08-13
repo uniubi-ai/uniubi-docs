@@ -1,20 +1,22 @@
-# 启动并验证 ROS 2 Motion bridge
+# Start and Validate ROS 2 Motion Bridge
 
-## 目标
+**English** | [简体中文](ros2-motion-bridge.zh-CN.md)
 
-面向普通 ROS 2 业务节点，启动 `uniubi_motion_bridge`，先完成只读观测验证，再决定是否进入控制流程。
+## Goal
 
-本指南不覆盖原始 DDS / RPC 协议开发；需要协议级接入时，转到 [DDS / ROS 2 直连接入 API](../uniubi_robot_dds_api.md)。
+Start `uniubi_motion_bridge` for a ROS 2 application, complete read-only observation checks, and only then decide whether to enter the control workflow.
 
-## 前置条件
+This guide does not cover raw DDS/RPC development. For protocol-level integration, see the [DDS / ROS 2 API](../uniubi_robot_dds_api.md).
 
-- ROS 2 Humble 已安装并完成环境配置。
-- 开发机或 Orin 与机器人处于同一可发现网络和 DDS Domain。
-- 已确认目标机器人的 `device_id`，它对应设备信息中的 `deviceNo`。
-- 推荐使用 Cyclone DDS；多机器人场景为每条机器人使用独立的 `ROS_DOMAIN_ID`。
-- 如果存在多个网卡，提前配置 `CYCLONEDDS_URI` 指向机器人所在网卡。
+## Prerequisites
 
-## 1. 构建消息包和 bridge
+- ROS 2 Humble is installed and sourced.
+- The development host or Orin is on a network and DDS domain from which the robot can be discovered.
+- The target robot's `device_id` is known; it corresponds to `deviceNo` in device information.
+- Cyclone DDS is recommended. For multiple robots, use a separate `ROS_DOMAIN_ID` for each robot.
+- On a multi-interface host, configure `CYCLONEDDS_URI` for the robot-facing interface before starting.
+
+## 1. Build the Message Package and Bridge
 
 ```bash
 mkdir -p ~/ros2_ws/src
@@ -31,10 +33,9 @@ colcon build --packages-select uniubi uniubi_motion_client uniubi_motion_bridge
 . install/setup.bash
 ```
 
-成功标准：`colcon build` 返回成功，并且 `ros2 pkg list` 中能找到
-`uniubi`、`uniubi_motion_client` 和 `uniubi_motion_bridge`。
+Success criterion: `colcon build` succeeds and `ros2 pkg list` contains `uniubi`, `uniubi_motion_client`, and `uniubi_motion_bridge`.
 
-## 2. 配置运行环境
+## 2. Configure the Runtime Environment
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -46,26 +47,25 @@ export ROS_LOCALHOST_ONLY=0
 export ROBOT_DEVICE_ID="$(python3 -c 'import json; print(json.load(open("/tmp/deviceInfo"))["deviceNo"])')"
 ```
 
-如果设备信息不在 `/tmp/deviceInfo`，将 `ROBOT_DEVICE_ID` 替换为设备信息中的
-`deviceNo`；不要把机器人 SN 和 ROS Domain 混为一谈。
+If device information is not available at `/tmp/deviceInfo`, set `ROBOT_DEVICE_ID` to the target robot's actual `deviceNo`. Do not confuse the robot SN with the ROS domain ID.
 
-## 3. 启动 bridge
+## 3. Start the Bridge
 
 ```bash
 ros2 launch uniubi_motion_bridge motion_bridge.launch.py \
   device_id:="$ROBOT_DEVICE_ID"
 ```
 
-启动成功的最低标准：
+Minimum startup criteria:
 
-- bridge 节点保持运行；
-- 能发现 robotServer；
-- 启动阶段不会自动申请运动控制权；
-- 未配置正确的设备 ID、DDS Domain 或网卡时，应先排查连接，不要直接尝试动作。
+- The bridge node remains running.
+- It discovers `robotServer`.
+- It does not request motion-control ownership at startup.
+- If the device ID, DDS domain, or network interface is wrong, diagnose connectivity before attempting an action.
 
-## 4. 先做只读观测验证
+## 4. Validate Read-only Observations
 
-另开终端并重新 source 环境：
+Open another terminal and source the environment again:
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -78,30 +78,29 @@ ros2 topic echo --once /imu/data sensor_msgs/msg/Imu
 ros2 topic echo --once /battery_state sensor_msgs/msg/BatteryState
 ```
 
-成功标准：
+Success criteria:
 
-- `uniubi_motion_bridge` 出现在节点列表；
-- 标准 topic 能收到有效样本；
-- 只读订阅不需要申请运动控制权；
-- topic 没有数据时，优先检查网络、`ROS_DOMAIN_ID`、RMW、网卡和 `device_id`。
+- `uniubi_motion_bridge` appears in the node list.
+- Standard topics receive valid samples.
+- Read-only subscriptions do not require motion-control ownership.
+- If topics have no data, first check networking, `ROS_DOMAIN_ID`, RMW, the selected interface, and `device_id`.
 
-## 5. 控制流程的边界
+## 5. Control Boundaries
 
-bridge 启动本身不等于机器人已经开始运动。控制流程需要额外确认：
+Starting the bridge does not start robot motion. Before entering control:
 
-- 动作类型和参数是否在设备能力范围内；
-- 场地、急停和人工接管是否准备就绪；
-- 业务结束后显式停止动作并释放控制权；
-- 不要把 `/cmd_vel` 当作取权或启动动作的接口。
+- confirm that the action and parameters are supported by the device;
+- prepare the test area, emergency stop, and manual-takeover procedure;
+- explicitly stop the action and release control when the application finishes; and
+- do not treat `/cmd_vel` as an ownership-acquisition or action-start interface.
 
-普通业务优先使用 bridge；需要更细粒度的高级控制时，再阅读
-[`uniubi_motion_client` 的选型说明](https://github.com/uniubi-ai/uniubi_ros2/blob/main/docs/ros2_usage_modes.md)。
+Use the bridge for standard application development. For more detailed High-level control, read the [`uniubi_motion_client` usage modes](https://github.com/uniubi-ai/uniubi_ros2/blob/main/docs/ros2_usage_modes.md).
 
-## 常见排查
+## Troubleshooting
 
-| 现象 | 优先检查 |
+| Symptom | Check first |
 |---|---|
-| bridge 无法发现 robotServer | DDS Domain、RMW、网卡、`CYCLONEDDS_URI`、设备网络 |
-| 节点启动但 topic 无数据 | `device_id`、机器人服务状态、topic 名和 QoS |
-| 只读正常但控制失败 | 设备能力、控制权生命周期、动作参数和安全状态 |
-| 多台机器人互相收到数据 | 是否复用了同一个 `ROS_DOMAIN_ID` |
+| Bridge cannot discover `robotServer` | DDS domain, RMW, network interface, `CYCLONEDDS_URI`, and device network |
+| Node runs but topics have no data | `device_id`, robot-service status, topic name, and QoS |
+| Read-only data works but control fails | Device capabilities, control lifecycle, action parameters, and safety state |
+| Multiple robots receive one another's data | Reuse of the same `ROS_DOMAIN_ID` |

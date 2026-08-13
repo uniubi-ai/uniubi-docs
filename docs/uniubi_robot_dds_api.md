@@ -1,83 +1,85 @@
-# 宇泛机器狗 DDS / ROS 2 直连接入 API
+# Uniubi Quadruped DDS / ROS 2 Direct Integration API
 
-> 适用对象：不借助本厂商 SDK，直接用 OMG DDS（推荐 Cyclone DDS 0.10.5）或 ROS 2 对接设备的开发者。
-> 与高级控制 SDK（`docs/motion_highlevel_sdk.md`）能力对齐，是其底层协议契约的对外描述。
+**English** | [简体中文](uniubi_robot_dds_api.zh-CN.md)
 
----
-
-## 目录
-
-- [一、概述与 DDS 通道对接规范](#一概述与-dds-通道对接规范)
-  - [1.1 接入方式](#11-接入方式)
-  - [1.2 DDS 基础](#12-dds-基础)
-  - [1.3 三类通道](#13-三类通道)
-    - [1.3.1 RPC 通道](#131-rpc-通道请求-应答)
-    - [1.3.2 事件通道](#132-事件通道设备主动推送)
-    - [1.3.3 数据订阅发布通道](#133-数据订阅发布通道开放型-pubsub)
-    - [1.3.4 Topic 汇总](#134-topic-汇总)
-  - [1.4 开发工程模板](#14-开发工程模板)
-- [二、业务消息格式规范](#二业务消息格式规范)
-  - [2.1 RPC 消息规范](#21-rpc-消息规范)
-    - [2.1.1 RPC 请求 payload 格式](#211-rpc-请求-payload-格式)
-    - [2.1.2 RPC 回复 payload 格式](#212-rpc-回复-payload-格式)
-    - [2.1.3 业务成败双层判定](#213-业务成败双层判定)
-  - [2.2 事件通道](#22-事件通道)
-- [三、业务流](#三业务流)
-  - [3.1 控制权生命周期](#31-控制权生命周期)
-  - [3.2 RPC 方法列表](#32-rpc-方法列表)
-  - [3.3 RPC 方法详解](#33-rpc-方法详解)
-    - [3.3.1 会话管理](#331-会话管理)
-    - [3.3.2 动作控制](#332-动作控制)
-    - [3.3.3 数据上报](#333-数据上报)
-    - [3.3.4 状态查询](#334-状态查询)
-    - [3.3.5 音频控制](#335-音频控制)
-    - [3.3.6 系统设置](#336-系统设置)
-  - [3.4 实时控制帧 (TRC)](#34-实时控制帧-trc)
-  - [3.5 运控观测量订阅](#35-运控观测量订阅)
-  - [3.6 事件接收与分发](#36-事件接收与分发)
-  - [3.7 关闭](#37-关闭)
-  - [3.8 断网与多端](#38-断网与多端)
-- [四、消息格式与字段](#四消息格式与字段)
-  - [4.1 TRC 控制帧](#41-trc-控制帧)
-  - [4.2 观测量](#42-观测量)
-  - [4.3 事件](#43-事件)
-  - [4.4 错误码](#44-错误码)
-- [附录 A · 客户端自检清单](#附录-a--客户端自检清单)
-- [附录 B · Python 接入要点](#附录-b--python-接入要点)
-- [附录 C · C++ 接入要点](#附录-c--c-接入要点)
-- [附录 D · 错误处理决策表与静默失败排查](#附录-d--错误处理决策表与静默失败排查)
+> Intended audience: developers integrating directly with a robot through OMG DDS (Cyclone DDS 0.10.5 recommended) or ROS 2 without using the Uniubi SDK.
+> This document describes the underlying protocol contract exposed by the High-level SDK and is aligned with its capabilities.
 
 ---
 
-## 一、概述与 DDS 通道对接规范
+## Table of contents
 
-本章覆盖两件事：
+- [1. Overview and DDS channel integration requirements](#1-overview-and-dds-channel-integration-requirements)
+- [1.1 Access method ](#11-access-method)
+- [1.2 DDS Basic ](#12-dds-basics)
+- [1.3 Category 3 channel ](#13-category-3-channels)
+- [1.3.1 RPC channel ](#131-rpc-channel-request-reply)
+- [1.3.2 Event channel ](#132-event-channel-active-push-by-device)
+- [1.3.3 Data subscription publishing channel ](#133-data-subscription-and-publishing-channel-open-pubsub)
+- [1.3.4 Topic Summary ](#134-topic-summary)
+- [1.4 Development project template ](#14-development-project-template)
+- [2. Business message format specification ](#2-business-message-format-specifications)
+- [2.1 RPC message specification ](#21-rpc-message-specification)
+- [2.1.1 RPC request payload format ](#211-rpc-request-payload-format)
+- [2.1.2 RPC reply payload format ](#212-rpc-reply-payload-format)
+- [2.1.3 Double-layer judgment of business success or failure ](#213-two-level-judgment-of-business-success-or-failure)
+- [2.2 Event channel ](#22-event-channel)
+- [3. Business flow ](#3-business-flow)
+- [3.1 Control life cycle ](#31-control-life-cycle)
+- [3.2 RPC method list ](#32-rpc-method-list)
+- [3.3 Detailed explanation of RPC method ](#33-detailed-explanation-of-rpc-method)
+- [3.3.1 Session Management ](#331-session-management)
+- [3.3.2 Action control ](#332-action-control)
+- [3.3.3 Data reporting ](#333-data-reporting)
+- [3.3.4 Status query ](#334-status-query)
+- [3.3.5 Audio Control ](#335-audio-control)
+- [3.3.6 System Settings ](#336-system-settings)
+- [3.4 Real-time Control Frame (TRC)](#34-real-time-control-frame-trc)
+- [3.5 Motion Observation Subscription](#35-motion-observation-subscription)
+- [3.6 Event reception and distribution ](#36-event-reception-and-distribution)
+- [3.7 Close ](#37-close)
+- [3.8 Disconnection and multi-terminal ](#38-disconnection-and-multiple-terminals)
+- [4. Message format and fields ](#4-message-format-and-fields)
+- [4.1 TRC control frame ](#41-trc-control-frame)
+- [4.2 Observations ](#42-observations)
+- [4.3 Event ](#43-events)
+- [4.4 Error code ](#44-error-code)
+- [Appendix A · Client self-check list](#appendix-a-client-self-check-list)
+- [Appendix B · Python access points](#appendix-b-python-access-points)
+- [Appendix C · C++ access points](#appendix-c-c-access-points)
+- [Appendix D · Error handling decision table and silent failure troubleshooting](#appendix-d-error-handling-decision-table-and-silent-failure-troubleshooting)
 
-1. 协议适用范围与接入方式（[§1.1](#11-接入方式)）
-2. 客户端按本协议接入 DDS 时必须遵守的通道层规范 —— DDS 基础参数、IDL 类型扩展性、QoS 与三类通道的形态约定（[§1.2](#12-dds-基础) / [§1.3](#13-三类通道)）
+---
 
-本章**不涉及任何业务名字 / 值**（如 `serverName`、`service`、方法名、topic 取值等都在 [§3](#三业务流) / [§4](#四消息格式与字段) 给出）。通道层任一项不对齐，DDS 会**静默丢弃**样本，没有任何错误反馈。
+## 1. Overview and DDS channel integration requirements
 
-### 1.1 接入方式
+This chapter covers two areas:
 
-| 接入方式 | 适用场景 |
+1. Scope of application and access method of the agreement ([§1.1](#11-access-method))
+2. The channel-layer requirements that a DDS client must follow: core DDS parameters, IDL extensibility, QoS, and the three channel patterns ([§1.2](#12-dds-basics) / [§1.3](#13-category-3-channels)).
+
+This chapter **does not define business-layer names or values**. Values such as `serverName`, `service`, method names, and topics are defined in [§3](#3-business-flow) and [§4](#4-message-format-and-fields). If any channel-layer setting is incompatible, DDS may silently drop samples without reporting an application-level error.
+
+### 1.1 Access method
+
+| Access method | Applicable scenarios |
 |---|---|
-| **OMG DDS 原生**（C/C++/Java/Python/Go） | 任何 OMG DDS 实现（Cyclone DDS 0.10.5 / RTI Connext / Fast DDS / OpenDDS）按本协议描述的 IDL + QoS 直接对接 |
-| **ROS2** | ROS 2 节点直接按 IDL 建立 DDS Topic，无需 ROS Message 转换；rmw 推荐 Cyclone DDS。ROS 2 `.msg` / `.srv` 与本协议 IDL 的命名 / 类型 / QoS 映射规范见 [`ros2_dds_interop_overview.md`](ros2_dds_interop_overview.md) |
+| **Native OMG DDS** (C/C++/Java/Python/Go) | Use any OMG DDS implementation (Cyclone DDS 0.10.5 / RTI Connext / Fast DDS / OpenDDS) with the IDL and QoS defined by this protocol |
+| **ROS 2** | Create DDS topics directly from the IDL without ROS message conversion; Cyclone DDS is recommended for the RMW. See [`ros2_dds_interop_overview.md`](ros2_dds_interop_overview.md) for ROS 2 `.msg` / `.srv` naming, type, and QoS mappings |
 
-两种方式底层等价 —— 在同一 DDS Domain 上 publish/subscribe 同一组 IDL 类型，差异仅在客户端框架。
+The two methods are equivalent at the wire level: both publish and subscribe to the same IDL types in the same DDS domain. Only the client framework differs.
 
-### 1.2 DDS 基础
+### 1.2 DDS Basics
 
-#### 域 / Discovery
+#### Domain/Discovery
 
-- **DDS Domain ID**：固定 **`42`**（业务域 "host"，承载本协议的全部 RPC、事件、数据通道）。客户端 DDS profile / 运行时 join 的 domain id 必须与之一致，否则 discovery 完全不可见
-- **Discovery**：标准 OMG SPDP / SEDP 多播。客户端与机器人需在同一二层网络或多播路由可达；不需要手动指定对端地址
-- **Participant 数**：每个进程一个 `DomainParticipant` 即可，所有 topic 复用之
+- **DDS Domain ID**: fixed at **`42`** (the `host` domain carrying every RPC, event, and data channel in this protocol). The client's DDS profile/runtime must join the same domain or discovery will fail completely.
+- **Discovery**: Standard OMG SPDP/SEDP multicast. The client and robot need to be on the same Layer 2 network or reachable via multicast routes; there is no need to manually specify the peer address.
+- **Participant number**: One `DomainParticipant` per process is enough, and all topics reuse it
 
-#### DDS profile（Cyclone DDS 推荐配置）
+#### DDS profile (Cyclone DDS recommended configuration)
 
-机器人侧使用 Cyclone DDS 跑这条业务域。客户端如果也用 Cyclone DDS，建议加载下面这份 profile（**只需按部署环境改 `<NetworkInterface name="...">` 的网卡名**）：
+The robot side uses Cyclone DDS to run this business domain. If the client also uses Cyclone DDS, it is recommended to load the following profile (**Just change the network card name of `<NetworkInterface name="...">` according to the deployment environment**):
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -89,7 +91,8 @@
   <Domain Id="42">
     <General>
       <Interfaces>
-        <!-- 客户端按需替换 name 为本机实际网卡（eth0 / enp3s0 / wlan0 …）；presence_required="true" 让网卡缺失时立刻失败 -->
+        <!-- Replace name with the client's actual interface (eth0 / enp3s0 / wlan0 ...).
+             presence_required="true" fails immediately when the interface is absent. -->
         <NetworkInterface name="eth0" priority="3" multicast="default" presence_required="true" />
       </Interfaces>
       <AllowMulticast>true</AllowMulticast>
@@ -108,74 +111,74 @@
 </CycloneDDS>
 ```
 
-**关键字段含义**：
+**Key field meaning**:
 
-| 字段 | 必须 / 推荐 | 说明 |
+| Fields | Required/Recommended | Description |
 |---|---|---|
-| `Domain Id="42"` | **必须**与机器人侧一致 | 业务域固定 42，不可改 |
-| `<NetworkInterface name="...">` | **建议明确指定** | 多网卡 / 跨网段 / wifi+有线 共存时，不指定可能导致 DDS 在错误的网卡上协商；指定 `presence_required="true"` 让网卡不存在时启动直接失败，避免事后排查 |
-| `<AllowMulticast>true` | 必须 | discovery 走多播；如果网络环境完全禁用多播，需要改成 peers list（参见 Cyclone DDS 文档 `<Peers>` 字段） |
-| `<MaxMessageSize>65500B` | 推荐 | 单条 UDP 包上限；过低会触发分片影响吞吐 |
-| `<SharedMemory><Enable>` | 可选 | 同机器内不同进程间走 SHM 加速；若客户端总是跨网络可关闭 |
+| `Domain Id="42"` | **Must** be consistent with the robot side | The business domain is fixed at 42 and cannot be changed |
+| `<NetworkInterface name="...">` | **It is recommended to specify clearly** | When multiple network cards/cross-network segments/wifi+wired coexist, not specifying may cause DDS to negotiate on the wrong network card; specifying `presence_required="true"` will cause the startup to fail directly when the network card does not exist, avoiding subsequent troubleshooting |
+| `<AllowMulticast>true` | Must | Discovery uses multicast; if the network environment completely disables multicast, it needs to be changed to peers list (see the Cyclone DDS document `<Peers>` field) |
+| `<MaxMessageSize>65500B` | Recommended | The upper limit of a single UDP packet; if it is too low, it will trigger fragmentation and affect throughput |
+| `<SharedMemory><Enable>` | Optional | SHM acceleration between different processes in the same machine; if the client always crosses the network, it can be turned off |
 
-**应用如何加载该 profile**
+**How ​​the application loads this profile**
 
-| 方式 | 做法 |
+| Method | Practice |
 |---|---|
-| 环境变量 | `export CYCLONEDDS_URI=file:///path/to/host_config.xml` 后再启动应用 |
-| 代码层 | Cyclone DDS API 创建 `DomainParticipant` 时通过 `dds_create_domain` 或 `participant_qos` 加载（具体参考 Cyclone DDS C/C++ 文档） |
+| Environment variables | `export CYCLONEDDS_URI=file:///path/to/host_config.xml` before starting the application |
+| Code layer | Cyclone DDS API is loaded through `dds_create_domain` or `participant_qos` when creating `DomainParticipant` (refer to Cyclone DDS C/C++ documentation for details) |
 
-> 若使用 **RTI Connext / Fast DDS / OpenDDS** 等其它 OMG DDS 实现，按各自厂商的 QoS profile 语法重写一份等价配置即可 —— 只要 **Domain Id = 42 + 多播 discovery + 通用 QoS（§1.2 后续小节）** 对齐，跨实现互通没问题。
+> With another OMG DDS implementation such as **RTI Connext, Fast DDS, or OpenDDS**, express the equivalent settings using that implementation's QoS syntax. Cross-implementation interoperability requires **Domain ID 42, multicast discovery, and the common QoS defined later in §1.2** to match.
 
-#### IDL 类型扩展性（OMG XTYPES）
+#### IDL type extensibility (OMG XTYPES)
 
-| 类型 | Extensibility |
+| Type | Extensibility |
 |---|---|
-| `Header` | `@final`（显式标注，不可扩展） |
-| 其他业务 / 信封类型 | 默认 `@appendable`（允许末尾追加新字段，不允许删除或重排） |
+| `Header` | `@final` (explicitly marked, not expandable) |
+| Other Business/Envelope Type | Default `@appendable` (new fields are allowed to be appended at the end, deletion or rearrangement is not allowed) |
 
-客户端 IDL 必须与此一致；某些 DDS 实现（如 Fast DDS）若标注不一致会导致 discovery 不匹配。
+Client IDL must be consistent with this; some DDS implementations (such as Fast DDS) can cause discovery mismatches if annotations are inconsistent.
 
-#### 其他 IDL 约定
+#### Other IDL conventions
 
-- 所有 `string` 字段均为 **unbounded**（无长度上限）。
-- 所有 topic 均为 **keyless**（IDL 中无 `@key`，每 topic 仅一个 instance）。
+- All `string` fields are **unbounded** (no upper limit on length).
+- All topics are **keyless** (there is no `@key` in IDL, there is only one instance per topic).
 
-#### 通用 QoS（所有通道都加）
+#### Common QoS (applies to all channels)
 
-| QoS Policy | 取值 | 选择原因 |
+| QoS Policy | Value | Reason for selection |
 |---|---|---|
-| `DATA_REPRESENTATION` | `[XCDR1, XCDR2]` | 兼容新旧 |
-| `TYPE_CONSISTENCY_ENFORCEMENT` | `ALLOW_TYPE_COERCION` | 允许 IDL 字段顺序差异 / 增减 |
+| `DATA_REPRESENTATION` | `[XCDR1, XCDR2]` | Compatible with new and old |
+| `TYPE_CONSISTENCY_ENFORCEMENT` | `ALLOW_TYPE_COERCION` | Allow IDL field order differences/increases and decreases |
 
-#### QoS 不匹配的后果
+#### Consequences of QoS mismatch
 
-DDS 触发 `RequestedIncompatibleQos`，sample **静默不投递**（不报错）。每个通道的具体 QoS 见各自小节。
+DDS triggers `RequestedIncompatibleQos`, sample **silently does not deliver** (no error reported). The specific QoS for each channel is described in the respective subsections.
 
-### 1.3 三类通道
+### 1.3 Category 3 channels
 
-设备与客户端之间存在三类通道（按通信模式区分，不绑业务）：
+There are three types of channels between the device and the client (differentiated by communication mode, not tied to services):
 
-| 通道 | 模式 | 载荷形态 | 详见 |
+| Channel | Mode | Load form | See details |
 |---|---|---|---|
-| RPC 通道 | 请求-应答 | 信封 + JSON payload | [§1.3.1](#131-rpc-通道请求-应答) |
-| 事件通道 | 设备→客户端单向，带信封 + magic | 信封 + JSON payload | [§1.3.2](#132-事件通道设备主动推送) |
-| 数据订阅发布通道 | 单向 pub/sub，开放型 | IDL 结构体直接作 payload | [§1.3.3](#133-数据订阅发布通道开放型-pubsub) |
+| RPC channel | request-reply | envelope + JSON payload | [§1.3.1](#131-rpc-channel-request-reply) |
+| event channel | device → client one-way, with envelope + magic | envelope + JSON payload | [§1.3.2](#132-event-channel-active-push-by-device) |
+| Data subscription and publishing channel | One-way pub/sub, open type | IDL structure is directly used as payload | [§1.3.3](#133-data-subscription-and-publishing-channel-open-pubsub) |
 
-#### 1.3.1 RPC 通道（请求-应答）
+#### 1.3.1 RPC channel (request-reply)
 
-承载所有业务请求-响应类调用。
+Hosts all business request-response class calls.
 
-**Topic 命名模式**
+**Topic naming pattern**
 
 ```
-rq/${serverName}Request    // 请求，客户端 → 设备
-rr/${serverName}Reply      // 响应，设备 → 客户端
+rq/${serverName}Request    // Request: client → device
+rr/${serverName}Reply      // Reply: device → client
 ```
 
-`rq/` / `rr/` 是本协议固定前缀（与 ROS 2 命名约定一致），不可改；对开发者提供 RPC 通道的请求 topic 为 `rq/robotServerRequest`，RPC 响应的 topic 为 `rr/robotServerReply`。
+`rq/` / `rr/` is a fixed prefix of this protocol (consistent with the ROS 2 naming convention) and cannot be changed; the topic of the request for the RPC channel provided by the developer is `rq/robotServerRequest`, and the topic of the RPC response is `rr/robotServerReply`.
 
-**IDL 定义**
+**IDL definition**
 
 ```idl
 module uniubi {
@@ -212,82 +215,82 @@ module uniubi {
 };
 ```
 
-**信封字段语义**
+**Envelope field semantics**
 
-请求：
+ask:
 
-| 字段 | 类型 | 必填 | 含义 |
+| Field | Type | Required | Meaning |
 |---|---|---|---|
-| `header.clientId` | uint64 | 是 | 客户端 id；每个客户端唯一固定 id |
-| `header.requestId` | uint64 | 是 | 请求 id；单调递增 |
-| `timestamp` | uint64 | 是 | 调试时间戳 |
-| `service` | string | 是 | 业务路由 |
-| `device_id` | string | 是 | 目标设备 SN；设备只会响应 SN 为自己的 RPC 请求 |
-| `method` | string | 是 | 业务方法名 |
-| `payload` | string | 是 | 业务参数 JSON 字符串 |
+| `header.clientId` | uint64 | Yes | Client id; a unique fixed id for each client |
+| `header.requestId` | uint64 | Yes | Request id; monotonically increasing |
+| `timestamp` | uint64 | Yes | Debug timestamp |
+| `service` | string | Yes | Business routing |
+| `device_id` | string | Yes | Target device SN; the device will only respond to RPC requests with SN for itself |
+| `method` | string | Yes | Business method name |
+| `payload` | string | Yes | Business parameter JSON string |
 
-响应：
+response:
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `header.clientId` / `header.requestId` | uint64 | 回显请求 |
-| `code` | uint32 | RPC 协议层 code（取值见下表）；`0` = RPC 消息路由成功；非 0 表示错误，具体错误参考 code 取值表格 |
-| `timestamp` | uint64 | 调试时间戳 |
-| `device_id` | string | 设备 SN；设备只会响应 SN 为自己的 RPC 请求 |
-| `payload` | string | 业务响应 JSON 字符串 |
+| `header.clientId` / `header.requestId` | uint64 | Echo request |
+| `code` | uint32 | RPC protocol layer code (see the table below for values); `0` = RPC message routing is successful; non-0 indicates an error. For specific errors, please refer to the code value table |
+| `timestamp` | uint64 | Debug timestamp |
+| `device_id` | string | Device SN; the device will only respond to RPC requests with the SN as its own |
+| `payload` | string | Business response JSON string |
 
-**`code` 取值**
+**`code` value**
 
-| code | 名称 | 含义 | 触发场景 | 客户端动作 |
+| code | name | meaning | trigger scenario | client action |
 |---|---|---|---|---|
-| `0` | SUCCESS | 路由成功 | handler 已返回，业务结果看 payload | 进入业务层判定（[§2.1.3](#213-业务成败双层判定)） |
-| `1` | TIMEOUT | 框架层超时 | 设备 handler 内部超时 | 不可重试；检查设备状态 |
-| `2` | SERVER_ERROR | 服务端错误 | handler 抛出异常 / 内部错 | 不可重试；上报 |
-| `3` | METHOD_NOT_FOUND | 方法不存在 | 设备不支持请求的 `method` | 检查 method / 固件版本 |
-| `4` | INVALID_REQUEST | 请求非法 | 信封字段缺失 / 类型错 | 检查请求结构 |
-| `5` | SERVER_UNPREPARE | 服务未就绪 | 设备启动早期 | 退避 1–3s 重试 |
-| `6` | SERVICE_NOT_FOUND | 服务不存在 | `service` 字段值不合法 | 检查 service 拼写 |
-| `7` | DESERIALIZE_ERROR | 反序列化失败 | `payload` 不是合法 JSON | 检查 payload 序列化 |
+| `0` | SUCCESS | Routing successful | handler has returned, the business results can be found in payload | Enter business layer determination ([§2.1.3](#213-two-level-judgment-of-business-success-or-failure)) |
+| `1` | TIMEOUT | Framework layer timeout | Device handler internal timeout | No retry; Check device status |
+| `2` | SERVER_ERROR | Server error | handler threw exception / internal error | Cannot retry; report |
+| `3` | METHOD_NOT_FOUND | Method does not exist | Device does not support requested `method` | Check method / firmware version |
+| `4` | INVALID_REQUEST | Illegal request | Missing envelope field/wrong type | Check request structure |
+| `5` | SERVER_UNPREPARE | Service not ready | Device startup early | Back off 1–3s and try again |
+| `6` | SERVICE_NOT_FOUND | Service does not exist | `service` field value is illegal | Check service spelling |
+| `7` | DESERIALIZE_ERROR | Deserialization failed | `payload` is not a valid JSON | Check payload serialization |
 
-**响应匹配（协议级强制约束）**
+**Response matching (protocol level mandatory constraints)**
 
-客户端必须按以下两项同时匹配响应，任一不匹配视为响应不属于本次调用，**必须丢弃**：
+The client must match the response according to the following two items at the same time. If any one does not match, the response is deemed not to belong to this call and must be discarded:
 
-| 匹配项 | 规则 |
+| Matches | Rules |
 |---|---|
-| `System_Response_.header.clientId` | == 请求.`header.clientId` |
-| `System_Response_.header.requestId` | == 请求.`header.requestId` |
+| `System_Response_.header.clientId` | == request.`header.clientId` |
+| `System_Response_.header.requestId` | == request.`header.requestId` |
 
-- `Header.clientId` 进程内全局唯一（启动时随机 uint64）
-- `Header.requestId` session 内单调递增，绝不重复
-- **着重注意：每次请求 `header.requestId` 单调递增**
+- `Header.clientId` is globally unique within the process (random uint64 at startup)
+- `Header.requestId` monotonically increases within the session and never repeats
+- **Important note: Each request `header.requestId` increases monotonically**
 
 **QoS**
 
-| QoS Policy | 取值 | 说明 |
+| QoS Policy | Value | Description |
 |---|---|---|
-| `RELIABILITY` | `RELIABLE` | RPC 不可丢，依赖 DDS 重传 |
-| `RELIABILITY.max_blocking_time` | `100 ms` | 防止调用线程被网络拖死 |
-| `HISTORY` | `KEEP_LAST, depth=10` | 缓存最近 10 个 sample |
-| `DURABILITY` | `VOLATILE` | 不持久化；后加入的 reader 不补发历史 |
-| `DATA_REPRESENTATION` | `[XCDR1, XCDR2]` | 兼容新旧 |
-| `TYPE_CONSISTENCY_ENFORCEMENT` | `ALLOW_TYPE_COERCION` | 允许 IDL 字段顺序差异 / 增减 |
+| `RELIABILITY` | `RELIABLE` | RPC cannot be lost and relies on DDS retransmission |
+| `RELIABILITY.max_blocking_time` | `100 ms` | Prevent the calling thread from being dragged to death by the network |
+| `HISTORY` | `KEEP_LAST, depth=10` | Cache the latest 10 samples |
+| `DURABILITY` | `VOLATILE` | Not persistent; readers added later will not reissue history |
+| `DATA_REPRESENTATION` | `[XCDR1, XCDR2]` | Compatible with new and old |
+| `TYPE_CONSISTENCY_ENFORCEMENT` | `ALLOW_TYPE_COERCION` | Allow IDL field order differences/increases and decreases |
 
-请求与响应 topic 的 reader/writer 必须**采用完全相同的 QoS**。
+The reader/writer of the request and response topic must use exactly the same QoS.
 
-#### 1.3.2 事件通道（设备主动推送）
+#### 1.3.2 Event channel (active push by device)
 
-承载设备主动推送的业务事件（状态变化、控制权变化等）。单向、不重传。区别于通用 pub/sub（[§1.3.3](#133-数据订阅发布通道开放型-pubsub)）：带固定信封 + `magic` 校验 + wire/业务 topic 二级路由。
+Bears business events actively pushed by the device (status changes, control rights changes, etc.). One-way, no retransmission. Different from general pub/sub ([§1.3.3](#133-data-subscription-and-publishing-channel-open-pubsub)): with fixed envelope + `magic` verification + wire/business topic secondary routing.
 
-**Topic 命名模式**
+**Topic naming pattern**
 
 ```
-rt/${serverName}/Event     // 设备 → 客户端
+rt/${serverName}/Event     // Device → client
 ```
 
-`rt/` 是本协议固定前缀（与 ROS 2 命名约定一致），不可改；对开发者提供事件通道的 topic 为 `rt/robotServer/Event`。
+`rt/` is a fixed prefix of this protocol (consistent with the ROS 2 naming convention) and cannot be changed; the topic for event channels provided to developers is `rt/robotServer/Event`.
 
-**IDL 定义**
+**IDL definition**
 
 ```idl
 module uniubi {
@@ -304,10 +307,10 @@ module uniubi {
 
       struct EventMessage_ {
           uniubi::dds_::Header  header;
-          uint32                magic;       // 固定 = 0x53425645，校验失败必须丢弃
-          uint64                timestamp;   // 调试时间戳
-          string                topic;       // 业务 topic（取值见 §4.3），见 [§4](#四消息格式与字段)
-          string                payload;     // 事件 JSON 字符串
+          uint32                magic;       // Fixed at 0x53425645; discard on validation failure
+          uint64                timestamp;   // Debug timestamp
+          string                topic;       // Business topic; see §4.3 and §4
+          string                payload;     // Event JSON string
       };
 
     };
@@ -315,84 +318,84 @@ module uniubi {
 };
 ```
 
-**信封字段语义**
+**Envelope field semantics**
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `header.clientId` | uint64 | 事件源 id（设备生成），可用于过滤本端 loop-back |
-| `header.requestId` | uint64 | 设备内部事件序号 |
-| `magic` | uint32 | 协议校验常量，固定 = `0x53425645`（ASCII `"EVBS"`）；**校验失败必须整帧丢弃** |
-| `timestamp` | uint64 | 调试时间戳 |
-| `topic` | string | 业务 topic 字符串（不是 DDS wire-level topic）；具体取值由业务约定（见 [§4](#四消息格式与字段)）；客户端遇未知值**宽容透传**给业务层 |
-| `payload` | string | JSON 字符串，schema 随 `topic` 取值而异（详见 [§4](#四消息格式与字段)） |
+| `header.clientId` | uint64 | Event source id (generated by device), which can be used to filter the local loop-back |
+| `header.requestId` | uint64 | Device internal event sequence number |
+| `magic` | uint32 | Protocol check constant, fixed = `0x53425645` (ASCII `"EVBS"`); **If the check fails, the entire frame must be discarded** |
+| `timestamp` | uint64 | Debug timestamp |
+| `topic` | string | Business topic string (not DDS wire-level topic); the specific value is agreed by the business (see [§4](#4-message-format-and-fields)]); when the client encounters an unknown value, it is **tolerant and transparently transmitted** to the business layer |
+| `payload` | string | JSON string, schema varies with the value of `topic` (see [§4](#4-message-format-and-fields) for details) |
 
 **QoS**
 
-| QoS Policy | 取值 | 说明 |
+| QoS Policy | Value | Description |
 |---|---|---|
-| `RELIABILITY` | `BEST_EFFORT` | reader 离线时不积压在设备侧 |
-| `HISTORY` | `KEEP_LAST, depth=10` | reader 最多积压 10 条 |
-| `DURABILITY` | `VOLATILE` | 不补发历史；初值需 RPC 主动查询 |
-| `DATA_REPRESENTATION` | `[XCDR1, XCDR2]` | 兼容新旧 |
-| `TYPE_CONSISTENCY_ENFORCEMENT` | `ALLOW_TYPE_COERCION` | 允许 IDL 字段顺序差异 / 增减 |
+| `RELIABILITY` | `BEST_EFFORT` | reader is not backlogged on the device side when offline |
+| `HISTORY` | `KEEP_LAST, depth=10` | reader has a maximum backlog of 10 items |
+| `DURABILITY` | `VOLATILE` | No reissue history; initial value requires RPC active query |
+| `DATA_REPRESENTATION` | `[XCDR1, XCDR2]` | Compatible with new and old |
+| `TYPE_CONSISTENCY_ENFORCEMENT` | `ALLOW_TYPE_COERCION` | Allow IDL field order differences/increases and decreases |
 
-#### 1.3.3 数据订阅发布通道（开放型 pub/sub）
+#### 1.3.3 Data subscription and publishing channel (open pub/sub)
 
-承载客户端 ↔ 设备的高频单向流。本通道不绑定固定业务，是**留给业务层扩展**的开放型通道，IDL 结构体直接作为 payload，无 JSON 信封。
+Carrying high-frequency unidirectional streams of clients ↔ devices. This channel is not bound to fixed services and is an open channel reserved for business layer expansion. The IDL structure is directly used as the payload without a JSON envelope.
 
-**Topic 命名模式**
+**Topic naming pattern**
 
 ```
 rt/<scopeName>
 ```
 
-`rt/` 是本协议固定前缀（与 ROS 2 命名约定一致），不可改；`<scopeName>` 由具体业务约定。
+`rt/` is the fixed prefix of this agreement (consistent with the ROS 2 naming convention) and cannot be changed; `<scopeName>` is agreed upon by the specific business.
 
-**载荷形态**
+**Load form**
 
-整个 IDL 结构体即 payload，**不嵌套 JSON 字符串**。新业务追加新 topic 时，建议继续遵循"IDL 结构体直接作 payload"的约定。
+The entire IDL structure is the payload, **no nested JSON string**. When adding a new topic to a new business, it is recommended to continue to follow the convention of "directly using the IDL structure as the payload".
 
-**QoS（协议级强制项）**
+**QoS (protocol-level enforcement)**
 
-| QoS Policy | 取值 | 说明 |
+| QoS Policy | Value | Description |
 |---|---|---|
-| `DATA_REPRESENTATION` | `[XCDR1, XCDR2]` | 兼容新旧 |
-| `TYPE_CONSISTENCY_ENFORCEMENT` | `ALLOW_TYPE_COERCION` | 允许 IDL 字段顺序差异 / 增减 |
+| `DATA_REPRESENTATION` | `[XCDR1, XCDR2]` | Compatible with new and old |
+| `TYPE_CONSISTENCY_ENFORCEMENT` | `ALLOW_TYPE_COERCION` | Allow IDL field order differences/increases and decreases |
 
-其余 QoS（`RELIABILITY` / `HISTORY` / `DURABILITY` 等）由具体业务约定，本协议不在此处给出默认值。各业务通道的 `scopeName`、IDL 类型与完整 QoS 见 [§3](#三业务流) / [§4](#四消息格式与字段)。
+The remaining QoS (`RELIABILITY` / `HISTORY` / `DURABILITY`, etc.) are agreed upon by specific services, and this agreement does not give default values ​​here. For the `scopeName`, IDL type and complete QoS of each service channel, see [§3](#3-business-flow) / [§4](#4-message-format-and-fields).
 
-#### 1.3.4 Topic 汇总
+#### 1.3.4 Topic summary
 
-DDS wire-level topic 一览（客户端建 Writer/Reader 时使用）：
+List of DDS wire-level topics (used when the client creates Writer/Reader):
 
-| Topic | 方向 | 通道类型 | IDL 类型 | 用途 / 详见 |
+| Topic | Direction | Channel Type | IDL Type | Usage / Details |
 |---|---|---|---|---|
-| `rq/robotServerRequest` | 客户端 → 设备 | RPC 请求 | `System_Request_` | [§1.3.1](#131-rpc-通道请求-应答) |
-| `rr/robotServerReply` | 设备 → 客户端 | RPC 应答 | `System_Response_` | [§1.3.1](#131-rpc-通道请求-应答) |
-| `rt/robotServer/Event` | 设备 → 客户端 | 事件通道 | `EventMessage_` | [§1.3.2](#132-事件通道设备主动推送) / [§4.3](#43-事件) |
-| `rt/motion/trc` | 客户端 → 设备 | 数据 pub/sub | `RemoteControl_` | TRC 实时控制帧 [§3.4](#34-实时控制帧-trc) / [§4.1](#41-trc-控制帧) |
-| `rt/motion/observed` | 设备 → 客户端 | 数据 pub/sub | `MotionObserved_` | 运控观测量 [§3.5](#35-运控观测量订阅) / [§4.2](#42-观测量) |
-| `rt/sensor/observed` | 设备 → 客户端 | 数据 pub/sub | `SensorObserved_` | 传感器观测量（GPS / UWB / Walk 里程计）[§3.5](#35-运控观测量订阅) / [§4.2](#42-观测量) |
+| `rq/robotServerRequest` | Client → Device | RPC Request | `System_Request_` | [§1.3.1](#131-rpc-channel-request-reply) |
+| `rr/robotServerReply` | Device → Client | RPC Response | `System_Response_` | [§1.3.1](#131-rpc-channel-request-reply) |
+| `rt/robotServer/Event` | Device → Client | Event Channel | `EventMessage_` | [§1.3.2](#132-event-channel-active-push-by-device) / [§4.3](#43-events) |
+| `rt/motion/trc` | Client → Device | Data pub/sub | `RemoteControl_` | TRC real-time control frame [§3.4](#34-real-time-control-frame-trc) / [§4.1](#41-trc-control-frame) |
+| `rt/motion/observed` | Device → Client | Data pub/sub | `MotionObserved_` | Motion observation [§3.5](#35-motion-observation-subscription) / [§4.2](#42-observations) |
+| `rt/sensor/observed` | Device → Client | Data pub/sub | `SensorObserved_` | Sensor observations (GPS / UWB / Walk odometer) [§3.5](#35-motion-observation-subscription) / [§4.2](#42-observations) |
 
-> `rq/` / `rr/` / `rt/` 是 ROS 2 命名约定下的固定前缀，客户端必须按此 wire-level 名字订阅 / 发布 —— 跟 SDK 内部使用的"逻辑 topic 名"（如 `robotServer.host.event`、`motion/trc`）不同，那些是 SDK 内部 EventBus / Publisher 包装层的命名，DDS 上不可见。
+> `rq/` / `rr/` / `rt/` is a fixed prefix under the ROS 2 naming convention. The client must subscribe/publish according to this wire-level name - different from the "logical topic names" used internally by the SDK (such as `robotServer.host.event`, `motion/trc`), which are SDK internal EventBus / Publisher Naming of the packaging layer, not visible on DDS.
 
-### 1.4 开发工程模板
+### 1.4 Development project template
 
-本节给出最小可起跑的项目模板，开发者照着复制 + 补 IDL 即可编译 + 运行。
+This section provides the smallest project template that can be started. Developers can compile and run by copying and adding IDL.
 
-#### 1.4.1 依赖安装
+#### 1.4.1 Dependency installation
 
-机器人侧使用 **Cyclone DDS 0.10.5**；客户端建议使用相同主版本。
+The robot side uses **Cyclone DDS 0.10.5**; the client is recommended to use the same major version.
 
 ```bash
-# Ubuntu/Debian：从源码编译
+# Ubuntu/Debian: build from source
 git clone --depth=1 -b 0.10.5 https://github.com/eclipse-cyclonedds/cyclonedds
 cd cyclonedds && mkdir build && cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DBUILD_IDLC=ON ..
 make -j$(nproc) && sudo make install
 sudo ldconfig
 
-# 如需 C++ 绑定（推荐）：cyclonedds-cxx
+# Recommended C++ binding: cyclonedds-cxx
 git clone --depth=1 -b 0.10.5 https://github.com/eclipse-cyclonedds/cyclonedds-cxx
 cd cyclonedds-cxx && mkdir build && cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr/local ..
@@ -400,21 +403,21 @@ make -j$(nproc) && sudo make install
 sudo ldconfig
 ```
 
-校验：
+check:
 
 ```bash
-which idlc                       # /usr/local/bin/idlc（IDL 编译器）
-ldconfig -p | grep ddsc          # libddsc.so.0 已生效
-ldconfig -p | grep ddscxx        # libddscxx.so.0（C++ 绑定）
+which idlc                       # /usr/local/bin/idlc (IDL compiler)
+ldconfig -p | grep ddsc          # libddsc.so.0 is available
+ldconfig -p | grep ddscxx        # libddscxx.so.0 (C++ binding)
 ```
 
-#### 1.4.2 工程目录结构
+#### 1.4.2 Project directory structure
 
 ```
 my_robot_client/
 ├── CMakeLists.txt
-├── host_config.xml          # DDS profile，复制 §1.2 给出的样例后改 NetworkInterface 网卡名
-├── idl/                     # 从 SDK 仓库 IDL/ 整目录拷贝过来
+├── host_config.xml          # DDS profile; copy §1.2 and set the NetworkInterface name
+├── idl/                     # Complete copy of IDL/ from the SDK repository
 │   ├── Request.idl
 │   ├── RPCMessage.idl
 │   ├── EventMessage.idl
@@ -423,24 +426,24 @@ my_robot_client/
 │   ├── SensorObserved.idl
 │   └── RemoteControl.idl
 └── src/
-    └── main.cpp             # 应用代码
+    └── main.cpp             # Application code
 ```
 
-完整 IDL 文件由 SDK 仓库 `IDL/` 提供，**整目录拷出来即可**（带 `#include` 依赖关系，缺一不可）。每个文件覆盖的协议范围：
+The SDK repository provides the complete IDL set under `IDL/`. **Copy the entire directory** so every `#include` dependency is preserved. Each file covers the following protocol scope:
 
-| 文件 | 内容 |
+| Documentation | Content |
 |---|---|
-| `Request.idl` | 公共 `Header`（clientId / requestId），所有信封共用 |
-| `RPCMessage.idl` | `System_Request_` / `System_Response_`（RPC 请求 / 应答信封） |
-| `EventMessage.idl` | `EventMessage_`（事件通道信封） |
-| `MotorState.idl` | `MotorHeader`（电机寻址：limbsNo / jointNo） |
-| `MotionObserved.idl` | `IMUState` / `Vector3f` / `Quaternionf` / `MotorObserved` / `PowerObserved` / 运控观测帧 |
-| `SensorObserved.idl` | `GPSFrame` / `GEOGPoint` / `UWBRawObserved` / 传感器观测帧 |
-| `RemoteControl.idl` | `RemoteControl_`（遥控手柄帧） |
+| `Request.idl` | Public `Header` (clientId/requestId), shared by all envelopes |
+| `RPCMessage.idl` | `System_Request_` / `System_Response_` (RPC request/reply envelope) |
+| `EventMessage.idl` | `EventMessage_` (event channel envelope) |
+| `MotorState.idl` | `MotorHeader` (motor addressing: limbsNo/jointNo) |
+| `MotionObserved.idl` | `IMUState` / `Vector3f` / `Quaternionf` / `MotorObserved` / `PowerObserved` / Motion observation frame |
+| `SensorObserved.idl` | `GPSFrame` / `GEOGPoint` / `UWBRawObserved` / Sensor observation frame |
+| `RemoteControl.idl` | `RemoteControl_` (remote control handle frame) |
 
-> 客户端不需要全部使用，按场景挑：纯 RPC 接入只用 `Request.idl + RPCMessage.idl`；如果还要订阅事件、观测量、遥控，按需补 `EventMessage.idl` / `MotionObserved.idl` / `SensorObserved.idl` / `RemoteControl.idl` 等。
+> The client does not need to use all of them, choose according to the scenario: only use `Request.idl + RPCMessage.idl` for pure RPC access; if you also need to subscribe to events, observations, and remote control, add `EventMessage.idl` / `MotionObserved.idl` / `SensorObserved.idl` / `RemoteControl.idl`, etc. as needed.
 
-#### 1.4.3 CMakeLists.txt 样例
+#### 1.4.3 CMakeLists.txt sample
 
 ```cmake
 cmake_minimum_required(VERSION 3.16)
@@ -452,8 +455,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(CycloneDDS         REQUIRED)
 find_package(CycloneDDS-CXX     REQUIRED)
 
-# IDL → 自动生成 C++ 代码（编译期）
-# 文件顺序无关；idlc 会按 #include 关系解析依赖
+# IDL → generated C++ code (at build time)
+# File order is irrelevant; idlc resolves #include dependencies
 idlc_generate(TARGET sdk_idl
               FILES
                   idl/Request.idl
@@ -470,159 +473,159 @@ target_link_libraries(my_client
         CycloneDDS-CXX::ddscxx)
 ```
 
-#### 1.4.4 构建 + 运行
+#### 1.4.4 Build + Run
 
 ```bash
 mkdir -p build && cd build
 cmake ..
 make -j$(nproc)
 
-# 让 Cyclone DDS 加载本目录下的 profile（决定 domain 42 + 走哪张网卡）
+# Load this directory's Cyclone DDS profile (domain 42 and network interface)
 export CYCLONEDDS_URI=file://$PWD/../host_config.xml
 
 ./my_client
 ```
 
-#### 1.4.5 启动顺序与最小验证
+#### 1.4.5 Startup sequence and minimum verification
 
-1. **确保机器人已上电、网络可达**；客户端机器 `ip a` 能看到自己声明的网卡（如 `eth0`）
-2. **客户端进程启动后**，DDS Discovery 走 SPDP 多播。若 5 秒内仍 publish/subscribe 不到任何 sample：
-   - 检查 `host_config.xml` 里 `Domain Id="42"` 与机器人侧一致
-   - 检查 `<NetworkInterface name="...">` 是否选到了真正与机器人互通的网卡
-   - 抓 udp 多播包确认多播未被防火墙挡：`sudo tcpdump -i eth0 udp port 7400`（Cyclone DDS 默认 discovery 端口）
-3. **协议级最小验证**：参考 [§3.3.4 状态查询](#334-状态查询) 中 `getMotionCapabilities` —— 一次无副作用的 RPC，能返回设备支持的动作列表即代表通道打通
+1. **Make sure the robot is powered on and the network is reachable**; the client machine `ip a` can see its declared network card (such as `eth0`)
+2. **After the client process is started**, DDS Discovery uses SPDP multicast. If there is still no sample published/subscribe within 5 seconds:
+- Check that `Domain Id="42"` in `host_config.xml` is consistent with the robot side
+- Check whether `<NetworkInterface name="...">` has selected a network card that can actually communicate with the robot
+- Capture udp multicast packets to confirm that multicast is not blocked by the firewall: `sudo tcpdump -i eth0 udp port 7400` (Cyclone DDS default discovery port)
+3. **Protocol level minimum verification**: Refer to [§3.3.4 Status query ](#334-status-query) `getMotionCapabilities` - an RPC without side effects, which can return the action list supported by the device, means the channel is open
 
-具体每个 RPC 的信封 / payload / topic name 见 [§3 业务流](#三业务流) 和 [§4 消息格式与字段](#四消息格式与字段)。客户端按这两节装填 `System_Request_` + 发布到对应 topic 即可。
+For the specific envelope/payload/topic name of each RPC, see [§3 Business flow ](#3-business-flow) and [§4 Message format and fields ](#4-message-format-and-fields). The client can load `System_Request_` + according to these two sections and publish it to the corresponding topic.
 
 ---
 
-## 二、业务消息格式规范
+## 2. Business message format specifications
 
-本章定义业务层消息载荷的结构 —— RPC 通道的 payload JSON 信封（[§2.1](#21-rpc-消息规范)）与事件通道的 topic 约定（[§2.2](#22-事件通道)）。具体方法 / 事件的字段在 [§3](#三业务流) / [§4](#四消息格式与字段) 给出。
+This chapter defines the structure of the business layer message payload - the payload JSON envelope of the RPC channel ([§2.1](#21-rpc-message-specification)) and the topic convention of the event channel ([§2.2](#22-event-channel))). The fields of specific methods/events are given in [§3](#3-business-flow) / [§4](#4-message-format-and-fields).
 
-### 2.1 RPC 消息规范
+### 2.1 RPC message specification
 
-`System_Request_` / `System_Response_` 的 IDL 与字段语义见 [§1.3.1](#131-rpc-通道请求-应答)。本节专讲 `payload` 字段内 JSON 信封的结构 —— 所有业务方法共用同一信封；具体方法的 `params` 字段在 [§3.3](#33-rpc-方法详解) 各方法详解中给出。
+For the IDL and field semantics of `System_Request_` / `System_Response_`, see [§1.3.1](#131-rpc-channel-request-reply). This section focuses on the structure of the JSON envelope in the `payload` field - all business methods share the same envelope; the `params` field of the specific method is given in [§3.3](#33-detailed-explanation-of-rpc-method) Detailed explanation of each method.
 
-| 方向 | Topic |
+| Directions | Topic |
 |---|---|
-| 请求（客户端 → 设备） | `rq/robotServerRequest` |
-| 回复（设备 → 客户端） | `rr/robotServerReply` |
+| Request (Client → Device) | `rq/robotServerRequest` |
+| Reply (Device → Client) | `rr/robotServerReply` |
 
-#### 2.1.1 RPC 请求 payload 格式
+#### 2.1.1 RPC request payload format
 
 ```jsonc
 {
   "call":   { "clientId": "<string>" },
-  "params": { /* 方法专属字段 */ }
+  "params": { /* method-specific fields */ }
 }
 ```
 
-| 字段 | 类型 | 必填 | 含义 |
+| Field | Type | Required | Meaning |
 |---|---|---|---|
-| `call` | object | 是 | 调用方上下文 |
-| `call.clientId` | string | 是 | RPC 客户端 id；客户端 id 需要按照具体业务接口的要求来填写 |
-| `params` | object | 是 | 方法专属参数；无参填 `{}`（**不可省略**） |
+| `call` | object | yes | caller context |
+| `call.clientId` | string | Yes | RPC client id; the client id needs to be filled in according to the requirements of the specific business interface |
+| `params` | object | Yes | Method-specific parameters; no parameters to fill in `{}` (**cannot be omitted**) |
 
-#### 2.1.2 RPC 回复 payload 格式
+#### 2.1.2 RPC reply payload format
 
 ```jsonc
 { "code": <uint32>, "result": <bool>, "params": { ... } }
 ```
 
-| 字段 | 类型 | 必填 | 含义 |
+| Field | Type | Required | Meaning |
 |---|---|---|---|
-| `code` | uint32 | 是 | 业务 errno（取值见 [§4.4.1](#441-业务层-payloadcode)）；`0` = 成功 |
-| `result` | bool | 是 | `true` = 业务成功；`false` = 业务失败 |
-| `params` | object | 否 | handler 返回数据；可选，按具体业务接口而异 |
+| `code` | uint32 | Yes | Business errno (see [§4.4.1](#441-business-layer-payloadcode) for value); `0` = Success |
+| `result` | bool | Yes | `true` = Business success; `false` = Business failure |
+| `params` | object | No | handler returns data; optional, varies according to specific business interface |
 
-读取顺序：先看 `result` 判定业务成败，失败时再看 `code` 取失败原因；`params` 由具体方法决定是否存在（详见 [§3.3](#33-rpc-方法详解) 各方法的"响应 `params`"）。
+Reading sequence: first look at `result` to determine the success or failure of the business. If it fails, look at `code` to get the reason for the failure; whether `params` exists is determined by the specific method (for details, see [§3.3](#33-detailed-explanation-of-rpc-method) "Response `params`" of each method).
 
-#### 2.1.3 业务成败双层判定
+#### 2.1.3 Two-level judgment of business success or failure
 
-RPC 协议层成功 ≠ 业务层成功。判定一次 RPC 业务成功须**同时**满足：
+RPC protocol layer success ≠ business layer success. To determine the success of an RPC business, the following must be met at the same time:
 
-| 层 | 字段 | 必满足 |
+| Layer | Field | Required |
 |---|---|---|
-| 协议层 | `System_Response_.code` | `== 0` |
-| 业务层 | `payload.result` | `== true` |
+| Protocol layer | `System_Response_.code` | `== 0` |
+| Business layer | `payload.result` | `== true` |
 
 ```
 business_ok = (response.code == 0) AND (payload.result == true)
 ```
 
-### 2.2 事件通道
+### 2.2 Event channel
 
-事件通道的 IDL（`EventMessage_`）、信封字段与 QoS 见 [§1.3.2](#132-事件通道设备主动推送)，对外 topic 固定为 `rt/robotServer/Event`。
+For the IDL (`EventMessage_`), envelope field and QoS of the event channel, see [§1.3.2](#132-event-channel-active-push-by-device). The external topic is fixed to `rt/robotServer/Event`.
 
-事件 `EventMessage_.payload` 字段为 JSON 字符串，其 schema 随 `EventMessage_.topic` 字段值（业务 topic）而异 —— 详见 [§4.3](#43-事件)。
+The event `EventMessage_.payload` field is a JSON string, and its schema varies with the `EventMessage_.topic` field value (business topic) - see [§4.3](#43-events) for details.
 
 ---
 
-## 三、业务流
+## 3. Business flow
 
-本章描述基于 Cyclone DDS（[§1](#一概述与-dds-通道对接规范)）提供的机器狗业务能力。[§3.1](#31-控制权生命周期) 是各业务共用的基础 —— 控制权生命周期；[§3.2](#32-rpc-方法列表) 列出全部 RPC 方法；[§3.3](#33-rpc-方法详解) 分类详解每个方法的消息格式 / 字段 / 使用注意；[§3.4](#34-实时控制帧-trc) 起按场景介绍非 RPC 通道（TRC / 运控观测量 / 事件）与关闭、断网处理。
+This chapter describes the robot capabilities exposed over Cyclone DDS ([§1](#1-overview-and-dds-channel-integration-requirements)). [§3.1](#31-control-life-cycle) defines the control lifecycle shared by all capabilities; [§3.2](#32-rpc-method-list) lists every RPC method; [§3.3](#33-detailed-explanation-of-rpc-method) documents each method's message format, fields, and usage; and [§3.4](#34-real-time-control-frame-trc) begins the non-RPC channels (TRC, motion observations, and events), shutdown, and network-disconnection handling.
 
-#### 能力清单
+#### Competency List
 
-本协议当前覆盖以下业务能力，每项能力对应一个或多个 [§3.3](#33-rpc-方法详解) 中的 RPC 方法或 [§3.4](#34-实时控制帧-trc)-[§3.6](#36-事件接收与分发) 的通道操作：
+This Agreement currently covers the following business capabilities, each of which corresponds to one or more RPC methods in [§3.3](#33-detailed-explanation-of-rpc-method) or channel operations in [§3.4](#34-real-time-control-frame-trc)-[§3.6](#36-event-reception-and-distribution):
 
-| 能力 | 典型场景 |
+| Capabilities | Typical scenarios |
 |---|---|
-| 调度预置动作（走、站、跳等） | 自动化作业、任务编排 |
-| 实时手柄 / 摇杆控制（50–100 Hz） | 远程操控、遥操作训练 |
-| 订阅设备状态事件（电池、网络、播放等） | 监控面板、告警 |
-| 音频文件管理与播放控制 | 语音提示、人机交互 |
-| 查询设备能力与系统状态 | 健康检查、能力适配 |
-| 订阅运控高频观测量 | 训练数据采集、远程监视 |
+| Scheduling preset actions (walking, standing, jumping, etc.) | Automated jobs, task arrangement |
+| Real-time handle/joystick control (50–100 Hz) | Remote control, teleoperation training |
+| Subscribe to device status events (battery, network, playback, etc.) | Monitoring panel, alarms |
+| Audio file management and playback control | Voice prompts, human-computer interaction |
+| Query device capabilities and system status | Health check, capability adaptation |
+| Subscription to operation control high-frequency observations | Training data collection, remote monitoring |
 
-### 3.1 控制权生命周期
+### 3.1 Control life cycle
 
-要执行控制操作（如动作控制、下发遥控指令、音乐播放等），客户端必须先获取到设备的控制权。设备的控制权是**独占的**，不允许多个客户端同时执行控制。完整的控制权生命周期：
+To perform control operations (such as motion control, issuing remote control commands, music playback, etc.), the client must first obtain control of the device. Control of the device is **exclusive** and multiple clients are not allowed to perform control at the same time. Complete control life cycle:
 
 ```
-   ① 获取控制权 (takeMotionControl)
+   ① Acquire control (takeMotionControl)
             │
             ▼
-   ② 执行控制业务（下发动作 / TRC 帧 / 音频播放 ...）
+   ② Execute control operations (actions / TRC frames / audio playback ...)
             │
             ▼
-   ③ 周期性续约 (renewMotionControl)
+   ③ Renew periodically (renewMotionControl)
             │
             ▼
-   ④ 业务完成后释放控制权 (releaseMotionControl)
+   ④ Release control when finished (releaseMotionControl)
 ```
 
-- **租约机制**：客户端必须按照一定的周期对控制权续约；未续约或者超期，设备自动收回当前客户端的控制权。
-- **查询类接口不需要控制权**：默认所有查询类接口任何客户端都可调用 / 订阅；如有需要控制权的查询接口，会在该接口处单独说明。
+- **Lease mechanism**: The client must renew control ownership periodically. If renewal stops or the lease expires, the device automatically revokes that client's control ownership.
+- **Query APIs do not require control ownership by default**: any client may call or subscribe to them unless an individual API explicitly states otherwise.
 
-详细取控 / 续约 / 释放调用方式见 [§3.3.1](#331-会话管理) 会话管理。
+For detailed control/renewal/release calling methods, see [§3.3.1](#331-session-management) Session Management.
 
-### 3.2 RPC 方法列表
+### 3.2 RPC method list
 
-| serviceName | 方法 (method) | 功能描述 | 需要控制权 |
+| serviceName | method | function description | control required |
 |---|---|---|:---:|
-| `robotAppService` | `takeMotionControl` | 申请控制权 | 否 |
-| `robotAppService` | `renewMotionControl` | 控制权续约 | 是 |
-| `robotAppService` | `releaseMotionControl` | 释放控制权 | 否 |
-| `robotAppService` | `startMotionAction` | 触发预置动作 | 是 |
-| `robotAppService` | `stopMotionAction` | 停止当前动作 | 是 |
-| `robotAppService` | `setMotionActionParams` | 运行期改动作子参数 | 是 |
-| `robotAppService` | `emergencyStopMotion` | 紧急制动 | 是 |
-| `robotAppService` | `setMotionObservedEnable` | 开关运控观测量 | 否 |
-| `robotAppService` | `queryMotionState` | 查询运控状态 | 是 |
-| `robotAppService` | `getMotionCapabilities` | 查询设备支持的动作集合 | 否 |
-| `robotAppService` | `getSystemStatus` | 拉取系统状态快照 | 否 |
-| `robotAppService` | `startPlayList` | 启动 / 恢复音频播放 | 是 |
-| `robotAppService` | `stopPlayList` | 停止 / 暂停音频播放 | 是 |
-| `robotAppService` | `getAudioPlayList` | 查询音频文件清单 | 否 |
-| `robotAppService` | `getAudioPlayDetail` | 查询当前播放详情 | 否 |
-| `robotAppService` | `addAudioFile` | 上传 / 新增音频文件 | 是 |
-| `robotAppService` | `deleteAudioFile` | 删除音频文件 | 是 |
-| `robotAppService` | `getCameraLightBrightness` | 查询相机补光灯亮度 | 是 |
-| `robotAppService` | `setCameraLightBrightness` | 设置相机补光灯亮度 | 是 |
+| `robotAppService` | `takeMotionControl` | Apply for control | No |
+| `robotAppService` | `renewMotionControl` | Control right renewal | Yes |
+| `robotAppService` | `releaseMotionControl` | Release control | No |
+| `robotAppService` | `startMotionAction` | Trigger preset action | Yes |
+| `robotAppService` | `stopMotionAction` | Stop current action | Yes |
+| `robotAppService` | `setMotionActionParams` | Change subparameters during runtime | Yes |
+| `robotAppService` | `emergencyStopMotion` | Emergency brake | Yes |
+| `robotAppService` | `setMotionObservedEnable` | Switch motion observation measurement | No |
+| `robotAppService` | `queryMotionState` | Query operation control status | Yes |
+| `robotAppService` | `getMotionCapabilities` | Query the set of actions supported by the device | No |
+| `robotAppService` | `getSystemStatus` | Pull system status snapshot | No |
+| `robotAppService` | `startPlayList` | Start/resume audio playback | Yes |
+| `robotAppService` | `stopPlayList` | Stop/pause audio playback | Yes |
+| `robotAppService` | `getAudioPlayList` | Query audio file list | No |
+| `robotAppService` | `getAudioPlayDetail` | Query current playback details | No |
+| `robotAppService` | `addAudioFile` | Upload/Add audio file | Yes |
+| `robotAppService` | `deleteAudioFile` | Delete audio files | Yes |
+| `robotAppService` | `getCameraLightBrightness` | Query the camera fill light brightness | Yes |
+| `robotAppService` | `setCameraLightBrightness` | Set camera fill light brightness | Yes |
 
-调用模板（所有方法共用）：
+Call template (common to all methods):
 
 ```jsonc
 // System_Request_
@@ -630,160 +633,160 @@ business_ok = (response.code == 0) AND (payload.result == true)
   "header":    { "clientId": <session-id>, "requestId": <seq> },
   "timestamp": <now-ms>,
   "service":   "robotAppService",
-  "device_id": "<设备 SN>",
-  "method":    "<上表 method 列>",
-  "payload":   "<JSON 字符串化的 {call, params}>"
+  "device_id": "<device SN>",
+  "method":    "<method from the table above>",
+  "payload":   "<JSON-encoded {call, params}>"
 }
 ```
 
-### 3.3 RPC 方法详解
+### 3.3 Detailed explanation of RPC method
 
-每个方法给出：**请求 `params`**（消息格式 + 字段）、**响应 `params`**（消息格式 + 字段）、**使用注意**。
+Each method gives: **Request `params`** (message format + fields), **Response `params`** (message format + fields), **Usage Notes**.
 
-**方法速查表**
+**Method Cheat Sheet**
 
-| 方法 | 持权要求 | 关键参数 | 详见 |
+| Method | Control requirement | Key parameters | Details |
 |---|---|---|---|
-| `takeMotionControl` | 无 | `leaseTimeout`(ms) | [§3.3.1](#331-会话管理) |
-| `renewMotionControl` | 持权 | `controller` | [§3.3.1](#331-会话管理) |
-| `releaseMotionControl` | 持权 | `controller` | [§3.3.1](#331-会话管理) |
-| `startMotionAction` | 持权 | `action` / `params` | [§3.3.2](#332-动作控制) |
-| `stopMotionAction` | 持权 | — | [§3.3.2](#332-动作控制) |
-| `setMotionActionParams` | 持权 | `params`（按当前 action schema） | [§3.3.2](#332-动作控制) |
-| `emergencyStopMotion` | 持权 | — | [§3.3.2](#332-动作控制) |
-| `setMotionObservedEnable` | 无 | `motionEnable`(bool), `sensorEnable`(bool) | [§3.3.3](#333-数据上报) |
-| `queryMotionState` | 无 | — | [§3.3.4](#334-状态查询) |
-| `getMotionCapabilities` | 无 | — | [§3.3.4](#334-状态查询) |
-| `getSystemStatus` | 无 | — | [§3.3.4](#334-状态查询) |
-| `startPlayList` | 持权 | `list` / `volume` / `repeat` 等 | [§3.3.5](#335-音频控制) |
-| `stopPlayList` | 持权 | — | [§3.3.5](#335-音频控制) |
-| `getAudioPlayList` | 无 | `type`(如 customVoice) | [§3.3.5](#335-音频控制) |
-| `getAudioPlayDetail` | 无 | — | [§3.3.5](#335-音频控制) |
-| `addAudioFile` | 持权 | `id` / `name` / `file` 或 `url` 等 | [§3.3.5](#335-音频控制) |
-| `deleteAudioFile` | 持权 | `id` | [§3.3.5](#335-音频控制) |
-| `getCameraLightBrightness` | 持权 | — | [§3.3.6](#336-系统设置) |
-| `setCameraLightBrightness` | 持权 | `brightness`(0~100) | [§3.3.6](#336-系统设置) |
+| `takeMotionControl` | None | `leaseTimeout`(ms) | [§3.3.1](#331-session-management) |
+| `renewMotionControl` | Holding rights | `controller` | [§3.3.1](#331-session-management) |
+| `releaseMotionControl` | Holding rights | `controller` | [§3.3.1](#331-session-management) |
+| `startMotionAction` | Holding rights | `action` / `params` | [§3.3.2](#332-action-control) |
+| `stopMotionAction` | Holding rights | — | [§3.3.2](#332-action-control) |
+| `setMotionActionParams` | Holding rights | `params` (according to current action schema) | [§3.3.2](#332-action-control) |
+| `emergencyStopMotion` | Holding rights | — | [§3.3.2](#332-action-control) |
+| `setMotionObservedEnable` | None | `motionEnable`(bool), `sensorEnable`(bool) | [§3.3.3](#333-data-reporting) |
+| `queryMotionState` | None | — | [§3.3.4](#334-status-query) |
+| `getMotionCapabilities` | None | — | [§3.3.4](#334-status-query) |
+| `getSystemStatus` | None | — | [§3.3.4](#334-status-query) |
+| `startPlayList` | Holding rights | `list` / `volume` / `repeat`, etc. | [§3.3.5](#335-audio-control) |
+| `stopPlayList` | Holding rights | — | [§3.3.5](#335-audio-control) |
+| `getAudioPlayList` | None | `type` (such as customVoice) | [§3.3.5](#335-audio-control) |
+| `getAudioPlayDetail` | None | — | [§3.3.5](#335-audio-control) |
+| `addAudioFile` | Holding rights | `id` / `name` / `file` or `url`, etc. | [§3.3.5](#335-audio-control) |
+| `deleteAudioFile` | Holding rights | `id` | [§3.3.5](#335-audio-control) |
+| `getCameraLightBrightness` | Holding rights | — | [§3.3.6](#336-system-settings) |
+| `setCameraLightBrightness` | Holding rights | `brightness`(0~100) | [§3.3.6](#336-system-settings) |
 
-> 所有 RPC 通过同一对 wire topic `rq/robotServerRequest` / `rr/robotServerReply` 收发；服务名固定 `robotAppService` / `motionService` / `audioService` 之一（具体见各方法详解）。
+> All RPCs are sent and received through the same pair of wire topic `rq/robotServerRequest` / `rr/robotServerReply`; the service name is fixed to one of `robotAppService` / `motionService` / `audioService` (see the details of each method for details).
 
-#### 3.3.1 会话管理
+#### 3.3.1 Session Management
 
-`takeMotionControl` / `renewMotionControl` / `releaseMotionControl` 共同实现控制权生命周期（[§3.1](#31-控制权生命周期)）。
+`takeMotionControl` / `renewMotionControl` / `releaseMotionControl` jointly realize the control life cycle ([§3.1](#31-control-life-cycle)).
 
 ##### `takeMotionControl`
 
-申请高级控制模式控制权。成功后客户端持有控制权。已持权时再次调用会刷新 `leaseTimeout` 并返回相同 `controller`。
+Request High-level control ownership. On success, the client becomes the control owner. Calling the method again while already holding control refreshes `leaseTimeout` and returns the same `controller` token.
 
-**请求 `params`**
+**Request `params`**
 
-| 字段 | 类型 | 必填 | 含义 |
+| Field | Type | Required | Meaning |
 |---|---|---|---|
-| `leaseTimeout` | uint32 | 是 | 租约时长 ms；建议 5000–60000 |
+| `leaseTimeout` | uint32 | Yes | Lease duration ms; recommended 5000–60000 |
 
 ```jsonc
 { "call": { "clientId": "my-app" }, "params": { "leaseTimeout": 30000 } }
 ```
 
-**响应 `params`**（成功时）
+**Response `params`** (on success)
 
-| 字段 | 类型 | 出现条件 | 含义 |
+| Field | Type | Occurrence conditions | Meaning |
 |---|---|---|---|
-| `controller` | string（16 字节） | 始终 | 后续持权 RPC 的 `call.clientId` 必须填此值 |
-| `leaseTimeout` | uint32 | 始终 | 设备最终生效的租约 ms |
-| `rawActionId` | uint64 | 设备启用 TRC 时 | TRC 帧 `RemoteControl_.controller` 取此值；缺失或 0 表示 TRC 不可用 |
+| `controller` | string (16 bytes) | Always | This value must be filled in for `call.clientId` of subsequent rights-holding RPCs |
+| `leaseTimeout` | uint32 | Always | The final effective lease of the device ms |
+| `rawActionId` | uint64 | When the device enables TRC | TRC frame `RemoteControl_.controller` takes this value; missing or 0 means TRC is not available |
 
 ```jsonc
 { "result": true, "params": { "controller": "0xGUefQ7T9VWxulv", "leaseTimeout": 30000, "rawActionId": 1234567890 } }
 ```
 
-**使用注意**
+**Usage Note**
 
-- 取控成功后客户端持有控制权，需**立即**启动定时续约
-- 后续所有持权 RPC 的 `payload.call.clientId` 必须切换为响应里的 `controller`
-- 失败 `0x1D controlWasSeized`：控制权已被其他客户端持有；等对方释放或租约超时
-- `leaseTimeout` 建议 5000–60000 ms —— 客户端崩溃后设备等到租约超时才释放，不宜过长
+- After successful control, the client holds control and needs to start the scheduled renewal **immediately**
+- `payload.call.clientId` in all subsequent rights-holding RPCs must be switched to `controller` in the response
+- Failure `0x1D controlWasSeized`: Control is already held by another client; wait for the other party to release or the lease expires
+- `leaseTimeout` recommends 5000–60000 ms - after the client crashes, the device will not be released until the lease expires. It should not be too long.
 
 ##### `renewMotionControl`
 
-续约控制权。客户端**必须**周期调用，否则租约超时后设备自动收回。
+Renewal control. The client must be called periodically, otherwise the device will be automatically reclaimed after the lease expires.
 
-**请求 `params`**：`{}`
+**Request `params`**: `{}`
 
 ```jsonc
 { "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": {} }
 ```
 
-**响应 `params`**（成功时）
+**Response `params`** (on success)
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `leaseTimeout` | uint32 | 续约后的剩余租约时长 ms |
+| `leaseTimeout` | uint32 | Remaining lease duration after renewal ms |
 
 ```jsonc
 { "result": true, "params": { "leaseTimeout": 30000 } }
 ```
 
-**使用注意**
+**Usage Note**
 
-- 续约周期建议 `clamp(leaseTimeout / 3, 200 ms, 10 s)`
-- 任一次续约 RPC 超时或返失败立即视为已失权
-- 失败 `0x10 operatorInvalid`：租约已过期，立即按"失权处理"流程
+- Suggested renewal period `clamp(leaseTimeout / 3, 200 ms, 10 s)`
+- Any renewal RPC that times out or fails will be immediately deemed to have been lost.
+- Failure `0x10 operatorInvalid`: The lease has expired, immediately follow the "loss of rights processing" process
 
 ##### `releaseMotionControl`
 
-主动归还控制权后，其他客户端可立即接管。
+After actively returning control, other clients can take over immediately.
 
-**请求 `params`**：`{}` —— 响应 `params` 也为空（仅 `result: true`）。
+**Request `params`**: `{}` - response `params` is also empty (only `result: true`).
 
 ```jsonc
 { "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": {} }
 ```
 
-**使用注意**
+**Usage Note**
 
-- 调用后客户端应将 `payload.call.clientId` 切回自定义标识，停止续约线程
-- 即便对方未应答，本端也应认为不再持权
-- 关闭流程必须在 RPC endpoint 销毁前完成（见 [§3.7](#37-关闭)）
+- After the call, the client should switch `payload.call.clientId` back to the custom identification and stop the renewal thread.
+- Even if the other party does not respond, the local party should consider that it no longer holds the right.
+- The shutdown process must be completed before the RPC endpoint is destroyed (see [§3.7](#37-close))
 
-##### 失权处理（统一流程）
+##### Loss of rights processing (unified process)
 
-以下任一情形触发：
+Triggered by any of the following situations:
 
-| 触发条件 |
+| Trigger conditions |
 |---|
-| 续约 RPC 超时或返失败 |
-| 续约 RPC 返 `0x10 operatorInvalid`（租约已过期） |
-| 任意 RPC 返 `0x1C noOperationPerm` / `0x1D controlWasSeized` |
-| 收到事件 `robotServer.control.status` 且 `controlled == false`（且自己原本是持权方） |
-| 长时间断网超过租约期（设备已自动收权） |
+| Renewal RPC timed out or failed |
+| Renew RPC return `0x10 operatorInvalid` (lease has expired) |
+| Any RPC returns `0x1C noOperationPerm` / `0x1D controlWasSeized` |
+| Received events `robotServer.control.status` and `controlled == false` (and I was originally the rights holder) |
+| Long-term disconnection exceeds the lease period (the device has automatically recovered rights) |
 
-统一处理动作：
+Unified processing actions:
 
 ```
-① 立即停止 TRC 帧发送
-② 停止后台续约线程
-③ 若有正在执行的预置动作，调一次 stopMotionAction 通知设备清理状态
-   （此调用大概率返 0x1C，可忽略返回结果）
-④ 客户端不再持有控制权
-⑤ 通知业务层
+① Stop sending TRC frames immediately
+② Stop the background renewal thread
+③ If a preset action is running, call stopMotionAction once so the device can clean up
+   (this call will probably return 0x1C; ignore that result)
+④ Mark the client as no longer holding control
+⑤ Notify the application layer
 ```
 
-失权后**不需要重建 DDS endpoint**，重新 `takeMotionControl` 时必须使用**新响应里的 `controller` / `rawActionId`**，不要复用旧值。
+There is no need to rebuild the DDS endpoint after losing authority. When re-`takeMotionControl`, you must use the `controller` / `rawActionId` in the new response. Do not reuse the old value.
 
-#### 3.3.2 动作控制
+#### 3.3.2 Action Control
 
-`startMotionAction` / `stopMotionAction` / `setMotionActionParams` / `emergencyStopMotion` 共同实现动作下发与停止。
+`startMotionAction` / `stopMotionAction` / `setMotionActionParams` / `emergencyStopMotion` jointly realize action issuing and stopping.
 
 ##### `startMotionAction`
 
-触发设备执行预置动作。RPC 返回时设备已开始动作，运动本身异步。
+Trigger the device to perform preset actions. The device has started moving when the RPC returns, and the movement itself is asynchronous.
 
-**请求 `params`**
+**Request `params`**
 
-| 字段 | 类型 | 必填 | 含义 |
+| Field | Type | Required | Meaning |
 |---|---|---|---|
-| `action` | string | 是 | 动作名；必须在 `getMotionCapabilities` 返回列表内 |
-| `params` | object | 否 | 动作子参数；字段名/范围/单位通过 `getMotionCapabilities` 的 `actions[].params` 动态查询。一次性动作（如 `jumpBackflip`）通常无参数，可省略或填 `{}` |
+| `action` | string | Yes | Action name; must be in the `getMotionCapabilities` return list |
+| `params` | object | No | Action sub-parameter; field name/range/unit is dynamically queried through `actions[].params` of `getMotionCapabilities`. One-time actions (such as `jumpBackflip`) usually have no parameters and can be omitted or filled in. `{}` |
 
 ```jsonc
 {
@@ -795,52 +798,52 @@ business_ok = (response.code == 0) AND (payload.result == true)
 }
 ```
 
-**典型 `action` 取值**
+**Typical `action` value**
 
 `walking` / `standing` / `laying` / `bipedStand` / `handstand` / `waveBody` / `peakLoadStand` / `jumpFrontflip` / `jumpSideflip` / `jumpBackflip` / `jumpDoubleBackflip` / `jumpDoubleSideflip`
 
-**响应 `params`**：成功时为空（仅 `result: true`）。
+**Response to `params`**: Empty on success (`result: true` only).
 
-**使用注意**
+**Usage Note**
 
-- 实际支持的动作随设备型号与固件版本而异，须通过 `getMotionCapabilities` 动态查询，**不应在客户端硬编码**
-- RPC 返回成功只表示**请求被设备接受**，物理运动可能持续数秒；判定动作真正完成有三种方式：
-  - 轮询 `queryMotionState`，看 `params.action` 字段变化（适合站立/坐下等简单动作）
-  - 订阅运控观测量（[§3.5](#35-运控观测量订阅)），监测 `motor[i].velocity` 接近 0 且持续若干帧
-  - 预估等待（适合跳跃等简短固定动作）
-- 典型失败：
-  - `0x08 outOfDeviceCaps`：动作不在 capabilities，先 `getMotionCapabilities` 校验
-  - `0x09 operationTempNotAllow`：`emergencyStopMotion` 冷却期，退避 3–5s 重试
-  - `0x1C noOperationPerm`：已失权，走失权处理流程
+- The actual supported actions vary with the device model and firmware version, and must be dynamically queried through `getMotionCapabilities`, **should not be hard-coded on the client**
+- RPC return success only means that the request was accepted by the device, and the physical movement may last for several seconds; there are three ways to determine that the action is truly completed:
+- Poll `queryMotionState` to see changes in the `params.action` field (suitable for simple actions such as standing/sitting down)
+- Subscribe to the motion observation volume ([§3.5](#35-motion-observation-subscription)), monitor `motor[i].velocity` to be close to 0 and last for several frames
+- Anticipated waiting (suitable for short fixed actions such as jumping)
+- Typical failures:
+- `0x08 outOfDeviceCaps`: The action is not in capabilities, check `getMotionCapabilities` first
+- `0x09 operationTempNotAllow`: `emergencyStopMotion` cooling period, retreat 3–5s and try again
+- `0x1C noOperationPerm`: lost rights, lost rights handling process
 
 ##### `stopMotionAction`
 
-停止当前动作。设备走收尾流程（非立即停）。停止后**保留控制权**。
+Stop current action. The device goes through the closing process (not stopped immediately). **Retain control** after stopping.
 
-**请求 `params`**：`{}` —— 响应 `params` 为空。
+**Request `params`**: `{}` - Response `params` is empty.
 
-**使用注意**
+**Usage Note**
 
-- 要立即停请用 `emergencyStopMotion`
-- 关闭流程中需在 release 之前调用，否则设备在交还控制权前仍可能持续执行上一动作
+- To stop immediately please use `emergencyStopMotion`
+- The shutdown process needs to be called before release, otherwise the device may continue to perform the previous action before returning control.
 
 ##### `setMotionActionParams`
 
-在动作执行过程中动态修改子参数（**不切换动作**）。
+Dynamically modify sub-parameters during action execution (**without switching actions**).
 
-**请求 `params`**
+**Request `params`**
 
-| 字段 | 类型 | 必填 | 含义 |
+| Field | Type | Required | Meaning |
 |---|---|---|---|
-| `params` | object | 是 | 子参数；字段名 / 范围 / 单位见 `getMotionCapabilities` 返回的对应 action 的 `params` 列表 |
+| `params` | object | yes | sub-parameter; for field name/range/unit, see `getMotionCapabilities` `params` list corresponding to the action returned |
 
-以 `walking` 为例（字段名 / 范围以 `getMotionCapabilities` 返回的为准）：
+Take `walking` as an example (the field name/range is subject to the one returned by `getMotionCapabilities`):
 
-| 字段 | 类型 | 单位 | 含义 |
+| Field | Type | Unit | Meaning |
 |---|---|---|---|
-| `velocity`      | float | rad/s | 偏航角速度（yaw rate），正左转负右转 |
-| `lineVelocityX` | float | m/s   | 前后线速度，正前进负后退 |
-| `lineVelocityY` | float | m/s   | 侧向线速度，正右负左 |
+| `velocity` | float | rad/s | Yaw rate (yaw rate), positive left turn, negative right turn |
+| `lineVelocityX` | float | m/s | Front and rear linear speed, positive forward and negative backward |
+| `lineVelocityY` | float | m/s | Lateral linear velocity, positive right and negative left |
 
 ```jsonc
 {
@@ -849,80 +852,80 @@ business_ok = (response.code == 0) AND (payload.result == true)
 }
 ```
 
-**响应 `params`**：成功时为空。
+**Response `params`**: Empty on success.
 
-**使用注意**
+**Usage Note**
 
-- **全量重写**：`setMotionActionParams` 跟 `startMotionAction` 一样是**全量语义**——本次调用的 `params` 覆盖整套运行期参数，**未传字段归 0**。要只改 yaw 但保留 X 速度，必须三个字段都传齐
-- **范围由服务端裁剪**：超出范围不报错，按边界值代替；实际能力上限通过 `getMotionCapabilities` 查询
-- **零速度不等于停止**：要停下来用 `stopMotionAction`，不要靠下发 `{lineVelocityX:0, lineVelocityY:0, velocity:0}`
-- **三个字段独立**：完整运动须三轴组合（如边走边转：`{"lineVelocityX":0.5,"velocity":0.3}`）
+- **Full rewrite**: `setMotionActionParams` has the same **full semantics** as `startMotionAction` - `params` called this time covers the entire set of runtime parameters, and **untransmitted fields return to 0**. To change only yaw but retain X speed, all three fields must be passed
+- **The range is cut by the server**: No error will be reported when exceeding the range, and it will be replaced by the boundary value; the actual upper limit of the capacity can be queried through `getMotionCapabilities`
+- **Zero speed does not mean stop**: To stop, use `stopMotionAction`, do not rely on `{lineVelocityX:0, lineVelocityY:0, velocity:0}`
+- **Three fields are independent**: Complete movement requires a combination of three axes (such as walking and turning: `{"lineVelocityX":0.5,"velocity":0.3}`)
 
 ##### `emergencyStopMotion`
 
-紧急制动 —— 设备立即切断运动输出，不走收尾流程。停止后**保留控制权**。
+Emergency braking - the equipment immediately cuts off the motion output without going through the finishing process. **Retain control** after stopping.
 
-**请求 `params`**：`{}` —— 响应 `params` 为空。
+**Request `params`**: `{}` - Response `params` is empty.
 
-**使用注意**
+**Usage Note**
 
-- 紧急停后**短时间内（约几秒）设备拒绝新动作**（返 `0x09 operationTempNotAllow`）
-- 急停场景应使用本 RPC（走可靠通道），不要靠 TRC 帧
+- After emergency stop, the device refuses new actions for a short period of time (about a few seconds) (returns to `0x09 operationTempNotAllow`)
+- This RPC (reliable channel) should be used in emergency stop scenarios, do not rely on TRC frames
 
-#### 3.3.3 数据上报
+#### 3.3.3 Data reporting
 
 ##### `setMotionObservedEnable`
 
-控制运控观测量（[§3.5](#35-运控观测量订阅)）的对外发布开关。`motionEnable`/`sensorEnable` 分别独立控制 `MotionObserved_`、`SensorObserved_` 两路推送。
+Controls the external release switch of motion observations ([§3.5](#35-motion-observation-subscription)). `motionEnable`/`sensorEnable` independently control the two-way push of `MotionObserved_` and `SensorObserved_`.
 
-**请求 `params`**
+**Request `params`**
 
-| 字段 | 类型 | 必填 | 含义 |
+| Field | Type | Required | Meaning |
 |---|---|---|---|
-| `motionEnable` | bool | 否 | `true` = 开启 `MotionObserved_` 推送；`false`/缺省 = 关闭 |
-| `sensorEnable` | bool | 否 | `true` = 开启 `SensorObserved_` 推送；`false`/缺省 = 关闭 |
+| `motionEnable` | bool | No | `true` = Enable `MotionObserved_` push; `false`/Default = Disable |
+| `sensorEnable` | bool | No | `true` = Enable `SensorObserved_` push; `false`/Default = Disable |
 
 ```jsonc
 { "call": { "clientId": "my-app" }, "params": { "motionEnable": true, "sensorEnable": false } }
 ```
 
-**响应 `params`**：返回设置后的实际开关状态。
+**Response `params`**: Return the actual switch state after setting.
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `motionEnable` | bool | 当前 `MotionObserved_` 推送开关 |
-| `sensorEnable` | bool | 当前 `SensorObserved_` 推送开关 |
+| `motionEnable` | bool | Current `MotionObserved_` push switch |
+| `sensorEnable` | bool | Current `SensorObserved_` push switch |
 
-**使用注意**
+**Usage Note**
 
-- 默认关闭，且不持久化到配置：服务端重启后回到关闭态，需重新调用开启
-- 不强制要求持权，但 `payload.call.clientId` 不能为空
-- 调用顺序见 [§3.5](#35-运控观测量订阅)：**先订阅 reader 再调用本 RPC 开启推送**；反序会丢前若干毫秒的帧
+- It is closed by default and is not persisted to the configuration: the server returns to the closed state after restarting and needs to be turned on again.
+- Holding rights is not mandatory, but `payload.call.clientId` cannot be empty
+- For the calling sequence, see [§3.5](#35-motion-observation-subscription): **Subscribe to the reader first and then call this RPC to start pushing**; reverse order will lose the first few milliseconds of frames
 
-#### 3.3.4 状态查询
+#### 3.3.4 Status Query
 
 ##### `queryMotionState`
 
-查询当前运控环最近一拍的实际生效动作 + 控制速度。
+Query the actual effective action + control speed of the latest beat of the current operation control loop.
 
-**请求 `params`**：`{}`
+**Request `params`**: `{}`
 
-**响应 `params`**
+**Response `params`**
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `action`        | string | 当前生效动作名（运控环最近一拍 posture matching 结果）|
-| `velocity`      | float  | 角速度（rad/s） |
-| `lineVelocityX` | float  | 前后线速度（m/s） |
-| `lineVelocityY` | float  | 横移线速度（m/s） |
+| `action` | string | Current effective action name (the latest posture matching result of the motion control loop) |
+| `velocity` | float | Angular velocity (rad/s) |
+| `lineVelocityX` | float | Front and rear linear speed (m/s) |
+| `lineVelocityY` | float | Traverse linear speed (m/s) |
 
-> **无活动动作时**：RPC 成功（`result: true`）、`params` 为空对象 `{}`。
-> 注意区分两层：
-> - `result: false` → 服务端拒绝或 RPC 通道异常，按 RPC 错误码处理（参见 [§4.4 错误码](#44-错误码)）
-> - `result: true` + `params: {}` → 服务端就是没活动动作；不要把这个当失败处理
+> **When there is no active action**: RPC successful (`result: true`), `params` is empty object `{}`.
+> Pay attention to distinguish two layers:
+> - `result: false` → Server rejection or RPC channel exception, handle according to RPC error code (see [§4.4 Error code ](#44-error-code))
+> - `result: true` + `params: {}` → There is no active action on the server; do not treat this as a failure
 
 ```jsonc
-// 有活动动作
+// Active action
 {
   "result": true,
   "params": {
@@ -933,35 +936,35 @@ business_ok = (response.code == 0) AND (payload.result == true)
   }
 }
 
-// 无活动动作（例如已 stopMotionAction）
+// No active action (for example, after stopMotionAction)
 { "result": true, "params": {} }
 ```
 
-**使用注意**
+**Usage Note**
 
-- 速度字段名 `velocity` / `lineVelocityX` / `lineVelocityY` 跟 `startMotionAction` / `setMotionActionParams` 的 `params` 入参字段名一致，方便回写
-- 常用于动作完成判定（轮询 100–500 ms）；未来固件可能扩展更多字段，客户端应**忽略未知字段**以保持向前兼容
+- The speed field name `velocity` / `lineVelocityX` / `lineVelocityY` is consistent with the `params` input parameter field name of `startMotionAction` / `setMotionActionParams`, making it easy to write back
+- Commonly used for action completion determination (polling 100–500 ms); future firmware may expand more fields, and clients should **ignore unknown fields** to maintain forward compatibility
 
 ##### `getMotionCapabilities`
 
-查询当前设备支持的预置动作集合 —— 含按键组合 + 可调参数（min/max/unit）。建议作为接入流程的首个 RPC 调用，业务侧据此动态渲染。
+Query the set of preset actions supported by the current device - including key combinations + adjustable parameters (min/max/unit). It is recommended to be the first RPC call in the access process, and the business side will render dynamically accordingly.
 
-**请求 `params`**：`{}`
+**Request `params`**: `{}`
 
-**响应 `params`**
+**Response `params`**
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `actions[].name`    | string         | 动作名，传给 `startMotionAction` 的 `action` 参数 |
-| `actions[].mapping.require` | array<string\> | 触发该动作必须按下的按钮名，取值对应 TRC 按键字段 |
-| `actions[].mapping.axisRequire` | array<object\> | 额外轴值条件；每项含 `axis`、`min`、`max`，`axis` 为 TRC 轴字段 |
-| `actions[].mapping.priority` | integer | 同一帧多个动作命中时的优先级，数值越大优先级越高 |
-| `actions[].mapping.exact` | bool | `true` 表示除 `require` 外不能有其它按钮同时按下 |
-| `actions[].mapping.minHoldTime` | number | 最小按住时间，当前映射为 `0` |
-| `actions[].params`  | array<object\> | 该动作可调的运行期参数；一次性动作无此字段 |
-| `params[].name`     | string         | 参数 key，用作 `startMotionAction` / `setMotionActionParams` 的 `params` JSON 的 key |
-| `params[].min/max`  | float          | 取值范围；超出会被服务端 clamp |
-| `params[].unit`     | string         | 单位（如 `"m/s"` / `"rad/s"`）；服务端未配置则不输出 |
+| `actions[].name` | string | Action name, `action` parameter passed to `startMotionAction` |
+| `actions[].mapping.require` | array<string\> | The name of the button that must be pressed to trigger this action, the value corresponds to the TRC button field |
+| `actions[].mapping.axisRequire` | array<object\> | Additional axis value conditions; each item contains `axis`, `min`, `max`, `axis` is the TRC axis field |
+| `actions[].mapping.priority` | integer | The priority when multiple actions hit in the same frame. The larger the value, the higher the priority |
+| `actions[].mapping.exact` | bool | `true` means that no other buttons except `require` can be pressed at the same time |
+| `actions[].mapping.minHoldTime` | number | Minimum hold time, currently mapped to `0` |
+| `actions[].params` | array<object\> | Adjustable runtime parameters for this action; one-time actions do not have this field |
+| `params[].name` | string | Parameter key, used as the key of `params` JSON of `startMotionAction` / `setMotionActionParams` |
+| `params[].min/max` | float | Value range; if exceeded, the server will clamp |
+| `params[].unit` | string | Unit (such as `"m/s"` / `"rad/s"`); if the server is not configured, it will not output |
 
 ```jsonc
 {
@@ -1007,19 +1010,19 @@ business_ok = (response.code == 0) AND (payload.result == true)
 }
 ```
 
-**使用注意**
+**Usage Note**
 
-- 建议接入后首个 RPC 调用本方法，验证 DDS 链路 / IDL / QoS / `device_id` 全部对齐
-- 客户端 UI / 业务逻辑不应硬编码动作列表 / 参数范围
-- 启动期一次构建快照，运行期直接返 cache，多次调用零成本
+- It is recommended to call this method on the first RPC after access to verify that the DDS link / IDL / QoS / `device_id` are all aligned
+- Client UI/business logic should not hardcode action lists/parameter ranges
+- Build a snapshot once during the startup period and return it directly to the cache during the runtime, with zero cost for multiple calls.
 
 ##### `getSystemStatus`
 
-拉取**一次**完整设备系统状态快照。事件订阅为增量推送，**首次连接后须通过本方法获取完整快照**。
+Pull a complete device system state snapshot **once**. Event subscription is incremental push. **You must obtain a complete snapshot through this method after the first connection**.
 
-**请求 `params`**：`{}`
+**Request `params`**: `{}`
 
-**响应 `params`**（顶层 key 按子系统分组，客户端按需消费）
+**Response `params`** (top-level keys are grouped by subsystem, and the client consumes them on demand)
 
 ```jsonc
 {
@@ -1041,179 +1044,179 @@ business_ok = (response.code == 0) AND (payload.result == true)
 }
 ```
 
-**`battery` 字段**
+**`battery` field**
 
-| 字段 | 类型 | 单位 | 含义 |
+| Field | Type | Unit | Meaning |
 |---|---|---|---|
-| `abnormalStatus` | uint8 | — | 功率电路是否异常，非 0 表示异常 |
-| `statusCode` | uint16 | — | BMS 状态码，位掩码组合（见下表） |
-| `cycleCount` | uint16 | 次 | 电池累计充放电循环次数 |
-| `remainChargeTime` | uint16 | 分钟 | 剩余充电时间（充电中有效） |
-| `remainDischargeTime` | uint16 | 分钟 | 剩余放电时间（按当前负载估算） |
-| `power` | float | % | 当前电池电量百分比，0~100 |
-| `health` | float | % | 电池健康度，0~100 |
-| `temperature` | float | °C | 电池温度（有符号） |
-| `fullCharge` | float | mAh | 满充容量 |
-| `remaining` | float | mAh | 剩余容量 |
-| `current` | float | A | 当前充放电电流（正充电、负放电） |
-| `voltage` | float | V | 当前总电压 |
+| `abnormalStatus` | uint8 | — | Whether the power circuit is abnormal, non-0 means abnormal |
+| `statusCode` | uint16 | — | BMS status code, bit mask combination (see table below) |
+| `cycleCount` | uint16 | times | The cumulative number of battery charge and discharge cycles |
+| `remainChargeTime` | uint16 | Minutes | Remaining charging time (valid during charging) |
+| `remainDischargeTime` | uint16 | Minutes | Remaining discharge time (estimated based on current load) |
+| `power` | float | % | Current battery power percentage, 0~100 |
+| `health` | float | % | Battery health, 0~100 |
+| `temperature` | float | °C | Battery temperature (signed) |
+| `fullCharge` | float | mAh | Full charge capacity |
+| `remaining` | float | mAh | remaining capacity |
+| `current` | float | A | Current charge and discharge current (positive charge, negative discharge) |
+| `voltage` | float | V | Current total voltage |
 
-**`battery.statusCode` 位掩码**（`statusCode & bit != 0` 表示对应保护位有效）
+**`battery.statusCode` bit mask** (`statusCode & bit != 0` indicates that the corresponding protection bit is valid)
 
-| 位 | 值 | 含义 |
+| bit | value | meaning |
 |---|---|---|
-| bit0 | `0x0001` | pack 欠压保护 |
-| bit1 | `0x0002` | cell 欠压保护 |
-| bit2 | `0x0004` | pack 过压保护 |
-| bit3 | `0x0008` | cell 过压保护 |
-| bit4 | `0x0010` | 充电结束 |
-| bit5 | `0x0020` | 放电过流保护 |
-| bit6 | `0x0040` | 充电过流保护 |
-| bit7 | `0x0080` | 短路保护 |
-| bit8 | `0x0100` | 放电低温保护 |
-| bit9 | `0x0200` | 充电低温保护 |
-| bit10 | `0x0400` | 放电高温保护 |
-| bit11 | `0x0800` | 充电高温保护 |
-| bit12 | `0x1000` | MOS 高温保护 |
-| bit13 | `0x2000` | Cell 采集断线保护 |
-| bit14 | `0x4000` | Cell 电压失衡保护 |
-| bit15 | `0x8000` | Cell 电压失效保护 |
+| bit0 | `0x0001` | pack undervoltage protection |
+| bit1 | `0x0002` | cell undervoltage protection |
+| bit2 | `0x0004` | pack overvoltage protection |
+| bit3 | `0x0008` | cell overvoltage protection |
+| bit4 | `0x0010` | Charging completed |
+| bit5 | `0x0020` | Discharge overcurrent protection |
+| bit6 | `0x0040` | Charging overcurrent protection |
+| bit7 | `0x0080` | Short circuit protection |
+| bit8 | `0x0100` | Discharge low temperature protection |
+| bit9 | `0x0200` | Charging low temperature protection |
+| bit10 | `0x0400` | Discharge high temperature protection |
+| bit11 | `0x0800` | Charging high temperature protection |
+| bit12 | `0x1000` | MOS high temperature protection |
+| bit13 | `0x2000` | Cell collection disconnection protection |
+| bit14 | `0x4000` | Cell voltage imbalance protection |
+| bit15 | `0x8000` | Cell voltage failure protection |
 
-**`network.<iface>.status` 枚举值**
+**`network.<iface>.status` enumeration value**
 
-| 值 | 含义 |
+| Value | Meaning |
 |---|---|
-| `0` | 已连接 |
-| `1` | 未连接 |
-| `2` | 连接中 |
+| `0` | Connected |
+| `1` | Not connected |
+| `2` | Connecting |
 
-**`network.mobile.signalLevel` 枚举值**（仅 `mobile` 子对象）
+**`network.mobile.signalLevel` enumeration value** (`mobile` sub-object only)
 
-| 值 | 含义 |
+| Value | Meaning |
 |---|---|
-| `0` | 信号好（> 22 dB） |
-| `2` | 信号中等（> 15 dB） |
-| `3` | 信号差（≤ 15 dB） |
+| `0` | Good signal (> 22 dB) |
+| `2` | Moderate signal (>15 dB) |
+| `3` | Signal difference (≤ 15 dB) |
 
-`network.mobile.simCardSta`：`true` = SIM 卡已就绪，`false` = 未插入或未识别。
+`network.mobile.simCardSta`: `true` = SIM card ready, `false` = not inserted or not recognized.
 
-**使用注意**
+**Usage Note**
 
-- 首次接入必须主动调一次本方法获取完整快照；后续变化通过事件 `statistics/device_status`（[§4.3](#43-事件)）增量推送
-- 客户端需做**局部 merge / patch** 维护完整状态视图
+- When accessing for the first time, you must actively call this method to obtain a complete snapshot; subsequent changes are pushed incrementally through event `statistics/device_status` ([§4.3](#43-events))
+- The client needs to do **partial merge/patch** to maintain a complete status view
 
-#### 3.3.5 音频控制
+#### 3.3.5 Audio Control
 
 ##### `startPlayList`
 
-播放音频文件列表，或恢复 `stopPlayList { "pause": true }` 暂停的播放。
+Play a list of audio files, or resume `stopPlayList { "pause": true }` paused playback.
 
-**请求 `params`** —— 两种用法二选一：
+**Request `params`** - Choose one of two usages:
 
-*用法 A · 启动新列表*
+*Usage A · Start new list*
 
-| 字段 | 类型 | 必填 | 含义 |
+| Field | Type | Required | Meaning |
 |---|---|---|---|
-| `list` | array<object\> | 是 | 待播文件，每项 `{ "id": <string> }`；`id` 通过 `getAudioPlayList` 获取 |
-| `volume` | uint8 | 是 | 音量 0–100 |
-| `repeat` | int32 | 是 | 循环次数；`-1` = 无限循环，`>0` = 次数，`0` 无意义 |
+| `list` | array<object\> | Yes | Files to be played, each item `{ "id": <string> }`; `id` obtained through `getAudioPlayList` |
+| `volume` | uint8 | Yes | Volume 0–100 |
+| `repeat` | int32 | Yes | Number of loops; `-1` = infinite loop, `>0` = times, `0` meaningless |
 
 ```jsonc
 { "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": { "list": [{"id":"1"},{"id":"2"}], "volume": 50, "repeat": 1 } }
 ```
 
-*用法 B · 恢复暂停*
+*Usage B·Resume pause*
 
-| 字段 | 类型 | 必填 | 含义 |
+| Field | Type | Required | Meaning |
 |---|---|---|---|
-| `resume` | bool | 是 | 固定 `true`，恢复 `stopPlayList { "pause": true }` 暂停的播放 |
+| `resume` | bool | yes | Fixed `true`, resume paused playback of `stopPlayList { "pause": true }` |
 
 ```jsonc
 { "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": { "resume": true } }
 ```
 
-**响应 `params`**：成功时为空。
+**Response `params`**: Empty on success.
 
-**使用注意**
+**Usage Note**
 
-- A/B 两种用法互斥，一次调用只能携带其中一组字段
-- 播放状态变化通过事件 `statistics/play_list`（[§4.3](#43-事件)）订阅；首次快照用 `getAudioPlayDetail`
+- The two usages of A/B are mutually exclusive. Only one set of fields can be carried in one call.
+- Playback status changes are subscribed through event `statistics/play_list` ([§4.3](#43-events)); the first snapshot is using `getAudioPlayDetail`
 
 ##### `stopPlayList`
 
-停止或暂停音频播放。
+Stop or pause audio playback.
 
-**请求 `params`**
+**Request `params`**
 
-| 字段 | 类型 | 必填 | 含义 |
+| Field | Type | Required | Meaning |
 |---|---|---|---|
-| `pause` | bool | 否 | `true` = 暂停，保留播放位置（可用 `startPlayList { "resume": true }` 恢复）；`false` 或字段缺失 = 停止并清空设备播放队列（**不可恢复**） |
+| `pause` | bool | No | `true` = pause, keep playback position (can be resumed with `startPlayList { "resume": true }`); `false` or missing field = stop and clear the device playback queue (**not resumable**) |
 
 ```jsonc
-{ "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": {} }              // 停止
-{ "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": { "pause": true } } // 暂停
+{ "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": {} }              // Stop
+{ "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": { "pause": true } } // Pause
 ```
 
-**响应 `params`**：成功时为空。
+**Response `params`**: Empty on success.
 
-**使用注意**：停止（不带 `pause`）与暂停语义不同；前者清空队列不可恢复，后者保留位置可 `resume`。
+**Usage Note**: Stop (without `pause`) has different semantics from pause; the former clears the queue and cannot be restored, while the latter can reserve the position `resume`.
 
 ##### `getAudioPlayList`
 
-查询设备上已存音频文件清单。返回的 `id` 可作为 `startPlayList` / `deleteAudioFile` 的入参。
+Query the list of audio files stored on the device. The returned `id` can be used as the input parameter of `startPlayList` / `deleteAudioFile`.
 
-**请求 `params`**
+**Request `params`**
 
-| 字段 | 类型 | 必填 | 含义 |
+| Field | Type | Required | Meaning |
 |---|---|---|---|
-| `type` | string | 否 | 过滤类别，可选 `"customVoice"`（仅返回自定义）；字段缺失 = 返回全量 |
+| `type` | string | No | Filter category, optional `"customVoice"` (only return custom); missing field = return full amount |
 
-**响应 `params`**
+**Response `params`**
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `list` | array<object\> | 文件列表 |
-| `list[*].id` | string | 文件 id |
-| `list[*].name` | string | 文件名 |
-| `list[*].duration` | int | 时长（秒） |
-| `list[*].size` | int | 文件大小（字节） |
-| `list[*].createAt` | int64 | 创建时间戳（毫秒） |
-| `list[*].describe` | string | 备注 |
-| `remaining` | int | 剩余可上传数量 / 容量配额（精确语义由设备侧定义） |
+| `list` | array<object\> | File list |
+| `list[*].id` | string | file id |
+| `list[*].name` | string | file name |
+| `list[*].duration` | int | Duration (seconds) |
+| `list[*].size` | int | File size (bytes) |
+| `list[*].createAt` | int64 | Creation timestamp (milliseconds) |
+| `list[*].describe` | string | Remarks |
+| `remaining` | int | Remaining uploadable quantity/capacity quota (precise semantics are defined by the device side) |
 
 ```jsonc
 {
   "result": true,
   "params": {
     "customVoice": [
-      { "id": "1", "name": "walk", "duration": 12, "size": 320000, "createAt": 1712745600000, "describe": "示例备注" }
+      { "id": "1", "name": "walk", "duration": 12, "size": 320000, "createAt": 1712745600000, "describe": "example note" }
     ],
     "remaining": 20
   }
 }
 ```
 
-**使用注意**：返回为空集时正常（`0x28 dataResourceEmpty`，业务侧空集处理）。
+**Usage Note**: It is normal when the empty set is returned (`0x28 dataResourceEmpty`, empty set processing on the business side).
 
 ##### `getAudioPlayDetail`
 
-查询当前播放详情。事件 `statistics/play_list` 会推送增量变化，**首次快照须通过本方法获取**。
+Query the current playback details. Event `statistics/play_list` will push incremental changes, and **the first snapshot must be obtained through this method**.
 
-**请求 `params`**：`{}`
+**Request `params`**: `{}`
 
-**响应 `params`**
+**Response `params`**
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `channel` | int | 播放通道，含义由设备侧定义 |
-| `playing` | bool | 是否正在播放 |
-| `paused` | bool | 是否暂停 |
-| `repeat` | int | 重复配置：`-1`=无限循环；`>0`=次数；`0` 无意义 |
-| `index` | int | 当前播放下标（从 0 起） |
-| `count` | int | 当前播放列表总数 |
-| `volume` | int | 当前音量，0~100 |
-| `currentId` | string | 当前播放音频 ID |
-| `list` | array<string\> | 当前播放列表，元素为音频 ID |
+| `channel` | int | Playback channel, the meaning is defined by the device side |
+| `playing` | bool | Is it playing |
+| `paused` | bool | Whether to pause |
+| `repeat` | int | Repeat configuration: `-1`=infinite loop; `>0`=number of times; `0` meaningless |
+| `index` | int | Current playback index (starting from 0) |
+| `count` | int | Total number of current playlists |
+| `volume` | int | Current volume, 0~100 |
+| `currentId` | string | Currently playing audio ID |
+| `list` | array<string\> | Current playlist, the element is audio ID |
 
 ```jsonc
 {
@@ -1228,120 +1231,120 @@ business_ok = (response.code == 0) AND (payload.result == true)
 
 ##### `addAudioFile`
 
-向设备新增（上传）一个自定义音频文件。支持**两种获取文件的方式**：
+Add (upload) a custom audio file to the device. Supports **two ways of obtaining files**:
 
-- **`file` 模式（本地路径）**：调用方传入设备能直接读到的本地文件路径（如客户端跟机器人板内同部署、文件已在本机/共享盘上）。无下载步骤，最快。
-- **`url` 模式（远程下载）**：调用方传入 HTTP URL，**机器人在 RPC 调用期间从该 URL 下载文件**到本地后再入库。调用方需要部署 HTTP 文件服务器把音频放出来，机器人能直接 GET 到。
+- **`file` mode (local path)**: The caller passes in a local file path that the device can directly read (for example, the client and the robot board are deployed at the same time, and the file is already on the local machine/shared disk). No download steps, fastest.
+- **`url` mode (remote download)**: The caller passes in the HTTP URL, and **the robot downloads the file** from this URL during the RPC call to the local and then stores it in the database. The caller needs to deploy an HTTP file server to play the audio, and the robot can directly GET it.
 
-**两种模式 `file` 和 `url` 二选一**（同时给两个时优先 `url`）。
+**Choose one of the two modes `file` and `url`** (give priority to `url` when given both at the same time).
 
-| 部署形态 | 推荐 |
+| Deployment form | Recommendation |
 |---|---|
-| SDK 应用与机器人同板内（板内模式） | 用 `file` —— 文件本来就在板上，直接给路径 |
-| SDK 应用在远端主机（多机器人 / 外部机器） | 用 `url` —— 需自己跑一个 HTTP 文件服务器把音频暴露出来 |
+| The SDK application and the robot are on the same board (in-board mode) | Use `file` - the file is already on the board, just give the path directly |
+| SDK application on remote host (multiple robots/external machines) | Use `url` - you need to run an HTTP file server yourself to expose the audio |
 
-**请求 `params`**
+**Request `params`**
 
-| 字段 | 类型 | 必填 | 含义 |
+| Field | Type | Required | Meaning |
 |---|---|---|---|
-| `id` | string | 是 | 文件 id；客户端自定义，需保证不与已存在的非系统文件冲突 |
-| `name` | string | 是 | 文件名（含扩展名，如 `"hello.mp3"`） |
-| `file` | string | 二选一 | **本地路径模式**：机器人侧能直接读到的文件绝对路径 |
-| `url` | string | 二选一 | **远程下载模式**：HTTP URL，机器人会拉取后入库 |
-| `describe` | string | 否 | 备注 / 描述 |
+| `id` | string | Yes | File id; customized by the client, ensure that it does not conflict with existing non-system files |
+| `name` | string | Yes | File name (including extension, such as `"hello.mp3"`) |
+| `file` | string | Choose one of the two | **Local path mode**: The absolute path of the file that can be read directly by the robot side |
+| `url` | string | Choose one of the two | **Remote download mode**: HTTP URL, the robot will pull it and put it into the database |
+| `describe` | string | No | Notes/Description |
 
 ```jsonc
-// 本地路径模式（板内部署）
-{ "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": { "id": "custom_1", "name": "hello.mp3", "file": "/var/audio/hello.mp3", "describe": "示例" } }
+// Local-path mode (on-board deployment)
+{ "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": { "id": "custom_1", "name": "hello.mp3", "file": "/var/audio/hello.mp3", "describe": "example" } }
 
-// 远程下载模式（外部主机部署）
-{ "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": { "id": "custom_1", "name": "hello.mp3", "url": "http://192.168.1.x:8000/audio/hello.mp3", "describe": "示例" } }
+// Remote-download mode (external host deployment)
+{ "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": { "id": "custom_1", "name": "hello.mp3", "url": "http://192.168.1.x:8000/audio/hello.mp3", "describe": "example" } }
 ```
 
-**响应 `params`**：成功时为空。
+**Response `params`**: Empty on success.
 
-**使用注意**
+**Usage Note**
 
-- 新增成功后，文件归类为 `customVoice`，可通过 `getAudioPlayList` 查询，亦可作为 `startPlayList` / `deleteAudioFile` 的 `id` 入参
-- 支持的音频格式：`mp3` / `wav` 等常见格式；具体支持列表与单文件大小上限由设备方按机型给出
-- `url` 模式：设备会在 RPC 调用期间完成下载，整体响应时间随网络与文件大小而变化；建议客户端使用比默认 5s 更长的本地超时（如 30s）
-- `file` 模式：路径必须是机器人能访问的；走 NAS / 共享盘时确认挂载与读权限
-- 典型失败：`0x01 paramsTypeError` / `0x02 paramsDeletion`（字段错）；`0x08 outOfDeviceCaps`（达到设备最大可存储音频数）；`id` 冲突（与已有非系统文件相同）；`url` 拉取失败 / `file` 路径不存在
+- After the addition is successful, the file will be classified as `customVoice` and can be queried through `getAudioPlayList` or used as `id` of `startPlayList` / `deleteAudioFile`.
+- Supported audio formats: `mp3` / `wav` and other common formats; the specific support list and single file size limit are given by the device according to the model.
+- `url` mode: The device will complete the download during the RPC call, and the overall response time varies with the network and file size; it is recommended that the client uses a local timeout longer than the default 5s (such as 30s)
+- `file` mode: The path must be accessible to the robot; confirm the mounting and read permissions when using NAS/shared disks
+- Typical failures: `0x01 paramsTypeError` / `0x02 paramsDeletion` (field error); `0x08 outOfDeviceCaps` (the maximum number of audios that can be stored in the device is reached); `id` conflicts (same as existing non-system files); `url` pull failure / `file` path does not exist
 
 ##### `deleteAudioFile`
 
-删除设备上指定 id 的音频文件。仅允许删除 `customVoice` 类；删除系统预置音频会返错误码。
+Delete the audio file with the specified id on the device. Only the `customVoice` class is allowed to be deleted; deleting system preset audio will return an error code.
 
-**请求 `params`**
+**Request `params`**
 
-| 字段 | 类型 | 必填 | 含义 |
+| Field | Type | Required | Meaning |
 |---|---|---|---|
-| `id` | string | 是 | 待删文件 id；通过 `getAudioPlayList` 获取 |
+| `id` | string | Yes | The id of the file to be deleted; obtained through `getAudioPlayList` |
 
 ```jsonc
 { "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": { "id": "1" } }
 ```
 
-**响应 `params`**：成功时为空。
+**Response `params`**: Empty on success.
 
-**使用注意**：典型失败 `0x21 fileNotExist`，检查 `id` 是否仍存在。
+**Usage Note**: Typical failure is `0x21 fileNotExist`, check whether `id` still exists.
 
-#### 3.3.6 系统设置
+#### 3.3.6 System settings
 
 ##### `getCameraLightBrightness`
 
-查询机身相机补光灯当前亮度。
+Query the current brightness of the body camera fill light.
 
-**请求 `params`**：无（仅 `call.clientId`）。
+**Request `params`**: None (`call.clientId` only).
 
 ```jsonc
 { "call": { "clientId": "0xGUefQ7T9VWxulv" } }
 ```
 
-**响应 `params`**：当前亮度。
+**Response `params`**: Current brightness.
 
 ```jsonc
 { "brightness": 50 }
 ```
 
-**使用注意**：需持有控制权，否则返回 `kNotControlled`。
+**Usage Note**: You need to hold control rights, otherwise `kNotControlled` will be returned.
 
 ---
 
 ##### `setCameraLightBrightness`
 
-设置机身相机补光灯亮度。
+Set the brightness of the body camera fill light.
 
-**请求 `params`**
+**Request `params`**
 
-| 字段 | 类型 | 必填 | 含义 |
+| Field | Type | Required | Meaning |
 |---|---|---|---|
-| `brightness` | uint8 | 是 | 亮度，0~100 |
+| `brightness` | uint8 | Yes | Brightness, 0~100 |
 
 ```jsonc
 { "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": { "brightness": 50 } }
 ```
 
-**响应 `params`**：成功时为空。
+**Response `params`**: Empty on success.
 
-**使用注意**：典型失败 `0x04 paramsOutRange`，检查参数值域。
+**Usage Note**: Typical failure is `0x04 paramsOutRange`, check the parameter value range.
 
 ##### `getCameraLightBrightness`
 
-查询机身相机补光灯控制状态和亮度。
+Query the control status and brightness of the body camera's fill light.
 
-**请求 `params`**：可为空。
+**Request `params`**: Can be null.
 
 ```jsonc
 { "call": { "clientId": "0xGUefQ7T9VWxulv" } }
 ```
 
-**响应 `params`**
+**Response `params`**
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `control` | bool | 当前是否由手动控制亮度 |
-| `brightness` | int | 当前配置亮度，0~100 |
+| `control` | bool | Whether the brightness is currently controlled manually |
+| `brightness` | int | Current configuration brightness, 0~100 |
 
 ```json
 { "control": true, "brightness": 50 }
@@ -1349,190 +1352,190 @@ business_ok = (response.code == 0) AND (payload.result == true)
 
 ---
 
-### 3.4 实时控制帧 (TRC)
+### 3.4 Real-Time Control Frame (TRC)
 
-TRC 是数据订阅发布通道（[§1.3.3](#133-数据订阅发布通道开放型-pubsub)）在"客户端→设备"方向的具体使用，承载手柄 / 摇杆采样型输入。
+TRC is the specific use of the data subscription publishing channel ([§1.3.3](#133-data-subscription-and-publishing-channel-open-pubsub)) in the "client→device" direction, carrying handle/joystick sampling type input.
 
-| 项 | 取值 |
+| item | value |
 |---|---|
 | Topic | `rt/motion/trc` |
-| 载荷类型 | `uniubi::msg::dds_::RemoteControl_`（[§4.1](#41-trc-控制帧)） |
-| 推送频率 | 50–100 Hz |
-| 鉴权字段 | `RemoteControl_.controller = rawActionId`（uint64，**不是** `controller` 字符串） |
+| Load type | `uniubi::msg::dds_::RemoteControl_` ([§4.1](#41-trc-control-frame)) |
+| Push frequency | 50–100 Hz |
+| Authentication field | `RemoteControl_.controller = rawActionId` (uint64, **not** `controller` string) |
 
 #### QoS
 
-| QoS Policy | 取值 | 选择原因 |
+| QoS Policy | Value | Reason for selection |
 |---|---|---|
-| `RELIABILITY` | `BEST_EFFORT` | 高频流不重传；下一帧自动覆盖 |
-| `HISTORY` | `KEEP_LAST, depth=10` | 缓存最近 10 帧 |
-| `DURABILITY` | `VOLATILE` | reader 加入晚了不补发老帧 |
-| `DATA_REPRESENTATION` | `[XCDR1, XCDR2]` | 兼容新旧 |
-| `TYPE_CONSISTENCY_ENFORCEMENT` | `ALLOW_TYPE_COERCION` | 允许 IDL 字段顺序差异 / 增减 |
+| `RELIABILITY` | `BEST_EFFORT` | High-frequency streams are not retransmitted; the next frame is automatically covered |
+| `HISTORY` | `KEEP_LAST, depth=10` | Cache the last 10 frames |
+| `DURABILITY` | `VOLATILE` | reader joined late and will not resend old frames |
+| `DATA_REPRESENTATION` | `[XCDR1, XCDR2]` | Compatible with new and old |
+| `TYPE_CONSISTENCY_ENFORCEMENT` | `ALLOW_TYPE_COERCION` | Allow IDL field order differences/increases and decreases |
 
-#### 调用前提
+#### Calling premise
 
 ```
-① 已持有控制权
+① Control is held
 ② rawActionId != 0
 ```
 
-任一不满足，设备**静默丢弃**所有 TRC 帧。
+If any of these are not met, the device silently discards all TRC frames.
 
-#### 发送步骤
+#### Sending steps
 
 ```
-构造 RemoteControl_:
+Construct RemoteControl_:
   trc.controller = rawActionId
   trc.timestamp  = now_ms
   trc.<button>   = 0 / 1
-  trc.<axis>     = float in 范围（见 [§4.1](#41-trc-控制帧)）
-DDS write 到 rt/motion/trc，不等响应，立即返回
+  trc.<axis>     = float in the range defined by [§4.1](#41-trc-control-frame)
+DDS-write to rt/motion/trc; return immediately without waiting for a response
 ```
 
-#### 单帧瞬时语义
+#### Single frame transient semantics
 
-- 按键状态**单帧瞬时** —— 保持按下需持续推帧
-- 触发后下一帧须将按键清零，否则会持续触发
-- 停止动作必须主动下发一帧全 0，否则设备维持上一帧
-- 建议同一按键组合以 20ms 间隔重发 3 次，提高送达概率（BestEffort 不保证每帧到达）
+- Button status **single frame instant** - keep pressing to continue pushing frames
+- The button must be cleared in the next frame after triggering, otherwise it will continue to trigger.
+- The stop action must actively deliver a frame of all 0s, otherwise the device will maintain the previous frame
+- It is recommended to resend the same key combination three times at 20ms intervals to increase the delivery probability (BestEffort does not guarantee the arrival of each frame)
 
-#### 急停场景
+#### Emergency stop scene
 
-走 RPC 通道（`emergencyStopMotion`），不要靠 TRC 帧 —— TRC 走不可靠通道。
+Use the RPC channel (`emergencyStopMotion`), do not rely on TRC frames - TRC uses an unreliable channel.
 
-### 3.5 运控观测量订阅
+### 3.5 Motion Observation Subscription
 
-运控观测量订阅基于数据订阅发布通道（[§1.3.3](#133-数据订阅发布通道开放型-pubsub)）的"设备→客户端"方向，承载 50 Hz 的运控观测帧（IMU + 多电机）。
+Motion observation subscription is based on the "device → client" direction of the data subscription publishing channel ([§1.3.3](#133-data-subscription-and-publishing-channel-open-pubsub)), carrying 50 Hz motion observation frames (IMU + multi-motor).
 
-| 项 | 取值 |
+| item | value |
 |---|---|
 | Topic | `rt/motion/observed` |
-| 载荷类型 | `uniubi::msg::dds_::MotionObserved_`（[§4.2](#42-观测量)） |
-| 推送频率 | 50 Hz（每帧约 1 KB，带宽 ≈ 50 KB/s） |
-| 默认状态 | **关闭** |
+| Load type | `uniubi::msg::dds_::MotionObserved_` ([§4.2](#42-observations)) |
+| Push frequency | 50 Hz (~1 KB per frame, bandwidth ≈ 50 KB/s) |
+| Default state | **Off** |
 
 #### QoS
 
-| QoS Policy | 取值 | 选择原因 |
+| QoS Policy | Value | Reason for selection |
 |---|---|---|
-| `RELIABILITY` | `BEST_EFFORT` | 高频流不重传；下一帧自动覆盖 |
-| `HISTORY` | `KEEP_LAST, depth=10` | 缓存最近 10 帧 |
-| `DURABILITY` | `VOLATILE` | reader 加入晚了不补发老帧 |
-| `DATA_REPRESENTATION` | `[XCDR1, XCDR2]` | 兼容新旧 |
-| `TYPE_CONSISTENCY_ENFORCEMENT` | `ALLOW_TYPE_COERCION` | 允许 IDL 字段顺序差异 / 增减 |
+| `RELIABILITY` | `BEST_EFFORT` | High-frequency streams are not retransmitted; the next frame is automatically covered |
+| `HISTORY` | `KEEP_LAST, depth=10` | Cache the last 10 frames |
+| `DURABILITY` | `VOLATILE` | reader joined late and will not resend old frames |
+| `DATA_REPRESENTATION` | `[XCDR1, XCDR2]` | Compatible with new and old |
+| `TYPE_CONSISTENCY_ENFORCEMENT` | `ALLOW_TYPE_COERCION` | Allow IDL field order differences/increases and decreases |
 
-#### 启停约定（顺序敏感）
+#### Start and stop convention (sequence sensitive)
 
 ```
-开启：
-  ① reader 已订阅 rt/motion/observed
-  ② 调用 RPC setMotionObservedEnable（[§3.3.3](#333-数据上报)），params: {"motionEnable": true}
-  ③ 设备开始按 50 Hz 推送
+Enable:
+  ① Subscribe the reader to rt/motion/observed
+  ② Call RPC setMotionObservedEnable ([§3.3.3](#333-data-reporting)), params: {"motionEnable": true}
+  ③ The device starts publishing at 50 Hz
 
-关闭：
-  ④ 调用 RPC setMotionObservedEnable，params: {"motionEnable": false}
-  ⑤ 销毁 reader（可选；session 不关闭可保留）
+Disable:
+  ④ Call RPC setMotionObservedEnable, params: {"motionEnable": false}
+  ⑤ Destroy the reader (optional; retain it while the session remains open)
 ```
 
-必须**先订阅再开推送**，反序会丢前若干毫秒的帧。`setMotionObservedEnable` 不强制要求持权，但 `payload.call.clientId` 不能为空 —— 未持权时也可调用。
+You must **subscribe first and then enable push**, otherwise frames in the first few milliseconds will be lost. `setMotionObservedEnable` does not require holding rights, but `payload.call.clientId` cannot be empty - it can also be called when no rights are held.
 
-#### 传感器观测量（`rt/sensor/observed`）
+#### Sensor observation (`rt/sensor/observed`)
 
-传感器观测（GPS / UWB / Walk 里程计）走独立 topic `rt/sensor/observed`，与运控观测同属"设备→客户端"数据通道，载荷为 `uniubi::msg::dds_::SensorObserved_`（[§4.2](#42-观测量)）。
+Sensor observation (GPS / UWB / Walk odometer) goes through the independent topic `rt/sensor/observed`, which belongs to the same "device → client" data channel as the motion observation, and the payload is `uniubi::msg::dds_::SensorObserved_` ([§4.2](#42-observations)).
 
-| 项 | 取值 |
+| item | value |
 |---|---|
 | Topic | `rt/sensor/observed` |
-| 载荷类型 | `uniubi::msg::dds_::SensorObserved_`（[§4.2](#42-观测量)） |
-| 默认状态 | **关闭** |
+| Load type | `uniubi::msg::dds_::SensorObserved_` ([§4.2](#42-observations)) |
+| Default state | **Off** |
 
-QoS、启停约定与运控观测量一致（同上：`BEST_EFFORT` / `KEEP_LAST` / `VOLATILE` / `ALLOW_TYPE_COERCION`；先订阅再开推送），开关同样经 [§3.3.3](#333-数据上报) 的数据上报 RPC 控制。无对应传感器硬件的设备不写入数据。
+QoS, start and stop conventions are consistent with motion observations (same as above: `BEST_EFFORT` / `KEEP_LAST` / `VOLATILE` / `ALLOW_TYPE_COERCION`; subscribe first and then enable push). The switch also reports the data of [§3.3.3](#333-data-reporting) for RPC control. Devices without corresponding sensor hardware do not write data.
 
-> `odom` 不依赖 GPS / UWB 硬件；开启 `sensorEnable` 后随本 topic 发布。GPS / UWB 不存在时，其各自的 `valid` 字段保持无效。
+> `odom` does not rely on GPS / UWB hardware; open `sensorEnable` and publish it with this topic. When GPS/UWB is not present, its respective `valid` field remains invalid.
 
-### 3.6 事件接收与分发
+### 3.6 Event reception and distribution
 
-客户端收到 `EventMessage_` 后的处理流程：
+The processing flow after the client receives `EventMessage_`:
 
 ```
-收到 EventMessage_
+Receive EventMessage_
    │
-   ├─► magic != 0x53425645  →  丢弃
+   ├─► magic != 0x53425645  →  discard
    │
-   ├─► (可选) header.clientId == 本端 id  →  本端 loop-back，丢弃
+   ├─► (optional) header.clientId == this client ID  →  local loopback; discard
    │
-   ├─► 按 `EventMessage_.topic` 字段值分发：
+   ├─► Dispatch by `EventMessage_.topic`:
    │
-   │   ┌─ "robotServer.host.event"（容器模式）
-   │   │   └─► 解析 payload JSON，按内层 event 字段二次分发
-   │   │       业务 payload 在 detail 字段
+   │   ┌─ "robotServer.host.event" (container mode)
+   │   │   └─► Parse payload JSON and dispatch again by the nested event field
+   │   │       The business payload is in detail
    │   │
-   │   ├─ "robotServer.control.status"（直通模式）
-   │   │   └─► payload JSON 直接传给业务 handler
+   │   ├─ "robotServer.control.status" (pass-through mode)
+   │   │   └─► Pass payload JSON directly to the business handler
    │   │
-   │   └─ 未知 `EventMessage_.topic` 值
-   │       └─► 透传给业务层（向前兼容设备新增事件）
+   │   └─ Unknown `EventMessage_.topic`
+   │       └─► Pass through to the business layer (forward-compatible with new device events)
    │
-   └─► 完成
+   └─► Done
 ```
 
-| 术语 | 当前已定义取值 | 位置 |
+| Terminology | Currently defined values ​​| Location |
 |---|---|---|
-| 业务 topic（`EventMessage_.topic` 字段值） | `robotServer.host.event` / `robotServer.control.status` | `EventMessage_.topic` |
-| 子业务 topic | 多个（如 `statistics/device_status`） | 容器型业务 topic 内层 `payload.event` |
+| Business topic (`EventMessage_.topic` field value) | `robotServer.host.event` / `robotServer.control.status` | `EventMessage_.topic` |
+| Sub-business topic | Multiple (such as `statistics/device_status`) | Container-type business topic inner layer `payload.event` |
 
-各 `EventMessage_.topic` 值与子业务 topic 的 payload schema 见 [§4.3](#43-事件)。
+For the payload schema of each `EventMessage_.topic` value and sub-business topic, see [§4.3](#43-events).
 
-### 3.7 关闭
+### 3.7 Close
 
-按以下顺序关闭，避免设备侧状态残留：
+Shut down in the following order to avoid residual status on the device side:
 
 ```
-① 若仍持有控制权：
-   a. 发一帧全 0 TRC（停止当前 TRC 控制）
-   b. 调 stopMotionAction
-   c. 若开启了运控观测量：调 setMotionObservedEnable(motionEnable=false)
-   d. 调 releaseMotionControl（等响应到达再继续；超时也无所谓）
-   e. 停止后台续约线程
+① If control is still held:
+   a. Send one all-zero TRC frame (stop current TRC control)
+   b. Call stopMotionAction
+   c. If motion observations are enabled, call setMotionObservedEnable(motionEnable=false)
+   d. Call releaseMotionControl (wait for the response before continuing; timeout is acceptable)
+   e. Stop the background renewal thread
 
-② 销毁运控观测量 reader / TRC writer / 事件 reader
-③ 销毁 RPC reader / writer
-④ 销毁 DomainParticipant
+② Destroy the motion-observation reader, TRC writer, and event reader
+③ Destroy the RPC reader and writer
+④ Destroy the DomainParticipant
 ```
 
-**顺序敏感**：RPC 调用（c、d）必须在 RPC endpoint 销毁（③）之前完成；停止指令必须在 release 之前下发，否则设备在交还控制权前仍可能持续执行上一动作。
+**Sequence Sensitive**: RPC calls (c, d) must be completed before the RPC endpoint is destroyed (③); the stop command must be issued before release, otherwise the device may continue to perform the previous action before returning control.
 
-### 3.8 断网与多端
+### 3.8 Disconnection and multiple terminals
 
-#### 断网与租约
+#### Disconnection and lease
 
-| 场景 | 表现 / 处理 |
+| Scene | Performance/Processing |
 |---|---|
-| 短时网络抖动（< 10 s） | DDS reliable QoS 自动补传 RPC；TRC / 运控观测量可能丢若干帧自动恢复；续约期间失败走"失权处理"流程（[§3.3.1](#331-会话管理)） |
-| 设备重启 / 长时间断网（> 30 s） | discovery 重新收敛后**不必销毁本端 endpoint**；先调 `getMotionCapabilities` 探活；按需重新 `takeMotionControl` |
-| 客户端进程意外退出 | 设备等到租约超时才释放控制权；重启客户端视为新 session；若旧租约未过期，新 session 会返 `0x1D`，需等待 |
+| Short-term network jitter (< 10 s) | DDS reliable QoS automatically retransmits RPC; TRC/motion observation may lose several frames and automatically recover; failure during renewal period will go through the "loss of rights processing" process ([§3.3.1](#331-session-management)) |
+| Device restart/long-term network disconnection (> 30 s) | After discovery re-convergence, it is not necessary to destroy the local endpoint**; first adjust `getMotionCapabilities` to detect activity; restart `takeMotionControl` as needed |
+| The client process unexpectedly exits | The device waits until the lease expires before releasing control; restarting the client is considered a new session; if the old lease has not expired, the new session will return `0x1D` and you need to wait |
 
-重连判定信号（任选其一）：DDS publication-matched 监听器 / 定时探活 / 任意 RPC 连续 3 次超时。
+Reconnection determination signal (choose one): DDS publication-matched listener/timing detection/any RPC timeout 3 times in a row.
 
-#### 同设备多客户端
+#### Multiple clients on the same device
 
-允许"一个持权 + N 个只读观察者"。每个客户端用独立的 `Header.clientId`（uint64）与 `payload.call.clientId`（string）；响应通过 `clientId` + `requestId` 匹配（[§1.3.1](#131-rpc-通道请求-应答)）自动路由到正确客户端。
+Allows "one rights holder + N read-only observers". Each client uses an independent `Header.clientId` (uint64) and `payload.call.clientId` (string); the response is automatically routed to the correct client via the `clientId` + `requestId` match ([§1.3.1](#131-rpc-channel-request-reply)]).
 
-#### 同网多设备
+#### Multiple devices on the same network
 
-`EventMessage_` / `MotionObserved_` / `RemoteControl_` 等广播消息**不含 `device_id` 字段** —— 同 Domain 内所有 reader 都会收到所有设备的广播。客户端必须做**应用层过滤**：
+Broadcast messages such as `EventMessage_` / `MotionObserved_` / `RemoteControl_` **do not contain the `device_id` field** - all readers in the same Domain will receive broadcasts from all devices. The client must do **application layer filtering**:
 
-- 单设备场景：所有广播按本端持有的 device_id 归属
-- 多设备同时持权场景：用 `controller` token 关联（事件 `payload.controller == 本端 controller` 才消费）
+- Single device scenario: All broadcasts are owned by the device_id held by the local end
+- Multiple devices hold rights at the same time: associate them using the `controller` token (consume an event only when `payload.controller == this client's controller`)
 
 ---
 
-## 四、消息格式与字段
+## 4. Message format and fields
 
-本章是 RPC 之外通道的字段字典 —— TRC 控制帧、观测量、事件 schema、错误码。RPC 业务消息格式见 [§2](#二业务消息格式规范)，各 RPC 方法 params 字段见 [§3.3](#33-rpc-方法详解)。
+This chapter is a dictionary of fields for channels outside of RPC - TRC control frames, observations, event schema, error codes. See [§2](#2-business-message-format-specifications) for the RPC business message format, and see [§3.3](#33-detailed-explanation-of-rpc-method) for the params field of each RPC method.
 
-### 4.1 TRC 控制帧
+### 4.1 TRC control frame
 
 #### IDL（`uniubi::msg::dds_::RemoteControl_`）
 
@@ -1542,10 +1545,10 @@ module uniubi {
     module dds_ {
 
       struct RemoteControl_ {
-          uint64   controller;   // 鉴权字段，填 takeMotionControl 响应里的 rawActionId
-          uint64   timestamp;    // 客户端发送时刻，ms since epoch
+          uint64   controller;   // Authorization field: rawActionId from takeMotionControl
+          uint64   timestamp;    // Client send time, milliseconds since epoch
 
-          // 16 个数字按键（uint8，0 = 未按 / 1 = 按下，单帧瞬时）
+          // 16 digital buttons (uint8; 0 = released, 1 = pressed for this frame)
           uint8    back;
           uint8    start;
           uint8    lb;
@@ -1563,12 +1566,12 @@ module uniubi {
           uint8    ls;
           uint8    rs;
 
-          // 6 个模拟轴（float）
-          float    stickLX;      // 摇杆量纲 [-1.0, 1.0]
+          // 6 analog axes (float)
+          float    stickLX;      // Stick range [-1.0, 1.0]
           float    stickLY;
           float    stickRX;
           float    stickRY;
-          float    triggerL;     // 扳机量纲 [0.0, 1.0]
+          float    triggerL;     // Trigger range [0.0, 1.0]
           float    triggerR;
       };
 
@@ -1577,87 +1580,87 @@ module uniubi {
 };
 ```
 
-#### 按键物理映射
+#### Key physical mapping
 
-| IDL 字段 | 物理映射 |
+| IDL fields | Physical mapping |
 |---|---|
-| `back` | Back / Select 键 |
-| `start` | Start 键 |
-| `lb` / `rb` | 左 / 右肩键（Left/Right Bumper） |
-| `f1` / `f2` | 功能键 1 / 2 |
-| `a` / `b` / `x` / `y` | ABXY 键 |
-| `up` / `down` / `left` / `right` | 方向键 D-Pad |
-| `ls` / `rs` | 左 / 右摇杆按下（Stick Click） |
+| `back` | Back / Select key |
+| `start` | Start key |
+| `lb` / `rb` | Left/right shoulder button (Left/Right Bumper) |
+| `f1` / `f2` | Function keys 1 / 2 |
+| `a` / `b` / `x` / `y` | ABXY key |
+| `up` / `down` / `left` / `right` | Directional keys D-Pad |
+| `ls` / `rs` | Left / right joystick press (Stick Click) |
 
-#### 摇杆 / 扳机映射
+#### Joystick/Trigger Mapping
 
-| IDL 字段 | 物理映射 | 范围 |
+| IDL fields | Physical mapping | Range |
 |---|---|---|
-| `stickLX` | 左摇杆横轴 | [-1.0, 1.0] |
-| `stickLY` | 左摇杆纵轴（典型用作前后） | [-1.0, 1.0] |
-| `stickRX` | 右摇杆横轴 | [-1.0, 1.0] |
-| `stickRY` | 右摇杆纵轴 | [-1.0, 1.0] |
-| `triggerL` | 左扳机 | [0.0, 1.0] |
-| `triggerR` | 右扳机 | [0.0, 1.0] |
+| `stickLX` | Left joystick horizontal axis | [-1.0, 1.0] |
+| `stickLY` | Left joystick vertical axis (typically used for front and rear) | [-1.0, 1.0] |
+| `stickRX` | Right joystick horizontal axis | [-1.0, 1.0] |
+| `stickRY` | Right joystick vertical axis | [-1.0, 1.0] |
+| `triggerL` | Left trigger | [0.0, 1.0] |
+| `triggerR` | Right trigger | [0.0, 1.0] |
 
-#### 按键组合 → 动作映射
+#### Key combination → Action mapping
 
-TRC 帧承担两类输入：
-- **按键组合切换动作**：将 `require` 中的按键同时置 1，且满足 `axisRequire`（如有），即可触发对应预置动作（等价于 `startMotionAction`）
-- **摇杆设置实时控制量**：摇杆 / 扳机 float 量驱动运行期参数（等价于 `setMotionActionParams`，例如 `walking` 时通过摇杆调 `lineVelocityX` / `lineVelocityY` / `velocity`）
+TRC frames bear two types of input:
+- **Button combination switching action**: Set the buttons in `require` to 1 at the same time and meet `axisRequire` (if any), the corresponding preset action can be triggered (equivalent to `startMotionAction`)
+- **Joystick setting real-time control volume**: The joystick/trigger float volume drives the running parameters (equivalent to `setMotionActionParams`, for example, when `walking` is set, `lineVelocityX` / `lineVelocityY` / `velocity` is adjusted by the joystick)
 
-两类输入可同时在一帧中携带。
+Both types of input can be carried simultaneously in a frame.
 
-下表完整对应 RobotService `motionCapacity` 的 `motionTRC.motionMap.posture`。对外按键名 Stand / Motion 在 DDS 中分别对应 `back` / `start`，在 SDK 中分别对应 `buttonBack` / `buttonStart`；设备实际开放动作和映射仍以 `getMotionCapabilities` 返回为准。
+The following table completely corresponds to `motionTRC.motionMap.posture` of RobotService `motionCapacity`. The external button name Stand / Motion corresponds to `back` / `start` in DDS, and `buttonBack` / `buttonStart` in SDK respectively; the actual open action and mapping of the device are still subject to the return of `getMotionCapabilities`.
 
-| 动作 | 含义 | require | axisRequire | priority | exact | minHoldTime |
+| action | meaning | require | axisRequire | priority | exact | minHoldTime |
 |---|---|---|---|---:|---|---:|
-| `emergencyStop` | 急停 | `lb + rb` | - | 10 | false | 0 |
-| `bipedStand` | 双足站立 | `lb + y` | - | 1 | true | 0 |
-| `handstand` | 倒立 | `lb + a` | - | 1 | true | 0 |
-| `leftSideStand` | 左侧站立 | `lb + x` | - | 1 | true | 0 |
-| `rightSideStand` | 右侧站立 | `lb + b` | - | 1 | true | 0 |
-| `laying` | 趴下 | `back + a` | - | 0 | true | 0 |
-| `walking` | 行走 | `back + y` | - | 0 | true | 0 |
-| `standing` | 站立 | `start` | - | 0 | true | 0 |
-| `waveBody` | 身体摆动 | `lb + start` | - | 2 | true | 0 |
-| `waveHand` | 招手 | `b` | - | 2 | true | 1000 |
-| `heartSit` | 坐起画心 | `y` | - | 2 | true | 1000 |
-| `tweak` | 原地踏步 / 低速微动 | `a` | - | 2 | true | 1000 |
-| `peakLoadStand` | 负重站立 | `start` | - | 2 | true | 0 |
-| `jumpForward` | 前跳 | `rb + up` | - | 1 | true | 0 |
-| `jumpFrontflip` | 前空翻 | `rb + y` | - | 1 | true | 0 |
-| `jumpSideflip` | 侧空翻 | `rb + b` | `triggerR` in `[-1.0, 0.49]` | 1 | true | 0 |
-| `jumpBackflip` | 后空翻 | `rb + a` | `triggerR` in `[-1.0, 0.49]` | 1 | true | 0 |
-| `jumpDoubleBackflip` | 双后空翻 | `rb + a` | `triggerR` in `[0.5, 1.0]` | 2 | true | 0 |
-| `jumpDoubleSideflip` | 双侧空翻 | `rb + b` | `triggerR` in `[0.5, 1.0]` | 2 | true | 0 |
+| `emergencyStop` | Emergency stop | `lb + rb` | - | 10 | false | 0 |
+| `bipedStand` | Standing on two feet | `lb + y` | - | 1 | true | 0 |
+| `handstand` | Handstand | `lb + a` | - | 1 | true | 0 |
+| `leftSideStand` | Standing on the left side | `lb + x` | - | 1 | true | 0 |
+| `rightSideStand` | Standing on the right side | `lb + b` | - | 1 | true | 0 |
+| `laying` | Get down | `back + a` | - | 0 | true | 0 |
+| `walking` | walking | `back + y` | - | 0 | true | 0 |
+| `standing` | standing | `start` | - | 0 | true | 0 |
+| `waveBody` | Body swing | `lb + start` | - | 2 | true | 0 |
+| `waveHand` | beckoning | `b` | - | 2 | true | 1000 |
+| `heartSit` | Sit up and draw the heart | `y` | - | 2 | true | 1000 |
+| `tweak` | Stand still / Low speed inching | `a` | - | 2 | true | 1000 |
+| `peakLoadStand` | Standing with weight | `start` | - | 2 | true | 0 |
+| `jumpForward` | Jump forward | `rb + up` | - | 1 | true | 0 |
+| `jumpFrontflip` | Front flip | `rb + y` | - | 1 | true | 0 |
+| `jumpSideflip` | Side flip | `rb + b` | `triggerR` in `[-1.0, 0.49]` | 1 | true | 0 |
+| `jumpBackflip` | Backflip | `rb + a` | `triggerR` in `[-1.0, 0.49]` | 1 | true | 0 |
+| `jumpDoubleBackflip` | Double backflip | `rb + a` | `triggerR` in `[0.5, 1.0]` | 2 | true | 0 |
+| `jumpDoubleSideflip` | Bilateral somersault | `rb + b` | `triggerR` in `[0.5, 1.0]` | 2 | true | 0 |
 
-`exact=true` 表示除 `require` 外不能有其它按钮同时按下；`emergencyStop` 未配置 `exact`，允许与其它按钮同时出现时仍按最高优先级触发。当前 `waveHand` / `heartSit` / `tweak` 的 `minHoldTime` 为 `1000`，其余为 `0`。
+`exact=true` means that no other buttons can be pressed at the same time except `require`; `emergencyStop` is not configured and `exact` is allowed to be triggered with the highest priority even when other buttons appear at the same time. The current `minHoldTime` of `waveHand` / `heartSit` / `tweak` is `1000`, and the rest are `0`.
 
-#### 帧丢弃条件
+#### Frame drop conditions
 
-| 条件 | 原因 |
+| Condition | Reason |
 |---|---|
-| `controller != 当前 rawActionId` | 鉴权失败 |
-| 设备未持权 / 无客户端持权 | 通道未激活 |
-| 设备未启用 TRC（`takeMotionControl` 响应里 `rawActionId` 缺失或 0） | 通道不可用 |
-| QoS 不匹配 | DDS 层 `RequestedIncompatibleQos`，sample 不投递 |
-| 字段范围越界（如 `stickLX = 5.0`） | 设备做范围裁剪，行为不可预期 |
+| `controller != current rawActionId` | Authentication failed |
+| The device does not hold the rights / No client holds the rights | The channel is not activated |
+| The device does not enable TRC (`rawActionId` is missing or 0 in the `takeMotionControl` response) | The channel is not available |
+| QoS mismatch | DDS layer `RequestedIncompatibleQos`, sample not delivered |
+| The field range is out of bounds (such as `stickLX = 5.0`) | The device performs range clipping and the behavior is unpredictable |
 
-**排查方法**：发送一帧后立刻调 `queryMotionState`，若 `params.action` 未变化，说明帧未生效。
+**Troubleshooting method**: Adjust `queryMotionState` immediately after sending a frame. If `params.action` does not change, it means that the frame has not taken effect.
 
 ---
 
-### 4.2 观测量
+### 4.2 Observations
 
-#### IDL（`uniubi::msg::dds_::MotionObserved_` 及其依赖）
+#### IDL (`uniubi::msg::dds_::MotionObserved_` and its dependencies)
 
 ```idl
 module uniubi {
   module dds_ {
 
     struct Vector3f {
-        int8        error;       // 单分量错误码（0 = 正常）
+        int8        error;       // Per-component error code (0 = normal)
         float       x;
         float       y;
         float       z;
@@ -1673,11 +1676,11 @@ module uniubi {
 
     struct IMUState {
         float       temp;        // °C
-        Vector3f    accel;       // 加速度 m/s²；x=roll/y=pitch/z=yaw
-        Vector3f    gyro;        // 角速度 rad/s；x=roll/y=pitch/z=yaw
-        Vector3f    mag;         // 磁力计 μT
-        Vector3f    euler;       // 欧拉角 rad；x=roll[-π,π], y=pitch[-π/2,π/2], z=yaw[-π,π]
-        Quaternionf quaternion;  // 单位四元数
+        Vector3f    accel;       // Acceleration, m/s²; x=roll/y=pitch/z=yaw
+        Vector3f    gyro;        // Angular velocity, rad/s; x=roll/y=pitch/z=yaw
+        Vector3f    mag;         // Magnetometer, μT
+        Vector3f    euler;       // Euler angles, rad; x=roll[-π,π], y=pitch[-π/2,π/2], z=yaw[-π,π]
+        Quaternionf quaternion;  // Unit quaternion
     };
 
     struct MotorHeader {
@@ -1688,23 +1691,23 @@ module uniubi {
     struct MotorObserved {
         uint8       enable;
         uint8       online;
-        uint8       error;       // 故障码（取值见下）
+        uint8       error;       // Fault code; values below
         float       position;
         float       velocity;
         float       torque;
         float       temp;
         float       voltage;
         float       lossRate;
-        float       maxTorque;   // 当前电机最大扭矩 N·m
+        float       maxTorque;   // Current motor maximum torque, N·m
         MotorHeader header;
     };
 
     struct PowerObserved {
-        float       power;          // 当前电池电量 %
-        float       health;         // 健康度 %
-        float       temper;         // 电池温度 ℃
-        float       chargeCurrent;  // 实时电流 A
-        float       chargeVoltage;  // 当前总电压 V
+        float       power;          // Current battery level, %
+        float       health;         // Health, %
+        float       temper;         // Battery temperature, °C
+        float       chargeCurrent;  // Instantaneous current, A
+        float       chargeVoltage;  // Current total voltage, V
     };
 
   };
@@ -1716,10 +1719,10 @@ module uniubi {
 
       struct MotionObserved_ {
           uniubi::dds_::IMUState        imu;
-          int32                         motorNum;     // 有效电机数量（≤ MAX_MOTOR_NUM）
-          uint64                        timestamp;    // 递增相对时间戳，单位 us（设备内部服务使用，非墙钟，跨主机对齐勿用）
-          uniubi::dds_::MotorObserved   motor[MAX_MOTOR_NUM];  // 定长 16；仅前 motorNum 个有效
-          uniubi::dds_::PowerObserved   power;        // 整机电源 / 电池状态
+          int32                         motorNum;     // Valid motor count (<= MAX_MOTOR_NUM)
+          uint64                        timestamp;    // Monotonic relative timestamp in us; device-internal, not wall time or cross-host aligned
+          uniubi::dds_::MotorObserved   motor[MAX_MOTOR_NUM];  // Fixed length 16; only the first motorNum entries are valid
+          uniubi::dds_::PowerObserved   power;        // System power/battery state
       };
 
     };
@@ -1727,102 +1730,102 @@ module uniubi {
 };
 ```
 
-> 注意：DDS IDL 的 `MotorHeader` 是 wire contract，字段为 `uint32 limbsNo/jointNo`。C++/Python SDK POD 中的 `MotorHeader` 是 SDK ABI 结构，字段为 `uint16_t limbNo/jointNo`。两者属于不同边界，不能直接混用或按内存布局转换；跨 DDS 与 SDK 边界时必须按字段名和语义显式转换。
+> Note: `MotorHeader` of DDS IDL is wire contract, and the field is `uint32 limbsNo/jointNo`. `MotorHeader` in the C++/Python SDK POD is the SDK ABI structure with the field `uint16_t limbNo/jointNo`. The two belong to different boundaries and cannot be mixed directly or converted according to memory layout; when crossing the boundary between DDS and SDK, they must be explicitly converted according to field names and semantics.
 
-#### IMU 字段量纲
+#### IMU field dimensions
 
-| 字段 | 量纲 | 说明 |
+| Field | Dimension | Description |
 |---|---|---|
-| `imu.temp` | °C | IMU 芯片温度 |
-| `imu.accel` | m/s² | 三轴加速度 |
-| `imu.gyro` | rad/s | 三轴角速度 |
-| `imu.mag` | μT | 三轴磁力计 |
+| `imu.temp` | °C | IMU chip temperature |
+| `imu.accel` | m/s² | Three-axis acceleration |
+| `imu.gyro` | rad/s | Three-axis angular velocity |
+| `imu.mag` | μT | Three-axis magnetometer |
 | `imu.euler` | rad | (roll, pitch, yaw)；roll ∈ [-π, π]，pitch ∈ [-π/2, π/2]，yaw ∈ [-π, π] |
-| `imu.quaternion` | — | 单位四元数 (w, x, y, z) |
+| `imu.quaternion` | — | Unit quaternion (w, x, y, z) |
 
-每个 `Vector3f` / `Quaternionf` 的 `error` 字段（`IMUDeviceErrno`）：`0` 正常 · `1` 数据无效 · `64` IMU 控制板离线 · `65` 控制板未就绪 · `66` 控制板升级中 · `67` 模组参数未就绪 · `68` 加热/未就绪。其中 `0/1` 由 IMU 上报、`64+` 由 SDK/服务端检测填入；`mag` / `quaternion` 部分机型不上报，`error` 恒为 `1`。
+`error` field (`IMUDeviceErrno`) of each `Vector3f` / `Quaternionf`: `0` normal · `1` data invalid · `64` IMU control board offline · `65` control board not ready · `66` control board is being upgraded · `67` module parameters are not ready · `68` heating/not ready. Among them, `0/1` is reported by the IMU, and `64+` is detected and filled in by the SDK/server. Some models of `mag` / `quaternion` are not reported, and `error` is always `1`.
 
-#### Motor 字段量纲
+#### Motor field dimension
 
-| 字段 | 量纲 | 说明 |
+| Field | Dimension | Description |
 |---|---|---|
-| `motor[i].enable` | 0/1 | 使能状态 |
-| `motor[i].online` | 0/1 | 在线状态 |
-| `motor[i].error` | uint8 | 故障码；0 = 正常，非 0 取值见 [§4.4.2](#442-电机-error-子码) |
-| `motor[i].position` | rad | 当前关节角度 |
-| `motor[i].velocity` | rad/s | 当前关节角速度 |
-| `motor[i].torque` | N·m | 前馈力矩 |
-| `motor[i].temp` | °C | 电机温度 |
-| `motor[i].voltage` | V | 母线电压 |
-| `motor[i].lossRate` | % | 通信丢包率 |
-| `motor[i].maxTorque` | N·m | 当前电机最大扭矩 |
-| `motor[i].header.limbsNo` | uint32 | 肢编号；编号规则随机型 |
-| `motor[i].header.jointNo` | uint32 | 肢内关节编号；编号规则随机型 |
+| `motor[i].enable` | 0/1 | Enable status |
+| `motor[i].online` | 0/1 | Online status |
+| `motor[i].error` | uint8 | Fault code; 0 = normal, non-0 value, see [§4.4.2](#442-motor-error-subcode) |
+| `motor[i].position` | rad | Current joint angle |
+| `motor[i].velocity` | rad/s | Current joint angular velocity |
+| `motor[i].torque` | N·m | Feedforward torque |
+| `motor[i].temp` | °C | Motor temperature |
+| `motor[i].voltage` | V | Bus voltage |
+| `motor[i].lossRate` | % | Communication packet loss rate |
+| `motor[i].maxTorque` | N·m | Current maximum torque of the motor |
+| `motor[i].header.limbsNo` | uint32 | Limb number; random numbering rule |
+| `motor[i].header.jointNo` | uint32 | Joint number within the limb; random numbering pattern |
 
-`limbsNo` / `jointNo` 具体编号规则随机型变化。客户端应把每个 `motor[i]` 当作独立条目处理，通过 `header` 字段查表，**不要假设固定电机数量或顺序**（如"四足 = 12 路 = 0..11"）。
+`limbsNo` / `jointNo` The specific numbering rules vary randomly. The client should treat each `motor[i]` as an independent entry, look up the table through the `header` field, and do not assume a fixed number or order of motors (such as "quad = 12 = 0..11").
 
-#### 顶层字段
+#### Top-level fields
 
-| 字段 | 量纲 | 说明 |
+| Field | Dimension | Description |
 |---|---|---|
-| `motorNum` | int32 | 有效电机数；具体数量随机型 |
-| `timestamp` | us | 设备递增相对时间戳（单调递增，非 wall clock，跨主机勿对齐） |
-| `motor[16]` | 定长数组 | 仅前 `motorNum` 个元素有效 |
-| `power` | `PowerObserved` | 整机电源 / 电池状态，字段见下 |
+| `motorNum` | int32 | Number of valid motors; specific number is random |
+| `timestamp` | us | Device increment relative timestamp (monotonically increasing, not wall clock, do not align across hosts) |
+| `motor[16]` | Fixed-length array | Only the first `motorNum` elements are valid |
+| `power` | `PowerObserved` | Machine power/battery status, see fields below |
 
-#### Power 字段量纲
+#### Power field dimension
 
-| 字段 | 量纲 | 说明 |
+| Field | Dimension | Description |
 |---|---|---|
-| `power.power` | % | 当前电池电量 |
-| `power.health` | % | 电池健康度 |
-| `power.temper` | ℃ | 电池温度 |
-| `power.chargeCurrent` | A | 实时电流 |
-| `power.chargeVoltage` | V | 当前总电压 |
+| `power.power` | % | Current battery power |
+| `power.health` | % | Battery health |
+| `power.temper` | ℃ | Battery temperature |
+| `power.chargeCurrent` | A | Real-time current |
+| `power.chargeVoltage` | V | Current total voltage |
 
-#### 传感器观测 `SensorObserved_`（topic `rt/sensor/observed`）
+#### Sensor observation `SensorObserved_` (topic `rt/sensor/observed`)
 
-承载 GPS / UWB / Walk 里程计，独立于 `MotionObserved_`，订阅见 [§3.5](#35-运控观测量订阅)。
+Carrying GPS / UWB / Walk odometer, independent of `MotionObserved_`, subscription see [§3.5](#35-motion-observation-subscription).
 
-##### IDL（`uniubi::msg::dds_::SensorObserved_` 及其依赖）
+##### IDL (`uniubi::msg::dds_::SensorObserved_` and its dependencies)
 
 ```idl
 module uniubi {
   module dds_ {
 
     enum GPSSignalLevel {
-        gpsGre38db,   // 信号强（> 38 dB）
-        gpsGre30db,   // 信号中（> 30 dB）
-        gpsLes30db    // 信号弱（≤ 30 dB）
+        gpsGre38db,   // Strong signal (> 38 dB)
+        gpsGre30db,   // Medium signal (> 30 dB)
+        gpsLes30db    // Weak signal (<= 30 dB)
     };
 
     struct GEOGPoint {
-        float       lat;        // 纬度 deg
-        float       lng;        // 经度 deg
+        float       lat;        // Latitude, deg
+        float       lng;        // Longitude, deg
     };
 
     struct GPSFrame {
-        uint32      valid;      // 1=有效，0=异常
-        float       speed;      // GPS 测速 km/h
-        int32       level;      // 信号等级，取值见 GPSSignalLevel
-        int32       rssi;       // 信号强度原始值 单位 dbm
-        GEOGPoint   point;      // 坐标点
+        uint32      valid;      // 1 = valid, 0 = invalid
+        float       speed;      // GPS speed, km/h
+        int32       level;      // Signal level; see GPSSignalLevel
+        int32       rssi;       // Raw signal strength, dBm
+        GEOGPoint   point;      // Coordinates
     };
 
     enum UWBPairState {
-        uwbPairNone,      // 未配对
-        uwbInPairing,     // 配对中
-        uwbPairSuccess,   // 配对成功
-        uwbPairFailed     // 配对失败
+        uwbPairNone,      // Not paired
+        uwbInPairing,     // Pairing
+        uwbPairSuccess,   // Pairing succeeded
+        uwbPairFailed     // Pairing failed
     };
 
     struct UWBRawObserved {
-        uint8       valid;      // 数据是否有效
-        uint8       pairState;  // 是否配对，取值见 UWBPairState
-        int16       rssi;       // 信号强度 单位 dbm
-        uint16      pitch;      // 俯仰角 deg，[0, 360)
-        uint16      azimuth;    // 方位角 deg，[0, 360)，正前方 0 度、逆时针递增
-        uint32      distance;   // 距离 cm
+        uint8       valid;      // Whether data is valid
+        uint8       pairState;  // Pairing state; see UWBPairState
+        int16       rssi;       // Signal strength, dBm
+        uint16      pitch;      // Pitch, deg [0, 360)
+        uint16      azimuth;    // Azimuth, deg [0, 360); 0 is forward, increasing counterclockwise
+        uint32      distance;   // Distance, cm
     };
 
     typedef float OdomVector3[3];
@@ -1841,10 +1844,10 @@ module uniubi {
     module dds_ {
 
       struct SensorObserved_ {
-          uint64                          timestamp;  // 递增相对时间戳，单位 us（设备内部服务使用，非墙钟）
-          uniubi::dds_::GPSFrame          gps;        // GPS 观测
-          uniubi::dds_::UWBRawObserved    uwb;        // UWB 观测
-          uniubi::dds_::MotionOdometry    odom;       // Walk 平面里程计
+          uint64                          timestamp;  // Monotonic relative timestamp in us; device-internal, not wall time
+          uniubi::dds_::GPSFrame          gps;        // GPS observation
+          uniubi::dds_::UWBRawObserved    uwb;        // UWB observation
+          uniubi::dds_::MotionOdometry    odom;       // Walk planar odometry
       };
 
     };
@@ -1852,69 +1855,69 @@ module uniubi {
 };
 ```
 
-##### GPS 字段量纲
+##### GPS field dimensions
 
-| 字段 | 量纲 | 说明 |
+| Field | Dimension | Description |
 |---|---|---|
-| `gps.valid` | 0/1 | 1=本帧 GPS 有效 |
-| `gps.speed` | km/h | GPS 测速 |
-| `gps.level` | — | 信号等级，取值见 `GPSSignalLevel`（0 强 / 1 中 / 2 弱）|
-| `gps.rssi` | dbm | 信号强度原始值 |
-| `gps.point.lat` | deg | 纬度 |
-| `gps.point.lng` | deg | 经度 |
+| `gps.valid` | 0/1 | 1=GPS is valid in this frame |
+| `gps.speed` | km/h | GPS speed measurement |
+| `gps.level` | — | Signal level, see `GPSSignalLevel` for values ​​(0 strong / 1 medium / 2 weak) |
+| `gps.rssi` | dbm | Original signal strength value |
+| `gps.point.lat` | deg | latitude |
+| `gps.point.lng` | deg | longitude |
 
-##### UWB 字段量纲
+##### UWB field dimensions
 
-| 字段 | 量纲 | 说明 |
+| Field | Dimension | Description |
 |---|---|---|
-| `uwb.valid` | 0/1 | 1=本帧 UWB 有效 |
-| `uwb.pairState` | 枚举 | 配对状态，取值见 `UWBPairState`（0 未配对 / 1 配对中 / 2 配对成功 / 3 配对失败）|
-| `uwb.rssi` | dbm | 信号强度 |
-| `uwb.pitch` | deg | 俯仰角，[0, 360) |
-| `uwb.azimuth` | deg | 方位角，[0, 360)，正前方 0 度、逆时针递增 |
-| `uwb.distance` | cm | 距离 |
+| `uwb.valid` | 0/1 | 1=This frame UWB is valid |
+| `uwb.pairState` | Enumeration | Pairing status, see `UWBPairState` for the value (0 not paired / 1 pairing / 2 pairing successful / 3 pairing failed) |
+| `uwb.rssi` | dbm | signal strength |
+| `uwb.pitch` | deg | pitch angle, [0, 360) |
+| `uwb.azimuth` | deg | Azimuth angle, [0, 360), 0 degrees directly ahead, increasing counterclockwise |
+| `uwb.distance` | cm | distance |
 
-##### Walk 里程计字段 `odom`
+##### Walk odometer field `odom`
 
-| 字段 | 量纲 | 说明 |
+| Field | Dimension | Description |
 |---|---|---|
-| `position[0]` | m | 当前 `epoch` 原点下累计 X 位移 |
-| `position[1]` | m | 当前 `epoch` 原点下累计 Y 位移 |
-| `position[2]` | — | 保留字段，当前固定为 `0`，不代表高度估计 |
-| `velocity[0]` | m/s | 本体系 X 方向模型预测速度 |
-| `velocity[1]` | m/s | 本体系 Y 方向模型预测速度 |
-| `velocity[2]` | — | 保留字段，当前固定为 `0`，不代表垂直速度 |
-| `yaw` | rad | 当前 `epoch` 原点下累计偏航角 |
-| `yawSpeed` | rad/s | 相邻有效 IMU yaw 的差分角速度 |
-| `epoch` | — | Walking 有效区间的原点代次；再次进入 Walking 时递增 |
-| `valid` | — | 当前平面里程计帧是否有效；不包含保留的 Z 分量 |
+| `position[0]` | m | Accumulated X displacement under the current `epoch` origin point |
+| `position[1]` | m | Accumulated Y displacement under the current `epoch` origin |
+| `position[2]` | — | Reserved field, currently fixed to `0`, does not represent height estimation |
+| `velocity[0]` | m/s | X-direction model predicted speed of this system |
+| `velocity[1]` | m/s | Y-direction model predicted speed of this system |
+| `velocity[2]` | — | Reserved field, currently fixed to `0`, does not represent vertical speed |
+| `yaw` | rad | Current accumulated yaw angle at `epoch` origin |
+| `yawSpeed` | rad/s | Differential angular velocity of adjacent effective IMU yaw |
+| `epoch` | — | The origin generation of the Walking valid interval; incremented when entering Walking again |
+| `valid` | — | Whether the current plane odometry frame is valid; does not contain the reserved Z component |
 
 ---
 
-### 4.3 事件
+### 4.3 Events
 
-`EventMessage_` 的 IDL 与信封字段见 [§1.3.2](#132-事件通道设备主动推送)。本节定义 `payload` JSON 的 schema —— 按 `EventMessage_.topic` 字段值（业务 topic）而异。
+See [§1.3.2](#132-event-channel-active-push-by-device) for the IDL and envelope fields of `EventMessage_`. This section defines the schema of `payload` JSON - which varies according to the `EventMessage_.topic` field value (business topic).
 
-> 注意区分两层 topic：DDS wire-level topic 始终是 `rt/robotServer/Event`（[§1.3.4](#134-topic-汇总)），下面表里的"业务 topic"是 `EventMessage_.topic` 这个 string 字段的取值，客户端按它路由到对应 handler。
+> Pay attention to distinguishing two levels of topics: DDS wire-level topic is always `rt/robotServer/Event` ([§1.3.4](#134-topic-summary)). The "business topic" in the table below is the value of the string field `EventMessage_.topic`, and the client is routed to the corresponding handler according to it.
 
-当前已定义 **2 个业务 topic**（设备版本演进可能新增；客户端遇未知值应宽容透传）：
+Currently **2 business topics** have been defined (may be added as the device version evolves; the client should tolerate transparent transmission when encountering unknown values):
 
-| `EventMessage_.topic` 取值 | 封装模式 | 含义 |
+| `EventMessage_.topic` value | Encapsulation mode | Meaning |
 |---|---|---|
-| `robotServer.host.event` | 容器模式 | 业务事件容器；真实业务子 topic 在 payload 内层 `event` 字段 |
-| `robotServer.control.status` | 直通模式 | 控制权状态变化 |
+| `robotServer.host.event` | Container mode | Business event container; the real business subtopic is in the `event` field inside the payload |
+| `robotServer.control.status` | Pass-through mode | Control status change |
 
-#### 4.3.1 容器模式 `robotServer.host.event`
+#### 4.3.1 Container mode `robotServer.host.event`
 
-**`EventMessage_.payload` 结构**
+**`EventMessage_.payload` Structure**
 
-| 字段 | 类型 | 出现条件 | 含义 |
+| Field | Type | Occurrence conditions | Meaning |
 |---|---|---|---|
-| `caller` | string | 始终 | 触发源（一般为空串 `""`） |
-| `event` | string | 始终 | 业务 topic，取值见下表 |
-| `detail` | object | 始终 | 业务 payload，结构按 `event` 不同而异 |
+| `caller` | string | always | trigger source (usually empty string `""`) |
+| `event` | string | Always | Business topic, the values ​​are shown in the table below |
+| `detail` | object | always | business payload, the structure varies according to `event` |
 
-示例：
+Example:
 
 ```jsonc
 {
@@ -1924,37 +1927,37 @@ module uniubi {
 }
 ```
 
-**已定义业务 topic**
+**Business topic defined**
 
-| `event` 取值 | 触发条件 | `detail` 内容 |
+| `event` value | Trigger condition | `detail` content |
 |---|---|---|
-| `statistics/device_status` | 电池 / 网络等子系统状态变化 | 单子系统快照（**分批推送**），如 `{"battery":{...}}` 或 `{"network":{...}}` |
-| `statistics/play_list` | 音频播放状态变化（开始 / 暂停 / 结束 / 切歌） | 当前播放详情，字段同 `getAudioPlayDetail` 响应，外加 `event` 字段（取值如 `"changed"`） |
+| `statistics/device_status` | Battery/network and other subsystem status changes | Single subsystem snapshot (**push in batches**), such as `{"battery":{...}}` or `{"network":{...}}` |
+| `statistics/play_list` | Audio playback status changes (start/pause/end/switch song) | Current playback details, the fields are the same as the `getAudioPlayDetail` response, plus the `event` field (the value is like `"changed"`) |
 
-##### `statistics/device_status` 字段语义
+##### `statistics/device_status` field semantics
 
-字段与 `getSystemStatus` 响应同结构。服务端**只下推有变化的字段**，未变化的字段不出现（不是 `null`）。客户端需做**局部 merge / patch** 来维护完整状态视图。
+The fields have the same structure as the `getSystemStatus` response. The server **only pushes down the changed fields**, and the unchanged fields do not appear (not `null`). The client needs to do **partial merge/patch** to maintain a complete status view.
 
-首次完整快照通过 `getSystemStatus` 主动查询（[§3.3.4](#334-状态查询)）。
+The first full snapshot is actively queried via `getSystemStatus` ([§3.3.4](#334-status-query)).
 
-##### `statistics/play_list` 字段语义
+##### `statistics/play_list` field semantics
 
-字段与 `getAudioPlayDetail` 响应同结构，**多一个 `event` 字段**：
+The fields have the same structure as the `getAudioPlayDetail` response, with one more `event` field**:
 
-| 字段 | 类型 | 含义 |
+| Field | Type | Meaning |
 |---|---|---|
-| `event` | string | 事件名，具体枚举值由设备侧定义（如 `"changed"`） |
+| `event` | string | Event name, the specific enumeration value is defined by the device side (such as `"changed"`) |
 
-#### 4.3.2 直通模式 `robotServer.control.status`
+#### 4.3.2 Pass-through mode `robotServer.control.status`
 
-**`EventMessage_.payload` 结构**
+**`EventMessage_.payload` Structure**
 
-| 字段 | 类型 | 出现条件 | 含义 |
+| Field | Type | Occurrence conditions | Meaning |
 |---|---|---|---|
-| `controlled` | bool | 始终 | 设备当前是否被持权 |
-| `controlRole` | string | 始终 | 当前控制角色（取值如 `"external_high_level"`） |
-| `controller` | string | 始终 | 当前持权方的 `controller` token；未持权时为空串 |
-| `controlMode` | string | 当前固件 | 当前控制模式名；早期固件可能缺失 |
+| `controlled` | bool | always | whether the device is currently authorized |
+| `controlRole` | string | always | current control role (value such as `"external_high_level"`) |
+| `controller` | string | Always | `controller` token of the current rights holder; empty string when no rights are held |
+| `controlMode` | string | Current firmware | Current control mode name; earlier firmware may be missing |
 
 ```jsonc
 {
@@ -1965,252 +1968,252 @@ module uniubi {
 }
 ```
 
-**触发时机**
+**Trigger time**
 
-- 任意客户端 `takeMotionControl` 成功
-- 任意客户端 `releaseMotionControl`
-- 设备侧租约超时自动收权
-- 设备侧因故障强制释放
+- Any client `takeMotionControl` succeeded
+- Any client `releaseMotionControl`
+- Automatically collect rights when the lease expires on the device side
+- Forced release due to malfunction on the device side
 
-**`controlled == false` 时的判断**：如果本端是原持权方（本端记录的 `controller` 与 `payload.controller` 不匹配，或 `payload.controller` 为空串），应立即按 [§3.3.1](#331-会话管理) 走"失权处理"流程。
+**Judgment when `controlled == false`**: If this end is the original right holder (the `controller` and `payload.controller` recorded by this end do not match, or `payload.controller` is an empty string), you should immediately go through the "loss of rights processing" process according to [§3.3.1](#331-session-management).
 
 ---
 
-### 4.4 错误码
+### 4.4 Error code
 
-> RPC 协议层 code（`System_Response_.code`）见 [§1.3.1](#131-rpc-通道请求-应答) "code 取值"。
+> For RPC protocol layer code (`System_Response_.code`), see [§1.3.1](#131-rpc-channel-request-reply) "code value".
 
-#### 4.4.1 业务层 payload.code
+#### 4.4.1 Business layer payload.code
 
-业务 errno，响应 payload 中始终存在；`0` 表示业务成功，非 0 表示业务失败（须同时配合 `payload.result == false`）。
+Business errno always exists in the response payload; `0` indicates business success, non-0 indicates business failure (`payload.result == false` must be used at the same time).
 
-| code（hex） | code（dec） | 名称 | 含义 | 典型触发 |
+| code(hex) | code(dec) | name | meaning | typical trigger |
 |---|---|---|---|---|
-| `0x01` | 1 | paramsTypeError | 参数类型错误 | 所有方法 |
-| `0x02` | 2 | paramsDeletion | 参数缺失 | 所有方法 |
-| `0x03` | 3 | paramsParseError | 参数解析错误 | 所有方法 |
-| `0x04` | 4 | paramsOutRange | 参数超出范围 | `setCameraLightBrightness`（亮度 > 100） |
-| `0x05` | 5 | paramsExpired | 参数过期（如带时效令牌） | 持权类调用 |
-| `0x06` | 6 | paramsIllegal | 参数非法 | `startMotionAction`（action 名拼错） |
-| `0x07` | 7 | interfaceNotFound | 接口未实现（路由层找不到） | 旧固件未注册的方法 |
-| `0x08` | 8 | outOfDeviceCaps | 超出设备能力 | `startMotionAction`（动作不在 capabilities） |
-| `0x09` | 9 | operationTempNotAllow | 操作当前不允许 | `emergencyStopMotion` 后冷却期 |
-| `0x0A` | 10 | methodNotSupport | 方法不支持 | 设备 / 固件版本旧 |
-| `0x0B` | 11 | deviceNoCapability | 设备无对应能力 | 某些机型不支持特定动作 |
-| `0x0C` | 12 | operateUnsupport | 操作不支持 | 配置不允许的操作 |
-| `0x0E` | 14 | methodNotImpl | 方法未实现（handler 是协议占位） | 部分系统设置类 |
-| `0x0F` | 15 | interStatusInvalid | 内部状态错误 | 设备状态机异常 |
-| `0x10` | 16 | operatorInvalid | 操作者非法 | `renewMotionControl`（租约已过期） |
-| `0x12` | 18 | operateTimeout | 操作超时 | 设备内部超时 |
-| `0x13` | 19 | deviceInBusy | 设备正忙 | 并发请求过多 |
-| `0x19` | 25 | serviceNotReady | 服务未就绪 | 设备启动早期 |
-| `0x1A` | 26 | serviceOffline | 服务不在线 | 子服务挂掉 |
-| `0x1C` | 28 | noOperationPerm | 无操作权限 | `payload.call.clientId != controller` |
-| `0x1D` | 29 | controlWasSeized | 控制权被夺 | `takeMotionControl`（被他人持有）或本端被抢权 |
-| `0x1E` | 30 | deviceIsNotBound | 设备未绑定 | 设备未完成激活 |
-| `0x1F` | 31 | devIoNodeOccupied | 设备节点被占用 | 同一物理端口被多服务占用 |
-| `0x21` | 33 | fileNotExist | 文件不存在 | `deleteAudioFile` / `startPlayList`（id 错） |
-| `0x22` | 34 | openFileFailed | 打开文件失败 | 同上 |
-| `0x23` | 35 | writeFileFailed | 写文件失败 | 音频上传场景 |
-| `0x28` | 40 | dataResourceEmpty | 数据资源为空 | `getAudioPlayList`（无音频文件） |
+| `0x01` | 1 | paramsTypeError | Parameter type error | All methods |
+| `0x02` | 2 | paramsDeletion | Parameter missing | All methods |
+| `0x03` | 3 | paramsParseError | Parameter parsing error | All methods |
+| `0x04` | 4 | paramsOutRange | Parameter out of range | `setCameraLightBrightness` (brightness > 100) |
+| `0x05` | 5 | paramsExpired | Parameter expiration (such as time-limited token) | Rights-holding class call |
+| `0x06` | 6 | paramsIllegal | Illegal parameters | `startMotionAction` (action name is misspelled) |
+| `0x07` | 7 | interfaceNotFound | The interface is not implemented (the routing layer cannot be found) | The old firmware is not registered method |
+| `0x08` | 8 | outOfDeviceCaps | Beyond device capabilities | `startMotionAction` (action not in capabilities) |
+| `0x09` | 9 | operationTempNotAllow | Operation is currently not allowed | `emergencyStopMotion` Post-cooling period |
+| `0x0A` | 10 | methodNotSupport | Method not supported | Device/firmware version old |
+| `0x0B` | 11 | deviceNoCapability | The device has no corresponding capability | Some models do not support specific actions |
+| `0x0C` | 12 | operateUnsupport | Operation not supported | Configure operations not allowed |
+| `0x0E` | 14 | methodNotImpl | The method is not implemented (handler is a protocol placeholder) | Some system setting classes |
+| `0x0F` | 15 | interStatusInvalid | Internal status error | Device state machine exception |
+| `0x10` | 16 | operatorInvalid | Illegal operator | `renewMotionControl` (lease has expired) |
+| `0x12` | 18 | operateTimeout | Operation timeout | Device internal timeout |
+| `0x13` | 19 | deviceInBusy | The device is busy | Too many concurrent requests |
+| `0x19` | 25 | serviceNotReady | Service not ready | Device startup early |
+| `0x1A` | 26 | serviceOffline | The service is not online | The sub-service is down |
+| `0x1C` | 28 | noOperationPerm | No operation permission | `payload.call.clientId != controller` |
+| `0x1D` | 29 | controlWasSeized | Control rights seized | `takeMotionControl` (held by others) or the local end has been seized |
+| `0x1E` | 30 | deviceIsNotBound | The device is not bound | The device has not completed activation |
+| `0x1F` | 31 | devIoNodeOccupied | The device node is occupied | The same physical port is occupied by multiple services |
+| `0x21` | 33 | fileNotExist | The file does not exist | `deleteAudioFile` / `startPlayList` (wrong id) |
+| `0x22` | 34 | openFileFailed | Failed to open file | Same as above |
+| `0x23` | 35 | writeFileFailed | File writing failed | Audio upload scenario |
+| `0x28` | 40 | dataResourceEmpty | The data resource is empty | `getAudioPlayList` (no audio file) |
 
-#### 4.4.2 电机 error 子码
+#### 4.4.2 Motor error subcode
 
-`MotionObserved_.motor[i].error` 字段（uint8）取值：
+`MotionObserved_.motor[i].error` field (uint8) value:
 
-| code（dec） | 名称 | 含义 | 严重性 |
+| code(dec) | name | meaning | severity |
 |---|---|---|---|
-| `0` | motorNormal | 正常 | — |
-| `1` | motorPreDriver | 预驱故障（驱动级硬件异常） | 高 |
-| `2` | motorEcodeError | 编码器故障 | 高 |
-| `3` | motorOverSpeed | 过速 | 高 |
-| `4` | motorOverTempe | 过温（短时可恢复） | 中 |
-| `5` | motorOverCurrent | 过流 | 高 |
-| `6` | motorOverVoltage | 过压 | 高 |
-| `59` | motorPGAbnormality | PG 异常 | 高 |
-| `60` | motorHWUndervoltage | 硬件欠压 | 高 |
-| `63` | motorCommError | 通信错误 | 高 |
-| `64` | motorControlOffline | 控制板离线 | 严重（电机失联） |
-| `65` | controlMotorNotEnable | 未使能 | 中 |
-| `66` | motorControlNotReady | 控制未就绪 | 中 |
-| `67` | motorControlUpgrade | 升级中 | 中 |
-| `68` | motorNoCalibrated | 未标定 | 严重（配置问题） |
-| `69` | motorURDFNotMapped | 标定丢失 | 严重（配置问题） |
+| `0` | motorNormal | Normal | — |
+| `1` | motorPreDriver | Pre-drive fault (driver level hardware abnormality) | High |
+| `2` | motorEcodeError | Encoder failure | High |
+| `3` | motorOverSpeed ​​| Overspeed | High |
+| `4` | motorOverTempe | Overtemperature (recoverable in a short time) | Medium |
+| `5` | motorOverCurrent | Overcurrent | High |
+| `6` | motorOverVoltage | Overvoltage | High |
+| `59` | motorPGAbnormality | PG abnormality | High |
+| `60` | motorHWUndervoltage | Hardware undervoltage | High |
+| `63` | motorCommError | Communication error | High |
+| `64` | motorControlOffline | Control board offline | Serious (motor lost connection) |
+| `65` | controlMotorNotEnable | Not enabled | Medium |
+| `66` | motorControlNotReady | Control not ready | Medium |
+| `67` | motorControlUpgrade | Upgrading | Medium |
+| `68` | motorNoCalibrated | Not calibrated | Serious (configuration problem) |
+| `69` | motorURDFNotMapped | Calibration lost | Critical (configuration problem) |
 
-按严重性归类：
+Classified by severity:
 
-- **可恢复**：`motorOverTempe`（过温，等冷却后恢复）
-- **需停机**：`motorPreDriver` / `motorEcodeError` / `motorOverSpeed` / `motorOverCurrent` / `motorOverVoltage` / `motorPGAbnormality` / `motorHWUndervoltage` / `motorCommError`
-- **配置 / 失联**：`motorControlOffline` / `controlMotorNotEnable` / `motorControlNotReady` / `motorControlUpgrade` / `motorNoCalibrated` / `motorURDFNotMapped`
+- **Recoverable**: `motorOverTempe` (over temperature, recover after cooling down)
+- **Stop required**: `motorPreDriver` / `motorEcodeError` / `motorOverSpeed` / `motorOverCurrent` / `motorOverVoltage` / `motorPGAbnormality` / `motorHWUndervoltage` / `motorCommError`
+- **Configuration / Lost connection**: `motorControlOffline` / `controlMotorNotEnable` / `motorControlNotReady` / `motorControlUpgrade` / `motorNoCalibrated` / `motorURDFNotMapped`
 
-出现**任何**非 0 子码，建议立即 `emergencyStopMotion` 并提示运维介入。
-
----
-
-## 附录 A · 客户端自检清单
-
-接入完成前，请确认客户端实现满足以下检查项：
-
-**DDS 层**
-- [ ] DDS Domain ID 与设备一致
-- [ ] 6 个 endpoint 已建立且 publication / subscription 匹配
-- [ ] 每个通道的 QoS 与本协议 [§1.3](#13-三类通道) 完全一致（含 `DATA_REPRESENTATION` 与 `TYPE_CONSISTENCY_ENFORCEMENT`）
-- [ ] `Header` 类型标 `@final` 注解
-
-**RPC 信封层**
-- [ ] `System_Request_.service` 固定填 `"robotAppService"`
-- [ ] `System_Request_.device_id` 必填非空
-- [ ] `Header.clientId` 进程内唯一（启动时随机 uint64）
-- [ ] `Header.requestId` session 内单调递增、永不重复
-- [ ] 响应匹配（clientId + requestId，[§1.3.1](#131-rpc-通道请求-应答)）
-
-**业务层**
-- [ ] 业务成功满足双层判定（`response.code==0` ∧ `payload.result==true`，[§2.1.3](#213-业务成败双层判定)）
-- [ ] 取控成功后所有 RPC 的 `payload.call.clientId` 切换为 `controller` 字段值
-- [ ] 释权后切回自定义 clientId
-- [ ] 动作列表通过 `getMotionCapabilities` 动态获取，不硬编码
-
-**TRC 通道**
-- [ ] `RemoteControl_.controller` 字段填 `rawActionId`（uint64），**不是** `controller` token（string）
-- [ ] 帧推送频率 50–100 Hz
-- [ ] 停止时主动下发一帧全 0
-
-**续约**
-- [ ] 后台续约线程已启动，频率 `clamp(leaseTimeout/3, 200ms, 10s)`
-- [ ] 续约失败立即视为失权 + 触发失权处理流程
-
-**运控观测量**
-- [ ] 先订阅 reader 再发 `setMotionObservedEnable(motionEnable=true)`（顺序敏感）
-- [ ] 关闭时先发 `setMotionObservedEnable(motionEnable=false)` 再销毁 reader
-
-**事件**
-- [ ] 事件回调内校验 `magic == 0x53425645`
-- [ ] 容器模式事件（`robotServer.host.event`）按 `payload.event` 二次分发
-- [ ] 直通模式事件（`robotServer.control.status`）原样传给业务 handler
-- [ ] 未知 `EventMessage_.topic` 值 宽容透传（向前兼容设备新增事件）
-
-**状态机**
-- [ ] 实现 [§3.1](#31-控制权生命周期) 列出的控制权生命周期流程（取控 → 业务 → 续约 → 释放）
-- [ ] 每个 RPC 的"是否需要控制权"（见 [§3.2](#32-rpc-方法列表) 方法列表）已在客户端代码里强校验
-- [ ] 错误码按附录 D 决策表处理，不静默忽略
+If **any** non-0 subcode appears, it is recommended to immediately `emergencyStopMotion` and prompt operation and maintenance intervention.
 
 ---
 
-## 附录 B · Python 接入要点
+## Appendix A · Client self-check list
 
-适用于 `cyclonedds-python` 等 Python DDS 绑定。
+Before the access is completed, please confirm that the client implementation meets the following check items:
 
-### B.1 接入步骤
+**DDS Layer**
+- [ ] DDS Domain ID is consistent with the device
+- [ ] 6 endpoints have been established and publication / subscription match
+- [ ] The QoS of each channel is completely consistent with this protocol [§1.3](#13-category-3-channels) (including `DATA_REPRESENTATION` and `TYPE_CONSISTENCY_ENFORCEMENT`)
+- [ ] `Header` type mark `@final` annotation
 
-1. **声明 IDL 类型**：按 [§1.3](#13-三类通道) 给出的 struct 定义，用 `cyclonedds.idl.IdlStruct` 子类化，`typename=` 显式传入完整模块路径
-2. **建 DataWriter / DataReader**：按每通道的 QoS 表逐项配置
-3. **取控后切换 `clientId`**：所有持权 RPC 的 `payload.call.clientId` 必须填响应里的 `controller`
-4. **后台续约线程**：周期 `clamp(leaseTimeout/3, 200ms, 10s)`；失败立即按 [§3.3.1](#331-会话管理) 失权处理流程
-5. **事件回调**：先校验 `magic == 0x53425645`，再按 `EventMessage_.topic` 字段值分发
+**RPC envelope layer**
+- [ ] `System_Request_.service` Fixed `"robotAppService"`
+- [ ] `System_Request_.device_id` Required, not empty
+- [ ] `Header.clientId` unique within the process (random uint64 at startup)
+- [ ] `Header.requestId` monotonically increases within the session and never repeats
+- [ ] response matching (clientId + requestId, [§1.3.1](#131-rpc-channel-request-reply))
 
-### B.2 cyclonedds-python 实现注意点
+**Business layer**
+- [ ] The business successfully meets the two-layer determination (`response.code==0` ∧ `payload.result==true`, [§2.1.3](#213-two-level-judgment-of-business-success-or-failure))
+- [ ] After successful control, the `payload.call.clientId` of all RPCs is switched to the `controller` field value.
+- [ ] Switch back to custom clientId after releasing rights
+- [ ] The action list is obtained dynamically through `getMotionCapabilities` and is not hard-coded.
 
-| 注意点 | 说明 |
+**TRC Channel**
+- [ ] `RemoteControl_.controller` field is filled with `rawActionId` (uint64), **not** `controller` token (string)
+- [ ] frame push frequency 50–100 Hz
+- [ ] Actively send a frame of all 0s when stopping
+
+**Renewal**
+- [ ] The background renewal thread has been started, frequency `clamp(leaseTimeout/3, 200ms, 10s)`
+- [ ] Failure to renew the contract will be immediately deemed as a loss of rights + trigger the loss of rights processing process
+
+**Motion Observations**
+- [ ] Subscribe to reader first and then send `setMotionObservedEnable(motionEnable=true)` (order sensitive)
+- [ ] When closing, send `setMotionObservedEnable(motionEnable=false)` first and then destroy the reader
+
+**event**
+- [ ] Verification within event callback `magic == 0x53425645`
+- [ ] Container mode event (`robotServer.host.event`) is distributed twice as `payload.event`
+- [ ] Pass-through mode event (`robotServer.control.status`) is passed to the business handler as it is
+- [ ] Unknown `EventMessage_.topic` value Tolerant transparent transmission (new event for forward compatible devices)
+
+**State Machine**
+- [ ] Implement the control life cycle process listed in [§3.1](#31-control-life-cycle) (control → business → renewal → release)
+- [ ] "Whether control is required" for each RPC (see [§3.2](#32-rpc-method-list) method list) has been strongly verified in the client code
+- [ ] Error codes are processed according to the decision table in Appendix D and are not ignored silently.
+
+---
+
+## Appendix B · Python access points
+
+Applicable to Python DDS bindings such as `cyclonedds-python`.
+
+### B.1 Access steps
+
+1. **Declare IDL type**: According to the struct definition given in [§1.3](#13-category-3-channels), subclass it with `cyclonedds.idl.IdlStruct`, and explicitly pass in the complete module path for `typename=`
+2. **Create DataWriter/DataReader**: Configure item by item according to the QoS table of each channel
+3. **Switch to `clientId` after taking control**: `payload.call.clientId` of all RPC-holding RPCs must fill in `controller` in the response
+4. **Background renewal thread**: Period `clamp(leaseTimeout/3, 200ms, 10s)`; if failed, press [§3.3.1](#331-session-management) immediately for loss of rights processing process
+5. **Event callback**: Verify `magic == 0x53425645` first, and then distribute according to the `EventMessage_.topic` field value
+
+### B.2 cyclonedds-python implementation notes
+
+| Notes | Description |
 |---|---|
-| `@final` 注解 | 必须从 `cyclonedds.idl.annotations` 导入；与 `@dataclass` 同时使用，写在 dataclass 之后 |
-| `typename=` 必传 | 否则会生成包含模块路径的默认类型名，与设备端不匹配 |
-| `Reliability.Reliable(...)` | 是工厂，必须传 `max_blocking_time`；`BestEffort` 是单例 |
-| `DataRepresentation` Policy | 0.10.x 版本用 `use_cdrv0_representation` / `use_xcdrv2_representation` 双 bool；不同小版本 API 有差异 |
-| Type discovery | 默认会发出 type info；若与设备的 cyclonedds C++ 版本不匹配会拒绝，可通过 `cls.__idl__.fill_type_data` 关闭 |
-| 字段命名 | IDL 是 camelCase（如 `clientId`）；切勿 Python 化重命名为 snake_case，否则 wire 不匹配 |
+| `@final` annotation | Must be imported from `cyclonedds.idl.annotations`; used together with `@dataclass`, written after dataclass |
+| `typename=` must be passed | Otherwise, the default type name containing the module path will be generated, which does not match the device side |
+| `Reliability.Reliable(...)` | is a factory, `max_blocking_time` must be passed; `BestEffort` is a singleton |
+| `DataRepresentation` Policy | 0.10.x version uses `use_cdrv0_representation` / `use_xcdrv2_representation` double bool; different minor versions have different APIs |
+| Type discovery | Type info will be emitted by default; if it does not match the cyclonedds C++ version of the device, it will be rejected and can be turned off by `cls.__idl__.fill_type_data` |
+| Field naming | IDL is camelCase (such as `clientId`); do not rename to snake_case Pythonically, otherwise the wire will not match |
 
-### B.3 快速验证链路
+### B.3 Quick verification link
 
-接入完成后建议先调一次 `getMotionCapabilities`（无须持权）验证 DDS 链路 / IDL / QoS / `device_id` 全部对齐：
+After the access is completed, it is recommended to adjust `getMotionCapabilities` (no rights required) to verify that the DDS link / IDL / QoS / `device_id` are all aligned:
 
-- 收到 `code=0` 且 `result=true` → 链路通
-- `code=4` 且 `device_id` 字段非空 → `device_id` 写错了，按响应回填的 SN 改回
-- 5 秒无响应 → Domain 不一致 / 多播路由不通 / topic 名拼错 / QoS 不匹配
+- Receive `code=0` and `result=true` → link pass
+- `code=4` and the `device_id` field is not empty → `device_id` is written incorrectly, change it back according to the SN filled in in the response
+- No response for 5 seconds → Domain inconsistency/multicast routing failure/topic name misspelling/QoS mismatch
 
 ---
 
-## 附录 C · C++ 接入要点
+## Appendix C · C++ access points
 
-C++ 客户端可选任一 OMG DDS 实现：Eclipse Cyclone DDS C++ / RTI Connext / eProsima Fast DDS / OpenDDS。
+The C++ client can choose any OMG DDS implementation: Eclipse Cyclone DDS C++ / RTI Connext / eProsima Fast DDS / OpenDDS.
 
-### C.1 IDL 文件组织
+### C.1 IDL file organization
 
-本协议涉及的 IDL 文件随 SDK 一起发布，位于仓库根目录的 `IDL/` 下。
+The IDL file involved in this agreement is released together with the SDK and is located under `IDL/` in the repository root.
 
-文件清单与 include 关系：
+File list and include relationship:
 
-| 文件 | 包含类型 | 依赖 |
+| Files | Included Types | Dependencies |
 |---|---|---|
 | `Request.idl` | `Header` | — |
 | `RPCMessage.idl` | `System_Request_` / `System_Response_` | `Request.idl` |
 | `EventMessage.idl` | `EventMessage_` | `Request.idl` |
-| `MotorState.idl` | `MotorHeader` + 常量 `MAX_MOTOR_NUM` | — |
+| `MotorState.idl` | `MotorHeader` + constant `MAX_MOTOR_NUM` | — |
 | `MotionObserved.idl` | `Vector3f` / `Quaternionf` / `IMUState` / `MotorObserved` / `PowerObserved` / `MotionObserved_` | `MotorState.idl` |
 | `SensorObserved.idl` | `GPSSignalLevel` / `GEOGPoint` / `GPSFrame` / `UWBRawObserved` / `SensorObserved_` | — |
 | `RemoteControl.idl` | `RemoteControl_` | — |
 
-直接从该目录拷贝 .idl 文件到项目，用对应 DDS 实现的 IDL 编译器生成 C++ 类型（Cyclone DDS C++ 用 `idlc -l cxx`；RTI 用 `rtiddsgen`；Fast DDS 用 `fastddsgen`）。
+Copy the .idl file directly from this directory to the project, and use the IDL compiler corresponding to the DDS implementation to generate the C++ type (`idlc -l cxx` for Cyclone DDS C++; `rtiddsgen` for RTI; `fastddsgen` for Fast DDS).
 
-### C.2 接入要点
+### C.2 Access points
 
-- **IDL `@final` 注解**：须开启 IDL 编译器的 XTYPES 支持；具体开关随实现而异，多数支持以 "IDL4" 或 "XTYPES" 为名的命令行选项
-- **JSON 序列化**：C++ 标准库无 JSON 支持，推荐 `nlohmann/json` 或 `rapidjson`
-- **续约线程**：用 `std::thread` + `std::condition_variable` 实现，周期 `clamp(leaseTimeout/3, 200ms, 10s)`
-- **事件订阅回调**：和 RPC 同 participant 但独立 reader；回调内**不要做长时间业务处理**，否则会阻塞 DDS 内部线程
-- **TRC 高频写**：用独立 writer + `BEST_EFFORT` QoS；不要复用 RPC writer，QoS 不兼容
-- **错误码常量**：按 [§4.4](#44-错误码) 表生成 `enum class DeviceErrorCode : uint32_t { ... }`，便于业务层 switch 处理
+- **IDL `@final` Note**: XTYPES support of the IDL compiler must be turned on; the specific switch varies with the implementation, most support command line options named "IDL4" or "XTYPES"
+- **JSON serialization**: The C++ standard library does not have JSON support. `nlohmann/json` or `rapidjson` is recommended.
+- **Renewal thread**: implemented with `std::thread` + `std::condition_variable`, cycle `clamp(leaseTimeout/3, 200ms, 10s)`
+- **Event subscription callback**: Same as RPC participant but independent reader; **Do not do long-term business processing** within the callback, otherwise it will block the DDS internal thread
+- **TRC high-frequency writing**: use independent writer + `BEST_EFFORT` QoS; do not reuse RPC writer, QoS is not compatible
+- **Error code constant**: Generate `enum class DeviceErrorCode : uint32_t { ... }` according to [§4.4](#44-error-code) table to facilitate business layer switch processing
 
-### C.3 不同 DDS 实现的注意点
+### C.3 Notes on different DDS implementations
 
-| 实现 | 注意点 |
+| Implementation | Notes |
 |---|---|
-| **Eclipse Cyclone DDS C++（ddscxx）** | 设备端实现，对接最自然；XTYPES 注解默认支持；命名空间 `org::eclipse::cyclonedds::dds::*` |
-| **RTI Connext** | XTYPES 完整支持；多播 discovery 默认开启；QoS API 风格为 `DDS_*Qos` 结构体；商业授权 |
-| **eProsima Fast DDS** | RTPS / simple discovery 默认与 Cyclone DDS 互通；XTYPES 注解需在 IDL 编译器开启对应选项 |
-| **OpenDDS** | 默认 InfoRepo discovery，与 Cyclone DDS 互通需切到 RTPS discovery；XTYPES 需 build 时显式启用 |
+| **Eclipse Cyclone DDS C++ (ddscxx)** | Device-side implementation, the most direct integration; XTYPES annotations are supported by default; namespace `org::eclipse::cyclonedds::dds::*` |
+| **RTI Connext** | XTYPES is fully supported; multicast discovery is enabled by default; QoS API style is `DDS_*Qos` structure; commercial authorization |
+| **eProsima Fast DDS** | RTPS / simple discovery interoperates with Cyclone DDS by default; XTYPES annotation needs to enable the corresponding option in the IDL compiler |
+| **OpenDDS** | Default InfoRepo discovery, interoperability with Cyclone DDS requires switching to RTPS discovery; XTYPES needs to be explicitly enabled when building |
 
-切换 DDS 实现时，按以下顺序验证互通：
+When switching DDS implementations, verify interoperability in the following order:
 
-1. Domain ID 一致
-2. SPDP / SEDP 多播能否互通（同一二层网络或多播路由可达）
-3. IDL 类型 `typename` + 模块路径一致
-4. 各通道的 QoS 全部匹配（含 `DATA_REPRESENTATION` / `TYPE_CONSISTENCY_ENFORCEMENT`；RPC 通道再加 `max_blocking_time`）
-5. 跑一次 `getMotionCapabilities` 烟囱测试，按附录 B.3 判定结果
+1. Domain ID is consistent
+2. Can SPDP / SEDP multicast interoperate (the same layer 2 network or multicast route is reachable)
+3. IDL type `typename` + module path is consistent
+4. The QoS of each channel is all matched (including `DATA_REPRESENTATION` / `TYPE_CONSISTENCY_ENFORCEMENT`; RPC channel plus `max_blocking_time`)
+5. Run the `getMotionCapabilities` chimney test once and determine the result according to Appendix B.3
 
 ---
 
-## 附录 D · 错误处理决策表与静默失败排查
+## Appendix D · Error handling decision table and silent failure troubleshooting
 
-### D.1 错误处理决策表
+### D.1 Error handling decision table
 
-按错误来源查处理动作。涉及控制权的错误仅在已持权时有意义，须走 [§3.3.1](#331-会话管理) 失权处理流程。
+Check the processing action according to the error source. Errors involving control rights are only meaningful when the rights are already held, and the [§3.3.1](#331-session-management) loss of rights processing process must be followed.
 
-| 错误来源 | 处理动作 |
+| Error source | Processing action |
 |---|---|
-| **本地超时**（5s 内无响应） | 用新 `requestId` 重试，连续 3 次失败熔断上报 |
-| **RPC code=1 / 2**（设备异常） | 不可重试，上报业务层；持权时须释放控制权 |
-| **RPC code=3 / 4 / 6 / 7**（请求格式错） | 不可重试，按 code 含义检查 `method` / 信封 / `service` / JSON 拼写 |
-| **RPC code=5**（服务未就绪） | 退避 1–3s 重试 |
-| **payload 0x01–0x08**（参数类） | 不可重试，检查 `params` 必填字段、类型、值域 |
-| **payload 0x09**（临时不允许） | 退避 3–5s 重试（典型场景：`emergencyStopMotion` 冷却期） |
-| **payload 0x0A / 0x0E**（不支持 / 未实现） | 不可重试 |
-| **payload 0x13**（设备忙） | 退避 500ms 重试 |
-| **payload 0x10 / 0x1C / 0x1D**（持权异常） | 走失权处理（[§3.3.1](#331-会话管理)） |
-| **事件 `controlled=false`** 且本端为原持权方 | 同上 |
-| **`motor[i].error` ≠ 0** | 立即 `emergencyStopMotion` + 告警 |
-| **TRC 帧无效果**（`queryMotionState` 验证） | 排查 `RemoteControl_.controller` 是否填 `rawActionId`（uint64），以及当前是否持权 |
-| **DDS discovery 长时间未收敛** | 检查 Domain / 多播路由 / `device_id` |
+| **Local timeout** (no response within 5s) | Try again with new `requestId`, and report 3 consecutive failed circuit breakers |
+| **RPC code=1 / 2** (device abnormality) | Cannot retry, report to the business layer; control rights must be released when holding rights |
+| **RPC code=3 / 4 / 6 / 7** (request format error) | Unable to retry, check the code meaning `method` / envelope / `service` / JSON spelling |
+| **RPC code=5** (service not ready) | Back off 1–3s and try again |
+| **payload 0x01–0x08** (parameter class) | No retry, check `params` required fields, types, value ranges |
+| **payload 0x09** (temporarily not allowed) | Back off 3–5s and try again (typical scenario: `emergencyStopMotion` cooling period) |
+| **payload 0x0A / 0x0E** (not supported / not implemented) | Not retryable |
+| **payload 0x13** (device busy) | Back off 500ms and try again |
+| **payload 0x10 / 0x1C / 0x1D** (right holding exception) | Lost right processing ([§3.3.1](#331-session-management)) |
+| **Event `controlled=false`** and this end is the original rights holder | Same as above |
+| **`motor[i].error` ≠ 0** | Immediate `emergencyStopMotion` + Alarm |
+| **TRC frame has no effect** (`queryMotionState` verification) | Check whether `RemoteControl_.controller` is filled with `rawActionId` (uint64), and whether it currently holds the rights |
+| **DDS discovery has not converged for a long time** | Check Domain / Multicast Routing / `device_id` |
 
-**重试时序**：第 1 次 50ms / 第 2 次 500ms / 第 3 次 2s；连续 3 次失败熔断上报。
+**Retry timing**: 1st time 50ms / 2nd time 500ms / 3rd time 2s; 3 consecutive failed circuit breaker reports.
 
-### D.2 静默失败排查清单
+### D.2 Quiet Failure Troubleshooting Checklist
 
-设备完全无响应（错误码层面无可识别信号）时，按下表核对：
+When the device is completely unresponsive (no identifiable signal at the error code level), check the following table:
 
-| 现象 | 可能原因 |
+| Phenomenon | Possible causes |
 |---|---|
-| RPC 完全收不到响应 | Domain 不一致 / 多播路由不通 / `device_id` 写空 / topic 名拼错 / QoS 不匹配 |
-| 收到响应但 device_id 不匹配 | 同网多设备，响应被串扰；检查响应 `device_id` 是否等于请求 `device_id` |
-| TRC 帧无效果 | `RemoteControl_.controller` 未填 `rawActionId`（错填了 `controller` 字符串） / 未持权 / 设备未启用 TRC |
-| 运控观测量不推 | 未调 `setMotionObservedEnable(motionEnable=true)` / reader 在 enable 之后才订阅（丢前几帧） |
-| 事件收不到 | DDS topic `rt/robotServer/Event` 拼错 / `magic` 常量写错（应 `0x53425645`） / 自端 loop-back 过滤误把对端事件也滤掉 |
+| RPC cannot receive any response at all | Domain inconsistency / multicast routing unavailable / `device_id` is empty / topic name is misspelled / QoS does not match |
+| Response received but device_id does not match | Multiple devices on the same network, the response is crosstalked; check whether the response `device_id` is equal to the request `device_id` |
+| TRC frame has no effect | `RemoteControl_.controller` is not filled in `rawActionId` (the `controller` string is filled in incorrectly) / no rights are held / TRC is not enabled on the device |
+| Motion observation is not pushed | Unadjusted `setMotionObservedEnable(motionEnable=true)` / reader is subscribed after enable (the first few frames are lost) |
+| The event cannot be received | DDS topic `rt/robotServer/Event` is misspelled / `magic` constant is written incorrectly (should be `0x53425645`) / self-end loop-back filtering mistakenly filters out the peer events |

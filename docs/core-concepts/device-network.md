@@ -1,38 +1,40 @@
-# 设备网络与大脑访问
+# Device Network and Robot Compute Module Access
 
-Uniubi 机器狗包含负责设备接入的小脑和运行开发程序的大脑。无线和有线连接下，大脑的访问方式不同。
+**English** | [简体中文](device-network.zh-CN.md)
 
-## 网络拓扑
+A Uniubi robot includes a motion controller and a robot compute module on which developer applications run. Access to the compute module differs between wireless and wired connections.
 
-| 连接方式 | 外部可见地址 | 大脑访问方式 |
+## Network Topology
+
+| Connection | Externally visible address | Compute-module access |
 |---|---|---|
-| 无线 | App 中显示的小脑 IP | 大脑没有独立的无线可访问 IP；外部访问经小脑桥接 |
-| 有线 | 大脑自己的有线 IP | 使用大脑有线 IP 直接访问 |
+| Wireless | Motion-controller IP shown in the app | The compute module has no separately reachable wireless IP; access is bridged through the motion controller |
+| Wired | Compute module's wired IP | Connect directly to the compute module's wired address |
 
-## 无线连接
+## Wireless Connection
 
-大脑本身不提供独立的无线 IP。机器狗通过无线网络连接时，App 中显示的是小脑 IP，外部设备不能通过该地址任意访问大脑的所有端口。
+The compute module does not expose an independent wireless IP. When the robot is connected over Wi-Fi, the app displays the motion-controller IP, and only selected compute-module ports are reachable through that address.
 
-- 需要在大脑上对外提供服务时，使用设备开放的 **20000–29999** 端口范围。
-- 不要假设大脑上的其它监听端口能够通过无线网络访问。
-- 大脑的 SSH 登录由小脑桥接；如需登录大脑，可使用 App 中显示的小脑 IP 作为 SSH 地址。
+- Use the device's exposed **20000–29999** port range for services that must be reached over the wireless bridge.
+- Do not assume that every listening port on the compute module is reachable over Wi-Fi.
+- SSH access to the compute module is bridged through the motion controller. Use the IP displayed in the app as the SSH address.
 
-具体 SSH 用户、密钥或密码由设备交付配置决定，不应写入公开仓库或示例命令。
+SSH users, keys, and passwords are determined by the device delivery configuration. Never place credentials in a public repository or example command.
 
-## 有线连接
+## Wired Connection
 
-连接有线网络后，大脑会获得自己独立的有线 IP。此时开发机可通过该 IP 直接连接大脑，不受无线桥接的业务端口范围限制。
+On a wired network, the compute module obtains its own IP address. The development machine can connect directly to that address without the wireless bridge's application-port restriction.
 
-如果不知道大脑的有线 IP，可先使用 App 中显示的小脑 IP，通过 SSH 登录大脑，再在大脑上执行：
+If the wired IP is unknown, first SSH through the motion-controller IP shown in the app, then run this command on the compute module:
 
 ```bash
 ip -br -4 addr
 ```
 
-根据实际接入的有线网卡及其 `UP` 状态确认 IPv4 地址。不要把 App 中显示的小脑 IP 误认为大脑的有线 IP。
+Use the IPv4 address of the active wired interface. Do not confuse the motion-controller IP displayed in the app with the compute module's wired IP.
 
-## 开发时如何选择
+## Choosing a Connection During Development
 
-- 在大脑上部署需要被外部访问的服务，且开发机通过无线连接机器狗时，将服务端口配置在 `20000–29999` 范围内。
-- 需要直接访问大脑其它端口、进行大量数据传输或排查网络问题时，优先连接大脑有线网络并使用其独立 IP。
-- SDK 或 DDS 程序需要显式指定网卡时，应选择当前实际与机器狗通信的接口；网卡名以 `ip -br addr` 的输出为准。
+- For a service hosted on the compute module and reached over the robot's wireless connection, use a port in the `20000–29999` range.
+- Prefer the wired connection for unrestricted port access, large transfers, or network troubleshooting.
+- When an SDK or DDS program requires an explicit network interface, select the interface that actually reaches the robot. Use `ip -br addr` to determine its name.

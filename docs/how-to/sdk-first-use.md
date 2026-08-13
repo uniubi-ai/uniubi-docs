@@ -1,38 +1,42 @@
-# SDK 通用准备
+# SDK First Use
 
-> 本文不是控制模式选择页。请先从 [How-to 入口](README.md) 选择 High-level 或 Low-level，再回到本文准备 SDK。
+**English** | [简体中文](sdk-first-use.zh-CN.md)
 
-## 目标
+> This page does not choose a control mode. Select High-level or Low-level from the [How-to entry point](README.md), then return here to prepare the SDK.
 
-完成一次 C++ 或 Python SDK 的构建/导入，并在进入控制流程前完成只读验证。
+## Goal
 
-## SDK 与控制模式
+Build or import the C++ or Python SDK and complete read-only validation before entering a control workflow.
 
-| 控制模式 | SDK 入口 | 说明 |
+## SDK Entry Points
+
+| Control mode | SDK entry point | Purpose |
 |---|---|---|
-| High-level | `MotionHighLevelClient` | 调用机器人内置动作能力，不单独控制每个关节 |
-| Low-level | `MotionLowLevelClient` | 运行自己的控制策略，直接控制关节位置或扭矩 |
+| High-level | `MotionHighLevelClient` | Invoke built-in robot actions without controlling individual joints |
+| Low-level | `MotionLowLevelClient` | Run a custom controller and directly command joint position or torque |
 
-Low-level 关节控制使用 SDK 的 `MotionLowLevelClient`。ROS 2 Motion Bridge 不提供等价的关节级控制入口。
+Joint-level Low-level control uses `MotionLowLevelClient`. ROS 2 Motion Bridge does not provide an equivalent interface.
 
-## 前置条件
+## Prerequisites
 
-- Linux 环境，以及目标架构对应的 SDK 运行库。
-- 已按 [设备网络与大脑访问](../core-concepts/device-network.md) 确认当前连接方式、目标 IP、可用端口和通信网卡。
-- 当前设备运行 SDK 程序需要 root 权限；C++ 构建不要求 `sudo`，Python SDK 在大脑上直接安装到系统 `python3`，运行示例时按对应 README 使用 `sudo env` 保留动态库环境。
-- C++ SDK 与 Python binding 使用同一套 ABI、架构和版本。
-- 先阅读 [构建、安装和交叉编译](../BUILD.md)。
+- A Linux environment and SDK runtime libraries for the target architecture
+- A confirmed connection method, target address, exposed ports, and robot-facing network interface; see [Device Network and Robot Compute Module Access](../core-concepts/device-network.md)
+- Root privileges when running SDK programs on current devices; C++ compilation itself does not require `sudo`
+- Matching C++ SDK, Python binding, architecture, version, and ABI
+- Completion of the [Build, Installation, and Cross-compilation Guide](../BUILD.md)
 
-## 1. 选择入口
+On the robot compute module, install the Python SDK into the system `python3`. Run examples with the `sudo env` form documented by the corresponding SDK README so that the dynamic-library environment is preserved.
 
-| 语言 | 项目 | 适合场景 |
+## 1. Choose a Language
+
+| Language | Repository | Use when |
 |---|---|---|
-| C++ | [`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) | C++ 控制、观测和示例开发 |
-| Python | [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py) | Python 控制、观测和策略接入 |
+| C++ | [`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) | Developing C++ control, observation, or example applications |
+| Python | [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py) | Developing Python control, observation, or policy integration |
 
-## 2. 完成最小构建或导入
+## 2. Complete a Minimal Build or Import
 
-C++ 项目先完成 configure 和 examples 构建：
+Build the C++ SDK examples:
 
 ```bash
 cd uniubi_robot_sdk
@@ -40,7 +44,7 @@ cmake -S . -B build
 cmake --build build -j
 ```
 
-Python 项目需要先准备 C++ SDK，再安装 binding：
+For Python, prepare the C++ SDK first, then install the binding:
 
 ```bash
 cd uniubi_robot_sdk_py
@@ -49,22 +53,22 @@ UNIUBI_SDK_ROOT="$UNIUBI_SDK_ROOT" python3 -m pip install .
 python3 -c "import robot_motion_sdk as sdk; print(sdk.MotionHighLevelClient)"
 ```
 
-如果 Linux 动态库、架构或媒体库不匹配，回到 [构建指南](../BUILD.md) 检查，不要先修改 Python binding。
+If runtime libraries, architecture, or media libraries do not match, return to the [Build Guide](../BUILD.md). Do not modify the Python binding to work around an environment mismatch.
 
-## 3. 只读验证
+## 3. Complete Read-only Validation
 
-先验证导入、连接和观测数据；不要把首次运行直接扩展成 walking、跳跃或低级力矩控制。
+Validate import, connection, and observations first. Do not turn the first run into a walking, jumping, or joint-torque test.
 
-成功标准：
+Success criteria:
 
-- C++ 示例或 Python 包构建/导入成功；
-- 能完成只读通信或观测验证；
-- 能明确当前 SDK 运行库、架构和 ABI；
-- 只有在只读验证通过后，才进入对应的 High-level 或 Low-level 控制文档。
+- The C++ example builds or the Python package imports successfully.
+- Read-only communication and observations work.
+- The active SDK runtime-library version, architecture, and ABI are known.
+- Only then proceed to the relevant High-level or Low-level control guide.
 
-## 下一步
+## Next Steps
 
-- High-level：[使用机器人内置动作](high-level-control.md) 和 [`uniubi_high_level_sdk.md`](../uniubi_high_level_sdk.md)
-- Low-level：[自定义关节控制策略](low-level-control.md) 和 [`uniubi_low_level_sdk.md`](../uniubi_low_level_sdk.md)
-- 媒体帧：[`uniubi_media_sdk.md`](../uniubi_media_sdk.md)
-- 项目级构建细节：[`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) 和 [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py) 的 README
+- High-level: [Use Built-in Robot Actions](high-level-control.md) and the [High-level SDK API](../uniubi_high_level_sdk.md)
+- Low-level: [Run a Custom Joint-control Policy](low-level-control.md) and the [Low-level SDK API](../uniubi_low_level_sdk.md)
+- Media frames: [Media SDK API](../uniubi_media_sdk.md)
+- Repository-specific build details: [`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) and [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py)

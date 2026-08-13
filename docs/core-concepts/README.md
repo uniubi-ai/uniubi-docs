@@ -1,97 +1,99 @@
 # Core Concepts
 
-Core Concepts 解释 Uniubi 机器人开发中的控制模型和系统边界。它不负责再次选择仓库，而是帮助你理解：应用到底控制什么、控制闭环由谁负责，以及 SDK、ROS 2 和机器人服务各自承担什么职责。
+**English** | [简体中文](README.zh-CN.md)
 
-设备连接前，先阅读 [设备网络与大脑访问](device-network.md)，确认无线桥接、有线 IP 和可用端口范围。
+This section explains the control abstractions and system boundaries used in Uniubi robot development: what an application controls, where the feedback loop runs, and what responsibilities belong to the SDK, ROS 2 components, and robot services.
 
-## 1. 两种控制抽象
+Before connecting to a robot, read [Device Network and Robot Compute Module Access](device-network.md) to understand wireless bridging, wired addressing, and exposed ports.
 
-| 维度 | High-level | Low-level |
+## 1. Two Control Abstractions
+
+| Dimension | High-level | Low-level |
 |---|---|---|
-| 应用控制对象 | 动作或运动意图 | 每个关节的位置或扭矩目标 |
-| 控制闭环 | 由机器人内置动作能力完成 | 由应用自己的策略和控制循环完成 |
-| 应用主要负责 | 选择动作、设置参数、处理状态 | 读取观测、运行策略、周期性下发关节控制量 |
-| 典型开发内容 | 站立、趴下、行走、转向和已有动作 | 自定义 locomotion 策略、关节位置控制、关节扭矩控制 |
+| Application commands | Actions or motion intent | Position or torque targets for individual joints |
+| Feedback loop | Robot's built-in motion capability | Application's policy or controller |
+| Application responsibilities | Select actions, set parameters, and process state | Read observations, run the policy, and send joint commands at the required rate |
+| Typical work | Standing, lying down, walking, turning, and other built-in actions | Custom locomotion policies and joint position or torque control |
 
 ### High-level
 
-High-level 的应用告诉机器人“要做什么”。机器人内部已有的动作能力负责把动作意图转换为具体的运动执行，应用不单独生成每个关节的控制量。
+A High-level application tells the robot what to do. The robot's built-in motion system converts that intent into joint-level execution; the application does not generate commands for every joint.
 
 ### Low-level
 
-Low-level 的应用自己决定“每个关节下一周期应该怎么控制”。策略可以来自自己的训练流程，也可以是自己实现的控制器；SDK 负责提供观测、控制接口和实时通信链路，但不替应用训练策略或决定关节目标。
+A Low-level application determines how each joint should be controlled on every cycle. The controller may be a trained policy or a conventional control algorithm. The SDK provides observations, control interfaces, and the real-time communication path, but it does not supply the policy or choose joint targets.
 
-## 2. 控制权和生命周期
+## 2. Control Lifecycle
 
-无论使用哪种模式，真实机器人控制都应遵循相同的生命周期：
+Real-robot control should follow this lifecycle in either mode:
 
 ```text
-连接 / 发现
+connect / discover
     ↓
-只读观测验证
+validate read-only observations
     ↓
-获取或启用控制权
+acquire or enable control
     ↓
-持续发送控制意图或关节控制帧
+continuously send motion intent or joint-control frames
     ↓
-停止动作 / 停止发送
+stop the action or command stream
     ↓
-禁用并释放控制权
+disable and release control
     ↓
-断开连接
+disconnect
 ```
 
-两种模式的关键差异在“持续控制”这一步：
+The continuous-control step differs by mode:
 
-- High-level 发送动作或运动意图，由机器人内置能力完成后续闭环。
-- Low-level 必须按约定周期持续运行自己的策略，并发送关节位置或扭矩控制量；控制循环、周期和退出行为都属于应用需要验证的内容。
+- High-level sends actions or motion intent; the built-in motion system closes the loop.
+- Low-level runs the application controller at the agreed rate and sends joint position or torque targets. The application must validate timing, the feedback loop, and shutdown behavior.
 
-控制权生命周期的具体 API 和状态机见 [API Reference](../api-reference/README.md)。
+See the [API Reference](../api-reference/README.md) for client state machines and lifecycle details.
 
-## 3. 各层组件的职责
+## 3. Component Responsibilities
 
-| 组件 | 负责什么 | 不负责什么 |
+| Component | Responsible for | Not responsible for |
 |---|---|---|
-| 机器人内置动作能力 | 执行 High-level 动作和运动能力 | 不替应用运行自定义 Low-level 策略 |
-| C++ / Python SDK | 提供 High-level / Low-level 客户端、观测和控制通信接口 | 不替应用选择控制模式或训练策略 |
-| ROS 2 Motion Bridge | 将机器人已有运动能力接入 ROS 2 业务节点 | 不提供等价的关节级 Low-level 控制入口 |
-| `uniubi_robot_msgs` | 提供 ROS 2 接口和 schema 的统一定义 | 不是普通开发者的起始仓库，也不是修改协议的授权 |
-| 训练 / 仿真环境 | 训练、回放和验证策略 | 不代表真实机器人上的 ABI、周期和安全验证已经完成 |
+| Built-in robot motion system | Executing High-level actions and locomotion capabilities | Running an application's custom Low-level policy |
+| C++ / Python SDK | High-level and Low-level clients, observations, and control transport | Choosing the application's control mode or training method |
+| ROS 2 Motion Bridge | Exposing built-in robot motion capabilities to ROS 2 application nodes | Providing an equivalent joint-level Low-level interface |
+| `uniubi_robot_msgs` | Shared ROS 2 interface and schema definitions | Serving as the starting repository for application development or authorizing protocol changes |
+| Training and simulation environments | Training, replaying, and evaluating policies | Proving real-robot ABI, timing, and safety behavior |
 
-因此，SDK、ROS 2 和消息仓库不是同一层的替代品：先确定控制抽象，再选择能够承载该抽象的实现方式。
+The SDK, ROS 2 bridge, and message definitions are complementary components, not interchangeable entry points. Choose the control abstraction first, then choose an implementation that supports it.
 
-## 4. 训练、仿真和真实机器人的关系
+## 4. From Training to a Real Robot
 
-Low-level 策略通常经过以下验证链路：
+A Low-level policy normally progresses through these validation stages:
 
 ```text
-训练
-  → checkpoint 回放
-  → 本地 Sim2Sim
+training
+  → checkpoint replay
+  → local Sim2Sim
   → Mock / SDK Sim2Sim
-  → 真实机器人
+  → real robot
 ```
 
-每一步验证的对象不同：
+Each stage answers a different question:
 
-- checkpoint 回放验证策略和接口是否能运行；
-- Sim2Sim 验证策略与仿真控制器的闭环行为；
-- Mock / SDK Sim2Sim 验证 SDK、仿真 bridge 和消息链路；
-- 真实机器人还必须额外验证架构、ABI、控制周期、关节顺序、急停和人工接管。
+- Checkpoint replay verifies that the policy and environment can execute.
+- Local Sim2Sim verifies the policy and simulated controller loop.
+- Mock / SDK Sim2Sim verifies the SDK client, simulation bridge, and message path.
+- Real-robot testing additionally verifies architecture, ABI, control rate, joint order, emergency stop, and manual takeover.
 
-仿真或 Mock 通过，不等于真实机器人安全通过。
+Passing simulation or Mock validation does not prove safe real-robot operation.
 
-## 5. 常见边界
+## 5. Common Boundaries
 
-- High-level / Low-level 是控制抽象，不是 C++ / Python / ROS 2 的语言选择。
-- 选择 High-level 后，可以在 SDK 和 ROS 2 Motion Bridge 之间选择；选择 Low-level 后，关节级控制统一使用 SDK。
-- 直接 DDS / RPC、QoS 和协议映射是 Advanced 路径，不是普通 Low-level SDK 的另一种写法。
-- 不会使用现有字段时，应先阅读 How-to 和 API Reference，不要直接修改 `uniubi_robot_msgs/idl`。
+- High-level and Low-level are control abstractions, not choices between C++, Python, and ROS 2.
+- High-level supports the SDK or ROS 2 Motion Bridge. Joint-level Low-level control uses the SDK.
+- Direct DDS/RPC, QoS, and protocol mapping belong to the Advanced integration path; they are not an alternative form of the standard Low-level SDK workflow.
+- If an existing field is unclear, read the appropriate How-to guide and API reference before considering any change to `uniubi_robot_msgs/idl`.
 
-## 继续阅读
+## Continue Reading
 
-- [设备网络与大脑访问](device-network.md)：确认无线和有线连接下的地址与端口边界。
-- [Quick Start](../../README.md#quick-start)：选择控制模式和实现方式。
-- [How-to](../how-to/README.md)：按任务完成环境准备和最小验证。
-- [API Reference](../api-reference/README.md)：查阅接口、字段和生命周期。
-- [Advanced](../advanced/README.md)：处理协议、DDS、QoS 和特殊集成场景。
+- [Device Network and Robot Compute Module Access](device-network.md)
+- [Quick Start](../../README.md#quick-start)
+- [How-to Guides](../how-to/README.md)
+- [API Reference](../api-reference/README.md)
+- [Advanced](../advanced/README.md)

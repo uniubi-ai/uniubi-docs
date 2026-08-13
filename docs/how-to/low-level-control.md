@@ -1,40 +1,42 @@
-# Low-level：自定义关节控制策略
+# Low-level: Run a Custom Joint-control Policy
 
-## 目标
+**English** | [简体中文](low-level-control.zh-CN.md)
 
-自己训练或运行控制策略，并直接输出每个关节的位置或扭矩控制量。
+## Goal
 
-典型目标包括：
+Run your own policy or controller and directly generate position or torque commands for individual joints.
 
-- 在仿真中训练自己的 locomotion 策略；
-- 将策略导出并接入机器人运行时；
-- 自己实现关节位置或扭矩控制器，并验证控制周期、关节顺序和安全策略。
+Typical goals include:
 
-## 这条路径不解决什么问题
+- training a locomotion policy in simulation;
+- exporting the policy and integrating it with the robot runtime; and
+- implementing a joint position or torque controller while validating timing, joint order, and safety behavior.
 
-如果只是调用机器人内置的站立、行走、转向或其他动作能力，不需要自己控制每个关节，请转到 [High-level：使用机器人内置动作](high-level-control.md)。
+## Out of Scope
 
-## 统一使用 SDK
+If you only need built-in standing, walking, turning, or other actions, follow [High-level: Use Built-in Robot Actions](high-level-control.md).
 
-关节级 Low-level 控制统一使用 SDK 的 `MotionLowLevelClient`：
+## Use the SDK
 
-| 开发方式 | 入口 | 对应仓库 |
+Joint-level Low-level control uses the SDK's `MotionLowLevelClient`:
+
+| Language | Entry point | Repository |
 |---|---|---|
 | C++ | `MotionLowLevelClient` | [`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) |
 | Python | `MotionLowLevelClient` | [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py) |
 
-ROS 2 Motion Bridge 不提供等价的关节级控制入口。直接使用 DDS/RPC 或修改协议属于协议级维护/特殊集成路径，不是普通 Low-level 开发入口。
+ROS 2 Motion Bridge does not provide an equivalent joint-level interface. Direct DDS/RPC integration and protocol changes are specialized protocol-level work, not the standard Low-level development path.
 
-## 推荐开发路径
+## Recommended Workflow
 
-1. **训练或准备策略**：进入 [训练、导出和回放策略](train-export-replay.md)；确认 checkpoint 能在仿真中回放。
-2. **准备 SDK**：阅读 [SDK 通用准备](sdk-first-use.md)，确认 C++/Python binding、头文件、运行库、架构和 ABI 匹配。
-3. **验证 SDK 链路**：没有真机时，使用 [Mock / Sim2Sim](mock-sim2sim.md) 验证策略、仿真 bridge 和 SDK client 的闭环。
-4. **进入真实机器人**：先只读，再进行低风险控制；确认控制周期、关节顺序、板端推理格式、急停和人工接管条件。
+1. **Train or prepare the policy:** follow [Policy Training, Export, and Replay](train-export-replay.md) and confirm checkpoint replay in simulation.
+2. **Prepare the SDK:** follow [SDK First Use](sdk-first-use.md) and verify that bindings, headers, runtime libraries, architecture, and ABI match.
+3. **Validate the SDK path:** use [Mock / Sim2Sim](mock-sim2sim.md) to validate the policy, simulation bridge, and SDK client without hardware.
+4. **Move to the real robot:** begin with read-only checks and low-risk posture validation. Verify the control rate, joint order, on-board inference format, emergency stop, and manual-takeover procedure.
 
-## SDK 与模型关节顺序
+## SDK and Model Joint Order
 
-当前 `MotorLayout` 返回 12 个关节，SDK/机器人采用 leg-major 顺序：
+The current `MotorLayout` contains 12 joints in SDK/robot leg-major order:
 
 ```text
 FL_ABAD, FL_HIP, FL_KNEE,
@@ -43,41 +45,29 @@ RL_ABAD, RL_HIP, RL_KNEE,
 RR_ABAD, RR_HIP, RR_KNEE
 ```
 
-Low-level 程序必须在 `kConnected` 后调用 `client.get_motor_layout()`，校验关节数量和
-实际顺序，再使用每个 `MotorInfo` 返回的 `limb_no`、`joint_no` 构造控制帧。不能仅
-依赖硬编码数组下标；数量或顺序不匹配时，应在 `set_motion_enable(true)` 前拒绝运行。
+After reaching `kConnected`, a Low-level application must call `client.get_motor_layout()` and verify both joint count and order. Construct each control frame with the `limb_no` and `joint_no` returned by the corresponding `MotorInfo`; do not rely only on hard-coded array indexes. Refuse to call `set_motion_enable(true)` if the count or order does not match.
 
-模型输入输出顺序由模型训练和导出契约决定，可能不同于 SDK 的 leg-major 顺序。
-模型运行程序必须分别声明 SDK 顺序和模型顺序，并在构造模型输入前、解析模型输出后
-显式完成双向重排。替换模型时还需同时核对 observation 定义、归一化、action scale、
-输入输出 shape 和控制频率，不能只替换 ONNX 文件。
+Model input and output order is defined by the model's training and export contract and may differ from the SDK's leg-major order. Declare SDK order and model order separately, and explicitly reorder before model inference and after reading model output. When replacing a model, verify the observation definition, normalization, action scale, input/output shapes, and control rate as well as the ONNX file.
 
-板端运行 C++ 或 Python Low-level TensorRT 控制进程时，建议通过 `taskset -c 2` 绑定 CPU 2，
-以减少调度抖动，使观测数据获取耗时和 50 Hz 控制周期更稳定。如果设备已有不同的
-CPU 隔离或核分配方案，应选择实际分配给该控制进程的独立核心。
+On the robot compute module, pinning a C++ or Python TensorRT Low-level process to CPU 2 with `taskset -c 2` is recommended to reduce scheduler jitter and stabilize observation latency and the 50 Hz control period. If the device uses another CPU-isolation plan, select the dedicated core assigned to the controller.
 
-TensorRT 参考实现：
+Reference implementations:
 
-- C++：[`example_lowlevel_tensorrt.cpp`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel_tensorrt.cpp)
-- Python：[`example_lowlevel_tensorrt.py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_lowlevel_tensorrt.py)
+- C++: [`example_lowlevel_tensorrt.cpp`](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel_tensorrt.cpp)
+- Python: [`example_lowlevel_tensorrt.py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_lowlevel_tensorrt.py)
 
-两个板端示例都输入 ONNX，并在每次进程启动时重新构建 TensorRT engine，不依赖
-PyTorch；C++ 示例还显式关闭 TF32，使用严格 FP32。C++ 示例提供
-`--validate-only`，可在不初始化 SDK、不连接机器人的情况下先验证 ONNX 解析、
-engine 构建和一次零输入推理。替换模型时不得复用未经核对的关节重排或
-observation 契约。
+Both examples accept ONNX input and rebuild the TensorRT engine at every process startup without PyTorch. The C++ example disables TF32 and uses strict FP32. Its `--validate-only` mode validates ONNX parsing, engine construction, and one zero-input inference without connecting to the robot. Never reuse an unverified joint reorder or observation contract when replacing the model.
 
-## 实机分阶段验证
+## Staged Real-robot Validation
 
-首次验证时，将机器狗可靠固定在安全吊架上，保持四脚完全腾空，只验证 `stand` 和
-`lay`。确认姿态、关节方向和急停均正常后，将机器狗放到空旷、平整、无障碍地面，
-再按 `stand` → `walk` → `stop` → `lay` 的顺序验证策略行走。不要在四脚腾空时执行
-`walk`；两个阶段都必须保持急停可触达并由专人值守。
+For the first hardware test, secure the robot on a reliable safety rig with all four feet fully clear. Validate only `stand` and `lay`. After confirming posture, joint direction, and emergency-stop behavior, place the robot on clear, level, obstacle-free ground and validate `stand` → `walk` → `stop` → `lay`.
 
-## 详细接口
+Never execute `walk` while the robot is suspended. During both stages, keep the emergency stop within reach and have a dedicated operator attend the robot.
 
-- [C++ 低级控制 SDK](../uniubi_low_level_sdk.md)
-- [`uniubi_robot_sdk` Low-level 示例](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel.cpp)
-- [`uniubi_robot_sdk_py` Low-level 示例](https://github.com/uniubi-ai/uniubi_robot_sdk_py/tree/main/examples)
+## Detailed Interfaces
 
-低级位置或扭矩控制必须在空旷场地、急停可触达、有人值守的条件下验证。仿真或 Mock 通过不等于真实机器人安全通过。
+- [Low-level SDK API](../uniubi_low_level_sdk.md)
+- [`uniubi_robot_sdk` Low-level example](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel.cpp)
+- [`uniubi_robot_sdk_py` examples](https://github.com/uniubi-ai/uniubi_robot_sdk_py/tree/main/examples)
+
+Passing simulation or Mock validation does not prove safe real-robot operation.

@@ -1,11 +1,13 @@
-# Documentation Entry
+# Documentation Entry Point
 
-仓库根目录的 [README.md](../README.md) 是统一入口。
+**English** | [简体中文](START_HERE.zh-CN.md)
 
-推荐阅读顺序：
+The repository [README](../README.md) is the main documentation entry point.
 
-1. [Quick Start](../README.md#quick-start)：先选择 High-level 或 Low-level。
-2. [Core Concepts](core-concepts/README.md)：理解控制模式和系统边界。
-3. [How-to](how-to/README.md)：按任务完成环境准备和最小验证。
-4. [API Reference](api-reference/README.md)：查阅接口细节。
-5. [Advanced](advanced/README.md)：阅读 DDS、协议和特殊集成相关内容。
+Recommended reading order:
+
+1. [Quick Start](../README.md#quick-start): choose High-level or Low-level control.
+2. [Core Concepts](core-concepts/README.md): understand control abstractions and system boundaries.
+3. [How-to Guides](how-to/README.md): complete setup and minimal validation for a specific task.
+4. [API Reference](api-reference/README.md): look up interface details.
+5. [Advanced](advanced/README.md): use DDS, protocol, and specialized integration documentation when required.

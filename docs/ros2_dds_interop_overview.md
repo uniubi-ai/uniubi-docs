@@ -1,79 +1,81 @@
-# ROS 2 MSG/SRV 到 DDS IDL 的映射规范
+# ROS 2 MSG/SRV to DDS IDL mapping specification
 
-本文说明使用 OMG DDS 原生接口接入 ROS 2 时，如何把 ROS 2 的 `.msg`、`.srv` 接口文件对应到 DDS IDL 文件，以及由此得到 DDS topic 名、DDS 类型名和请求/响应匹配规则。
+**English** | [简体中文](ros2_dds_interop_overview.zh-CN.md)
 
-ROS 2 的上层 API 会隐藏 DDS 细节；原生 DDS 接入时，需要显式使用 ROS 2 RMW 在 DDS 层使用的 wire contract。本文当前只覆盖普通消息发布订阅和 service 请求响应。
+This document explains how ROS 2 `.msg` and `.srv` interface files map to DDS IDL for native OMG DDS integration, including DDS topic names, DDS type names, and request/response correlation rules.
 
-## 总体流程
+ROS 2 APIs normally hide DDS details. Native DDS integration must implement the wire contract used by the selected ROS 2 RMW. This document covers standard message publish/subscribe and service request/reply traffic.
 
-从 ROS 2 接口到 DDS 原生接入，推荐按以下顺序处理：
+## Overall process
 
-1. 确认 ROS 2 可见名称：topic 名或 service 名，包含 namespace/remap 后的完整名称。
-2. 确认接口文件：`.msg` 或 `.srv` 所在 package、子目录和文件名。
-3. 按 ROS 2 到 DDS IDL 的映射规则生成 DDS IDL。
-4. 使用目标 DDS 的 IDL 编译器生成本语言类型支持。
-5. 按 ROS 2 DDS 命名规则创建 DDS topic。
-6. 按 ROS 2 默认 QoS 或接口约定配置 reader/writer。
+From ROS 2 interface to DDS native access, it is recommended to process in the following order:
 
-示意：
+1. Confirm the visible name of ROS 2: topic name or service name, including the complete name after namespace/remap.
+2. Confirm the package, subdirectory and file name of the interface file: `.msg` or `.srv`.
+3. Generate DDS IDL according to the mapping rules from ROS 2 to DDS IDL.
+4. Generate native language type support using the target DDS's IDL compiler.
+5. Create a DDS topic according to ROS 2 DDS naming rules.
+6. Configure reader/writer according to ROS 2 default QoS or interface convention.
+
+Flow:
 
 ```text
 ROS 2 .msg/.srv
       |
       v
-ROS 2 IDL / DDS IDL 映射
+ROS 2 IDL / DDS IDL mapping
       |
       v
-DDS IDL 文件
+DDS IDL files
       |
       v
-DDS 类型支持代码
+DDS type-support code
       |
       v
 dds_create_topic + dds_create_reader/writer
 ```
 
-## 命名规则
+## Naming rules
 
-默认 ROS namespace convention 下，ROS 2 名称会映射为 DDS topic 名：
+Under the default ROS namespace convention, ROS 2 names are mapped to DDS topic names:
 
-| ROS 2 实体 | DDS topic 名 |
+| ROS 2 entity | DDS topic name |
 |---|---|
 | topic `/<topic_name>` | `rt/<topic_name>` |
 | service `/<service_name>` request | `rq/<service_name>Request` |
 | service `/<service_name>` reply | `rr/<service_name>Reply` |
 
-注意事项：
+Things to note:
 
-- ROS 2 名称会先经过 namespace、remap、相对/绝对名解析，再进入 DDS 层。
-- 原生 DDS 端应使用解析后的完整名称，不要只使用源码中的短名。
-- 默认情况下普通 topic 使用 `rt` 前缀，service 使用 `rq` / `rr` 前缀。
-- 如果 ROS 2 端启用 `avoid_ros_namespace_conventions`，上述前缀规则会被绕过；对外互通接口建议不要启用该选项。
+- ROS 2 names will first go through namespace, remap, relative/absolute name resolution, and then enter the DDS layer.
+- The native DDS side should use the full resolved name, not just the short name from the source code.
+- By default, ordinary topics use the `rt` prefix, and services use the `rq` / `rr` prefix.
+- If `avoid_ros_namespace_conventions` is enabled on the ROS 2 end, the above prefix rules will be bypassed; it is recommended not to enable this option for external interoperability interfaces.
 
-示例：
+Example:
 
-| ROS 2 名称 | DDS topic |
+| ROS 2 name | DDS topic |
 |---|---|
 | `/robot/status` | `rt/robot/status` |
 | `/robot/reset` request | `rq/robot/resetRequest` |
 | `/robot/reset` reply | `rr/robot/resetReply` |
 
-## 本机器人数据 topic 一览（具体映射）
+## Robot data topics
 
-本机器人的原生 DDS 数据通道遵循上述 ROS 2 命名约定（`rt/` 前缀 + `<module>::msg::dds_::<Type>_` 类型名）。完整 IDL 与字段量纲见 [`uniubi_robot_dds_api.md`](uniubi_robot_dds_api.md)，下表给出 ROS 2 原生接入时需要的 wire 名称：
+The robot's native DDS data channels follow the ROS 2 naming convention above: an `rt/` topic prefix and a `<module>::msg::dds_::<Type>_` type name. See [`uniubi_robot_dds_api.md`](uniubi_robot_dds_api.md) for complete IDL definitions and field dimensions. The following table lists the wire-level names required for native DDS integration:
 
-| DDS topic | 方向 | DDS 类型 | IDL 文件 | 用途 |
+| DDS topic | Direction | DDS type | IDL file | Purpose |
 |---|---|---|---|---|
-| `rt/motion/trc` | 客户端 → 设备 | `uniubi::msg::dds_::RemoteControl_` | `RemoteControl.idl` | TRC 实时遥控帧 |
-| `rt/motion/observed` | 设备 → 客户端 | `uniubi::msg::dds_::MotionObserved_` | `MotionObserved.idl` | 运控观测量（IMU / 电机 / 电源）|
-| `rt/sensor/observed` | 设备 → 客户端 | `uniubi::msg::dds_::SensorObserved_` | `SensorObserved.idl` | 传感器观测量（GPS / UWB / Walk 里程计）|
-| `rt/robotServer/Event` | 设备 → 客户端 | `uniubi::msg::dds_::EventMessage_` | `EventMessage.idl` | 设备主动推送事件 |
+| `rt/motion/trc` | Client → Device | `uniubi::msg::dds_::RemoteControl_` | `RemoteControl.idl` | TRC real-time remote control frame |
+| `rt/motion/observed` | Device → Client | `uniubi::msg::dds_::MotionObserved_` | `MotionObserved.idl` | Motion observations (IMU / motor / power) |
+| `rt/sensor/observed` | Device → Client | `uniubi::msg::dds_::SensorObserved_` | `SensorObserved.idl` | Sensor observations (GPS / UWB / Walk odometer) |
+| `rt/robotServer/Event` | Device → Client | `uniubi::msg::dds_::EventMessage_` | `EventMessage.idl` | Device actively pushes events |
 
-> Walk 里程计位于 `rt/sensor/observed` 的 `odom` 字段；`position[2]` 和 `velocity[2]` 是三维兼容保留字段，当前固定为 `0`。`rt/robotServer/Event` 固定 `BEST_EFFORT` / `KEEP_LAST` / `VOLATILE`；`trc` / `observed` / `sensor` 三路的 reliability / history / durability 由具体业务约定（见 `uniubi_robot_dds_api.md` §1.3）。RPC 通道（`rq/robotServerRequest` / `rr/robotServerReply`）**不**复用本文后述的通用 RMW service header，而是自定义 `uniubi::dds_::Header{ uint64 clientId; uint64 requestId }`，按 `clientId` / `requestId` 关联请求与响应，详见 `uniubi_robot_dds_api.md`。
+> Walk odometry is carried in the `odom` field of `rt/sensor/observed`. `position[2]` and `velocity[2]` are reserved for 3-D compatibility and are currently fixed at `0`. `rt/robotServer/Event` uses fixed `BEST_EFFORT` / `KEEP_LAST` / `VOLATILE` QoS. The reliability, history, and durability of `trc`, `observed`, and `sensor` are defined by their respective business contracts; see §1.3 of `uniubi_robot_dds_api.md`. The RPC channel (`rq/robotServerRequest` / `rr/robotServerReply`) does not use the generic RMW service header described later. It uses `uniubi::dds_::Header{ uint64 clientId; uint64 requestId }` and correlates requests and replies by `clientId` and `requestId`; see `uniubi_robot_dds_api.md`.
 
-## 类型映射总则
+## General principles of type mapping
 
-ROS 2 接口路径会映射为 DDS IDL module：
+The ROS 2 interface path will be mapped to the DDS IDL module:
 
 ```text
 <package>/msg/<Type>.msg  ->  <package>::msg::dds_::<Type>_
@@ -81,7 +83,7 @@ ROS 2 接口路径会映射为 DDS IDL module：
                               <package>::srv::dds_::<Name>_Response_
 ```
 
-对应到 IDL 文件时，常见结构为：
+When corresponding to an IDL file, the common structure is:
 
 ```idl
 module <package> {
@@ -95,52 +97,52 @@ module <package> {
 };
 ```
 
-类型注意事项：
+Type Notes:
 
-- 结构体名通常带尾部下划线，例如 `String_`、`Reset_Request_`。
-- 字段名必须以实际生成的 DDS IDL 为准；不要按 ROS 2 C++ 字段名自行推断。
-- 如果字段名与 IDL 关键字冲突，生成器可能会调整字段名。
-- nested message 字段要使用完整 DDS module 路径。
-- 数组、sequence、string 的边界必须与 ROS 2 接口一致。
-- 不同 ROS 2 发行版或不同 RMW 可能存在细节差异；对外发布接口时应固定目标 ROS 2/RMW 组合，并以实际导出的 DDS IDL 为准。
+- Structure names usually have a trailing underscore, such as `String_`, `Reset_Request_`.
+- Field names must be based on the actual generated DDS IDL; do not infer them based on ROS 2 C++ field names.
+- The generator may adjust field names if they conflict with IDL keywords.
+- Use the complete DDS module path for the nested message field.
+- The boundaries of arrays, sequences, and strings must be consistent with the ROS 2 interface.
+- There may be differences in details between different ROS 2 releases or different RMWs; when publishing the interface to the outside world, the target ROS 2/RMW combination should be fixed, and the actual exported DDS IDL shall prevail.
 
-## 文件级对应关系
+## File-level correspondence
 
-建议按 ROS 2 接口路径组织 DDS IDL 文件，便于 include 和类型名保持一致：
+It is recommended to organize DDS IDL files according to the ROS 2 interface path so that include and type names can be consistent:
 
-| ROS 2 接口文件 | DDS IDL 文件 | DDS 类型 |
+| ROS 2 interface file | DDS IDL file | DDS type |
 |---|---|---|
 | `<package>/msg/<Type>.msg` | `<package>/msg/<Type>.idl` | `<package>::msg::dds_::<Type>_` |
 | `<package>/srv/<Service>.srv` | `<package>/srv/<Service>.idl` | `<package>::srv::dds_::<Service>_Request_` / `<Service>_Response_` |
-| service header | `ros_service.idl` 或目标 RMW 导出的等价 header IDL | `ros_service::msg::dds_::Header_` |
+| service header | `ros_service.idl` or the equivalent header IDL exported by the target RMW | `ros_service::msg::dds_::Header_` |
 
-嵌套类型需要在 DDS IDL 中显式 include。例如某个字段类型来自 `builtin_interfaces/msg/Time.msg`，则 DDS IDL 中应 include 对应的 `builtin_interfaces/msg/Time.idl`，字段类型写为：
+Nested types need to be explicitly included in the DDS IDL. For example, if a field type comes from `builtin_interfaces/msg/Time.msg`, the corresponding `builtin_interfaces/msg/Time.idl` should be included in the DDS IDL, and the field type is written as:
 
 ```idl
 builtin_interfaces::msg::dds_::Time_ stamp;
 ```
 
-service 的 request/response 结构体需要 include service header 所在 IDL。header 的 module 名必须与接入双方实际使用的 DDS 类型一致；如果目标 RMW 导出的 header module 名不同，应以目标 RMW 为准，不能只改 include 文件名。
+The request/response structure of service needs to include the IDL where the service header is located. The module name of the header must be consistent with the DDS type actually used by both access parties; if the header module name exported by the target RMW is different, the target RMW should prevail, and you cannot just change the include file name.
 
-## `.msg` 到 DDS IDL
+## `.msg` to DDS IDL
 
-`.msg` 文件对应一个 DDS topic payload 结构体。映射步骤：
+The `.msg` file corresponds to a DDS topic payload structure. Mapping steps:
 
-1. 文件所在 package 变成最外层 module。
-2. `msg` 目录变成 `module msg`。
-3. 增加 `module dds_`。
-4. 文件名变成结构体名，并追加尾部下划线。
-5. 字段按 ROS 2 类型映射为 IDL 字段。
-6. 用于 topic 发布订阅的消息结构体可标注 `@topic`。
+1. The package where the file is located becomes the outermost module.
+2. The `msg` directory becomes `module msg`.
+3. Add `module dds_`.
+4. The file name becomes the structure name, and a trailing underscore is appended.
+5. Fields are mapped to IDL fields by ROS 2 type.
+6. The message structure used for topic publishing and subscription can be marked `@topic`.
 
-示例：ROS 2 `.msg`
+Example: ROS 2 `.msg`
 
 ```text
 # std_msgs/msg/String.msg
 string data
 ```
 
-对应 DDS IDL：
+Corresponding DDS IDL:
 
 ```idl
 module std_msgs {
@@ -155,32 +157,32 @@ module std_msgs {
 };
 ```
 
-原生 DDS 创建 topic 时使用 DDS 层 topic 名和 DDS 类型描述：
+Native DDS uses the DDS layer topic name and DDS type description when creating a topic:
 
 ```text
 DDS topic name: rt/<topic_name>
 DDS type:       std_msgs::msg::dds_::String_
 ```
 
-## `.srv` 到 DDS IDL
+## `.srv` to DDS IDL
 
-`.srv` 文件由 `---` 分隔为 request 和 response。DDS 层需要两个结构体和两个 DDS topic：
+The `.srv` file is separated into request and response by `---`. The DDS layer requires two structures and two DDS topics:
 
 ```text
 <ServiceName>_Request_
 <ServiceName>_Response_
 ```
 
-service 的 DDS topic 命名：
+DDS topic naming of service:
 
 ```text
 rq/<service_name>Request    // client -> server
 rr/<service_name>Reply      // server -> client
 ```
 
-### Request/Response 结构体
+### Request/Response structure
 
-ROS 2 service 的业务字段来自 `.srv` 文件：
+The business fields of ROS 2 service come from the `.srv` file:
 
 ```text
 # <Package>/srv/<ServiceName>.srv
@@ -189,7 +191,7 @@ ROS 2 service 的业务字段来自 `.srv` 文件：
 <response fields>
 ```
 
-映射到 DDS IDL 时，request 和 response 分别进入 `module <package>::srv::dds_`。用于直接 DDS 互通的 service wire 类型必须包含请求匹配 header，且 header 放在业务字段之前：
+When mapped to DDS IDL, request and response enter `module <package>::srv::dds_` respectively. The service wire type used for direct DDS intercommunication must include the request matching header, and the header is placed before the business field:
 
 ```idl
 module ros_service {
@@ -204,7 +206,7 @@ module ros_service {
 };
 ```
 
-示例：ROS 2 `.srv`
+Example: ROS 2 `.srv`
 
 ```text
 # example_interfaces/srv/AddTwoInts.srv
@@ -214,7 +216,7 @@ int64 b
 int64 sum
 ```
 
-对应 DDS IDL：
+Corresponding DDS IDL:
 
 ```idl
 #include "ros_service.idl"
@@ -237,25 +239,25 @@ module example_interfaces {
 };
 ```
 
-实际字段名需要以目标 ROS 2/RMW 生成出的 DDS IDL 为准；有些生成结果可能会给字段名追加下划线。
+The actual field name needs to be based on the DDS IDL generated by the target ROS 2/RMW; some generated results may append underscores to the field name.
 
-### Service 匹配规则
+### Service matching rules
 
-ROS 2 service client 依赖 request header 匹配响应。原生 DDS 端必须遵守：
+ROS 2 service client relies on request headers to match responses. The native DDS side must comply with:
 
-1. client 发送 request 前，生成本次请求的 `seq`。
-2. client 将自身 request writer 的 GUID 写入 `header.writer_guid`。
-3. client 将请求序号写入 `header.seq`。
-4. server 处理 request 后，response 必须原样复制 request header。
-5. client 收到 response 后，用 `writer_guid + seq` 判断 response 是否属于本次请求。
+1. Before the client sends the request, `seq` of this request is generated.
+2. The client writes the GUID of its own request writer into `header.writer_guid`.
+3. The client writes the request sequence number into `header.seq`.
+4. After the server processes the request, the response must copy the request header as it is.
+5. After the client receives the response, it uses `writer_guid + seq` to determine whether the response belongs to this request.
 
-如果 response header 没有回填，ROS 2 client 即使收到 DDS sample，也无法把它关联到 pending request。
+If the response header is not backfilled, even if the ROS 2 client receives the DDS sample, it cannot associate it with the pending request.
 
-## 基础类型映射
+## Basic type mapping
 
-常见 ROS 2 字段类型到 DDS IDL 的对应关系：
+Correspondence between common ROS 2 field types and DDS IDL:
 
-| ROS 2 类型 | DDS IDL 类型 |
+| ROS 2 types | DDS IDL types |
 |---|---|
 | `bool` | `boolean` |
 | `byte` | `octet` |
@@ -272,46 +274,46 @@ ROS 2 service client 依赖 request header 匹配响应。原生 DDS 端必须�
 | `T[<=N]` | `sequence<T, N>` |
 | `T[N]` | `T field[N]` |
 
-复杂类型字段使用完整 DDS 类型名。例如：
+Complex type fields use the full DDS type name. For example:
 
 ```idl
 builtin_interfaces::msg::dds_::Time_ stamp;
 ```
 
-如果 `.msg` / `.srv` 引用了其他接口，DDS IDL 中需要 `#include` 对应 IDL 文件。
+If `.msg` / `.srv` references other interfaces, the IDL file corresponding to `#include` is required in the DDS IDL.
 
-## QoS 注意事项
+## QoS Considerations
 
-DDS endpoint 匹配遵循 requested/offered 兼容关系。ROS 2 默认 QoS 可作为原生 DDS 端的默认参考：
+DDS endpoint matching follows the requested/offered compatibility relationship. ROS 2 default QoS can be used as a default reference for the native DDS side:
 
-| 场景 | HISTORY | RELIABILITY | DURABILITY |
+| Scene | HISTORY | RELIABILITY | DURABILITY |
 |---|---|---|---|
-| 普通 topic 默认 QoS | `KEEP_LAST, depth=10` | `RELIABLE` | `VOLATILE` |
+| Common topic Default QoS | `KEEP_LAST, depth=10` | `RELIABLE` | `VOLATILE` |
 | sensor data QoS | `KEEP_LAST, depth=5` | `BEST_EFFORT` | `VOLATILE` |
-| service 默认 QoS | `KEEP_LAST, depth=10` | `RELIABLE` | `VOLATILE` |
+| service default QoS | `KEEP_LAST, depth=10` | `RELIABLE` | `VOLATILE` |
 
-常见不兼容：
+Common incompatibilities:
 
-| 问题 | 结果 |
+| Question | Result |
 |---|---|
-| reader 请求 `RELIABLE`，writer 只提供 `BEST_EFFORT` | 不匹配或不投递 |
-| reader 请求 `TRANSIENT_LOCAL`，writer 只提供 `VOLATILE` | 不匹配或不投递 |
-| 类型名相同但字段布局不一致 | 可能 discovery 失败或样本无法反序列化 |
-| service 只匹配 request 或只匹配 reply | service 调用无法完成 |
+| reader requests `RELIABLE`, writer only provides `BEST_EFFORT` | does not match or does not deliver |
+| reader requests `TRANSIENT_LOCAL`, writer only provides `VOLATILE` | does not match or does not deliver |
+| The type names are the same but the field layout is inconsistent | Discovery may fail or the sample cannot be deserialized |
+| service only matches request or only reply | service call cannot be completed |
 
-排查时不要只看 discovery。DDS graph 能看到 endpoint，不代表 QoS 和类型一定兼容。
+Don’t just look at discovery when troubleshooting. Just because the endpoint can be seen in the DDS graph does not mean that the QoS and type are necessarily compatible.
 
-## 对接检查清单
+## Integration checklist
 
-| 检查项 | 必查内容 |
+| Check items | Must-check contents |
 |---|---|
-| Domain | DDS Domain 是否与 ROS 2 `ROS_DOMAIN_ID` 一致 |
-| 名称 | namespace/remap 后的 ROS 2 全名是否确认 |
-| DDS topic | 是否使用 `rt` / `rq` / `rr` 前缀和正确后缀 |
-| IDL module | package、`msg`/`srv`、`dds_` 三层 module 是否正确 |
-| 结构体名 | 是否使用尾部下划线形式 |
-| 字段 | 字段名、字段顺序、数组/sequence/string 边界是否一致 |
-| include | 嵌套类型是否包含对应 IDL |
-| service header | request/response 是否包含并回显 header |
-| QoS | reliability、durability、history/depth 是否与 ROS 2 对端兼容 |
-| 类型支持 | 是否用同一份 DDS IDL 生成 reader/writer 使用的类型支持 |
+| Domain | Is the DDS Domain consistent with ROS 2 `ROS_DOMAIN_ID` |
+| Name | Is the full name of ROS 2 after namespace/remap confirmed |
+| DDS topic | Whether to use `rt` / `rq` / `rr` prefix and correct suffix |
+| IDL module | package, `msg`/`srv`, `dds_` three-layer module is correct |
+| Structure name | Whether to use trailing underscore form |
+| Field | Field name, field order, array/sequence/string boundaries are consistent |
+| include | Whether the nested type includes the corresponding IDL |
+| service header | whether request/response contains and echoes header |
+| QoS | reliability, durability, history/depth are compatible with ROS 2 peers |
+| Type support | Whether to use the same DDS IDL to generate the type support used by reader/writer |

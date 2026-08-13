@@ -1,16 +1,18 @@
-# 训练、导出和回放策略
+# Train, Export, and Replay a Policy
 
-## 目标
+**English** | [简体中文](train-export-replay.zh-CN.md)
 
-从任务注册和最小训练开始，确认 checkpoint 可回放，再进入导出、Sim2Sim 和部署。
+## Goal
 
-## 前置条件
+Register a task, run a minimal training job, confirm that its checkpoint can be replayed, and then continue to export, Sim2Sim, and deployment.
 
-- [`uniubi_rl_lab`](https://github.com/uniubi-ai/uniubi_rl_lab)。
-- Python 3.11、Isaac Sim 5.1、Isaac Lab 2.3.2、PyTorch 2.7.0 CUDA 12.8。
-- NVIDIA GPU 和已完成的 Isaac Lab 安装。
+## Prerequisites
 
-## 1. 安装并检查任务
+- [`uniubi_rl_lab`](https://github.com/uniubi-ai/uniubi_rl_lab)
+- Python 3.11, Isaac Sim 5.1, Isaac Lab 2.3.2, and PyTorch 2.7.0 with CUDA 12.8
+- An NVIDIA GPU and a working Isaac Lab installation
+
+## 1. Install and List Tasks
 
 ```bash
 cd /path/to/uniubi_rl_lab
@@ -18,29 +20,29 @@ python -m pip install -e source/uniubi_rl_lab
 python scripts/list_envs.py
 ```
 
-确认任务列表中包含 `Uniubi-Cyvet-Velocity`。
+Confirm that `Uniubi-Cyvet-Velocity` appears in the task list.
 
-## 2. 运行最小训练
+## 2. Run Minimal Training
 
 ```bash
 python scripts/rsl_rl/train.py --task=Uniubi-Cyvet-Velocity --headless --num_envs=16 --max_iterations=1 --device cuda:0
 ```
 
-成功标准：任务能启动，输出 observation/action shape，并生成可回放的运行记录。
+Success criteria: the task starts, reports the observation and action shapes, and creates a run directory that can be replayed.
 
-## 3. 回放 checkpoint
+## 3. Replay a Checkpoint
 
 ```bash
 python scripts/rsl_rl/play.py --task=Uniubi-Cyvet-Velocity --checkpoint logs/rsl_rl/cyvet_velocity/<run>/model_<iter>.pt --num_envs=32
 ```
 
-## 4. 进入部署链路
+## 4. Continue to Deployment
 
-按以下顺序推进：
+Proceed in this order:
 
-1. 从 checkpoint 导出 ONNX 或目标推理格式。
-2. 先做本地 MuJoCo Sim2Sim。
-3. 需要验证 SDK 链路时，再进入 `uniubi_robot_mock` SDK Sim2Sim。
-4. 最后核对板端推理格式、SDK ABI、控制周期、关节顺序和安全策略。
+1. Export ONNX or another target inference format from an identified checkpoint.
+2. Validate the same policy with local MuJoCo Sim2Sim.
+3. When the SDK path also needs validation, use `uniubi_robot_mock` SDK Sim2Sim.
+4. Finally verify the on-board inference format, SDK ABI, control rate, joint order, and safety behavior.
 
-训练或仿真通过不等于真机安全通过。部署细节见 [`uniubi_rl_lab/deploy`](https://github.com/uniubi-ai/uniubi_rl_lab/tree/main/deploy)。
+Passing training or simulation does not prove safe real-robot operation. See [`uniubi_rl_lab/deploy`](https://github.com/uniubi-ai/uniubi_rl_lab/tree/main/deploy) for deployment details.

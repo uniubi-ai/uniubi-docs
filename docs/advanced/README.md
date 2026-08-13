@@ -1,15 +1,17 @@
 # Advanced
 
-本节面向已经完成 Quick Start、理解控制模式并完成基础验证的开发者。这里的内容涉及协议、DDS、QoS 和特殊集成，不是普通开发的第一入口。
+**English** | [简体中文](README.zh-CN.md)
 
-## 协议与底层接入
+This section is for developers who have completed Quick Start, understand the control modes, and have finished basic validation. It covers protocols, DDS, QoS, and specialized integrations and is not the normal starting point for application development.
 
-| 主题 | 文档 | 适用场景 |
+## Protocol-level Access
+
+| Topic | Documentation | Use when |
 |---|---|---|
-| DDS / ROS 2 直连接入 | [DDS / ROS 2 API](../uniubi_robot_dds_api.md) | 不使用 SDK，直接对接设备协议 |
-| ROS 2 与 DDS 映射 | [ROS 2 / DDS Interop](../ros2_dds_interop_overview.md) | 排查 wire contract、topic、service 和 QoS 映射 |
+| Direct DDS / ROS 2 integration | [DDS / ROS 2 API](../uniubi_robot_dds_api.md) | Integrating directly with the device protocol without the SDK |
+| ROS 2 and DDS mapping | [ROS 2 / DDS Interoperability](../ros2_dds_interop_overview.md) | Troubleshooting wire contracts, topics, services, and QoS mappings |
 
-## 阅读边界
+## Boundaries
 
-- 直接 DDS / RPC 不等于普通 Low-level SDK 开发；关节级 Low-level 仍以 SDK 为标准入口。
-- 不要因为不会使用现有字段就修改 `uniubi_robot_msgs/idl`；先阅读 API 和对应 How-to。
+- Direct DDS/RPC integration is not equivalent to standard Low-level SDK development. Joint-level Low-level control uses the SDK as its standard entry point.
+- Do not modify `uniubi_robot_msgs/idl` merely because an existing field is unclear. Read the relevant API and How-to documentation first.

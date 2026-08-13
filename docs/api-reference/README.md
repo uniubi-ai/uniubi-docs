@@ -1,17 +1,19 @@
 # API Reference
 
-本页面向已经确定控制模式并完成最小验证的开发者。先看对应 How-to，再把本页作为接口查询入口。
+**English** | [简体中文](README.zh-CN.md)
 
-## SDK API
+This section is for developers who have chosen a control mode and completed minimal validation. Read the relevant How-to guide first, then use these pages to look up interfaces.
 
-| 领域 | 文档 | 适用场景 |
+## SDK APIs
+
+| Area | Documentation | Use when |
 |---|---|---|
-| High-level 控制 | [High-level SDK API](../uniubi_high_level_sdk.md) | 调用机器人内置动作能力 |
-| Low-level 控制 | [Low-level SDK API](../uniubi_low_level_sdk.md) | 自己运行策略并控制关节位置或扭矩 |
-| 媒体总线 | [Media SDK API](../uniubi_media_sdk.md) | 订阅摄像头、麦克风和编码帧 |
+| High-level control | [High-level SDK API](../uniubi_high_level_sdk.md) | Invoking built-in robot actions |
+| Low-level control | [Low-level SDK API](../uniubi_low_level_sdk.md) | Running a custom policy and commanding joint position or torque |
+| MediaBus | [Media SDK API](../uniubi_media_sdk.md) | Subscribing to camera, microphone, and encoded frames |
 
-## 使用建议
+## Before You Start
 
-- 还没有确定 High-level / Low-level：先回到 [Core Concepts](../core-concepts/README.md)。
-- 还没有完成构建、导入和只读验证：先阅读 [How-to](../how-to/README.md)。
-- 需要原始 DDS / RPC、QoS 或协议字段：进入 [Advanced](../advanced/README.md)，不要从本页直接开始。
+- If you have not chosen High-level or Low-level control, begin with [Core Concepts](../core-concepts/README.md).
+- If build, import, and read-only validation are incomplete, follow the [How-to guides](../how-to/README.md).
+- For raw DDS/RPC, QoS, or protocol fields, use [Advanced](../advanced/README.md) rather than starting here.
