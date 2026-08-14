@@ -20,7 +20,7 @@ Joint-level Low-level control uses `MotionLowLevelClient`. ROS 2 Motion Bridge d
 ## Prerequisites
 
 - A Linux environment and SDK runtime libraries for the target architecture
-- A confirmed connection method, target address, exposed ports, and robot-facing network interface; see [Device Network and Robot Compute Module Access](../core-concepts/device-network.md)
+- Device IPs obtained from the app, plus a confirmed login address, externally accessible service ports, and robot-facing network interface; see [Robot Network Access](../core-concepts/device-network.md). External High-level mode must use the interface that actually reaches the robot network; onboard High-level mode must select `eth0.100`
 - Root privileges when running SDK programs on current devices; C++ compilation itself does not require `sudo`
 - Matching C++ SDK, Python binding, architecture, version, and ABI
 - Completion of the [Build, Installation, and Cross-compilation Guide](../BUILD.md)

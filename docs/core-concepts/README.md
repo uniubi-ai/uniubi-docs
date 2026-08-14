@@ -47,12 +47,12 @@ flowchart LR
 
 > The real-robot Low-level SDK must run on the robot's brain. It does not support direct hardware control from an external PC.
 
-## 2. Device Network and Robot Compute Module Access
+## 2. Robot Network Access
 
-Before connecting to a real robot, understand the wireless-bridge and wired-direct access paths, then confirm the target IP address, exposed ports, and network interface.
-A High-level application can connect to a real robot from an external computer or the robot's compute module. A real-robot Low-level SDK application must run on the compute module.
+Before connecting to a real robot, obtain its 4G, Wi-Fi, and wired IP information from the app. A development host can use the Wi-Fi IP or wired IP to log in to the device; externally accessible user services use the designated port range.
+Inside the robot, the brain and cerebellum communicate through `eth0.100`. A High-level application can run on an external computer or the robot's brain. A real-robot Low-level SDK application must run on the brain.
 
-[Read Device Network and Robot Compute Module Access](device-network.md)
+[Read Robot Network Access](device-network.md)
 
 ## 3. Body Coordinate System and Default Stance
 

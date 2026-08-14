@@ -1,46 +1,44 @@
-# Device Network and Robot Compute Module Access
+# Robot Network Access
 
 **English** | [简体中文](device-network.zh-CN.md)
 
-A Uniubi robot includes a cerebellum (motion controller) for standard functions such as core motion control, remote-controller input, and UWB, plus a brain (compute module) that provides greater general-purpose compute for extension applications. See [Brain and Cerebellum](README.md#1-brain-and-cerebellum) for the full responsibility boundary. Accessing the compute module works essentially the same over wireless and wired connections; the difference is that the compute module can also have its own IP address when wired.
+Before connecting to a real robot, use the device app to obtain its current 4G, Wi-Fi, and wired IP information. A development host can use the Wi-Fi IP or wired IP to log in to the device. Login accounts and authentication methods are determined by the device delivery configuration.
 
-## Network Topology
+## Network Access
 
-The diagram shows only the access paths developers need to understand. It intentionally omits the robot's internal network, interfaces, and implementation details:
+The diagram shows only the developer-facing access flow and the communication interface between the robot's brain and cerebellum. It does not represent the robot's internal network routing:
 
-![Robot network access topology](images/device-network-topology.en.png)
+![Robot network access](images/device-network-topology.en.png)
 
-> Network reachability does not change control deployment requirements. The real-robot Low-level SDK must still run on the robot's compute module.
+## Getting Device IPs from the App
 
-| Connection | Available address | Notes |
-|---|---|---|
-| Wireless | Motion-controller IP shown in the app | Access to the compute module is bridged through the motion controller |
-| Wired | Motion-controller IP shown in the app, or the compute module's own wired IP | Access operations stay the same; the compute module's independent IP is also available |
+| Network information in the app | Use |
+|---|---|
+| 4G IP | Shows the device's current 4G network information; this guide does not use it as a development-host login address |
+| Wi-Fi IP | A development host can use this address to log in to the device |
+| Wired IP | A development host can use this address to log in to the device |
 
-## Wireless Connection
+IP addresses can change with the network currently connected to the device. Before each real-robot session, use the current values shown in the app instead of keeping an address hard-coded in scripts or configuration.
 
-The compute module does not expose an independent wireless IP. When the robot is connected over Wi-Fi, the app displays the motion-controller IP, and only selected compute-module ports are reachable through that address.
+## Logging In from a Development Host
 
-- Use the device's exposed **20000–29999** port range for services that must be reached over the wireless bridge.
-- Do not assume that every listening port on the compute module is reachable over Wi-Fi.
-- SSH access to the compute module is bridged through the motion controller. Use the IP displayed in the app as the SSH address.
+1. Confirm the current Wi-Fi IP or wired IP in the app.
+2. Make sure the development host can reach the corresponding network.
+3. Log in to the device using the selected IP.
 
-SSH users, keys, and passwords are determined by the device delivery configuration. Never place credentials in a public repository or example command.
+Login users, keys, and passwords are determined by the device delivery configuration. Never place credentials in a public repository or example command.
 
-## Wired Connection
+## Externally Accessible Service Ports
 
-On a wired network, the compute module can obtain its own IP address, giving the development machine an additional address for direct access. Operations such as SSH and service access are essentially the same as with a wireless connection.
+- User services that must be reached from outside the device should use the **`20000–29999`** port range.
+- Other ports are reserved for internal device services. User applications should not occupy them or assume that they are reachable from outside the device.
 
-If the wired IP is unknown, first SSH through the motion-controller IP shown in the app, then run this command on the compute module:
+The port range may change with the product configuration. Follow the current device documentation and delivery configuration when deploying a service.
 
-```bash
-ip -br -4 addr
-```
+## Brain-to-Cerebellum Communication
 
-Use the IPv4 address of the active wired interface. Both the motion-controller IP displayed in the app and the compute module's wired IP can serve as access points, but they are different addresses.
+Inside the robot, the brain and cerebellum communicate bidirectionally through `eth0.100`.
 
-## Choosing an Address During Development
-
-- When reaching a compute-module service through the motion-controller IP shown in the app, use a port in the device's exposed `20000–29999` range.
-- With a wired connection, either keep using the existing access point or use the compute module's independent IP; the application-level operations do not change.
-- When an SDK or DDS program requires an explicit network interface, select the interface that actually reaches the robot. Use `ip -br addr` to determine its name.
+- When a High-level SDK or DDS program runs on the robot's brain, it must explicitly select `eth0.100` to communicate with the cerebellum.
+- When a High-level program runs on an external computer, select the interface on that computer that actually reaches the robot network; do not configure `eth0.100` there.
+- The real-robot Low-level SDK must still run on the robot's brain. Network reachability does not change this deployment requirement.

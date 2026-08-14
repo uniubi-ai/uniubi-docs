@@ -25,7 +25,7 @@ ROS 2 Motion Bridge does not provide an equivalent joint-level Low-level interfa
 
 | Task | Guide | When to use it |
 |---|---|---|
-| Confirm device addresses, exposed ports, and compute-module access | [Device network and compute-module access](../core-concepts/device-network.md) | Before connecting to a real robot |
+| Obtain device IPs from the app and confirm the login address and service ports | [Robot network access](../core-concepts/device-network.md) | Before connecting to a real robot |
 | Prepare the build environment | [Build, installation, and cross-compilation](../BUILD.md) | Before SDK or ROS 2 development |
 | Prepare an SDK project | [SDK first use](sdk-first-use.md) | After selecting High-level or Low-level SDK development |
 | Write a ROS 2 application node | [Start and validate Motion Bridge](ros2-motion-bridge.md) | After selecting High-level + ROS 2 |

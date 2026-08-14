@@ -8,7 +8,7 @@ Uniubi Docs is the central documentation site for developing with Uniubi robots.
 
 Choose a control mode first, then choose an implementation. Do not begin by choosing a programming language or repository.
 
-> Before connecting to a real robot, read [Device Network and Robot Compute Module Access](docs/core-concepts/device-network.md) to confirm the wireless or wired access point, target IP address, exposed ports, and network interface. Skip this when working only with Mock / Sim2Sim, offline builds, or training.
+> Before connecting to a real robot, read [Robot Network Access](docs/core-concepts/device-network.md) to obtain the device IPs from the app and confirm the login address, externally accessible service ports, and network interface. Skip this when working only with Mock / Sim2Sim, offline builds, or training.
 
 ### 1. Choose a control mode
 
