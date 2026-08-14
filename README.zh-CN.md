@@ -71,6 +71,7 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 包含：
 
 - SDK 构建、安装和首次连接；
+- USB、以太网外设接入与直流供电；
 - High-level、Low-level 实机控制；
 - ROS 2 Motion Bridge 接入；
 - Low-level 策略训练、导出和回放。

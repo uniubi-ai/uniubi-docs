@@ -54,7 +54,7 @@ Understand brain and cerebellum responsibilities, High-level and Low-level contr
 
 ## How-to Guides
 
-Follow task-oriented instructions for environment setup, first connection, real-robot control, ROS 2 integration, and policy deployment.
+Follow task-oriented instructions for environment setup, first connection, peripheral connectivity and power, real-robot control, ROS 2 integration, and policy deployment.
 
 [Browse the How-to guides](docs/how-to/README.md)
 
