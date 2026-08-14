@@ -332,7 +332,7 @@ sudo env \
   python3 ~/uniubi_robot_sdk_py/examples/example_lowlevel.py
 ```
 
-### B. 使用 pip 安装（安装到 site-packages）
+### B. pip install（装到 site-packages）
 
 ```bash
 git clone https://github.com/uniubi-ai/uniubi_robot_sdk_py.git ~/uniubi_robot_sdk_py
@@ -349,7 +349,7 @@ sudo -H env UNIUBI_SDK_ROOT=~/uniubi_robot_sdk \
 
 `uniubi_robot_sdk_py/CMakeLists.txt` 自包含，pip 通过 `scikit-build-core` 后端调用 cmake（支持 `pip install -e .` 可编辑安装与 `-Ccmake.define.*` 透传）。
 
-### MediaBus Python 绑定构建开关
+### Python MediaBus 构建开关
 
 Python native binding 使用 `UNIUBI_SDK_ENABLE_MEDIA` 控制是否编译媒体帧绑定：
 
@@ -361,7 +361,7 @@ Python native binding 使用 `UNIUBI_SDK_ENABLE_MEDIA` 控制是否编译媒体�
 
 媒体帧订阅仍只支持 `aarch64` 板内本地部署；`x86_64` / `i386` wheel 默认关闭媒体绑定，不能调用 media client 接口。
 
-### C. 生成 wheel 包（分发给客户）
+### C. 生成 wheel（分发给客户）
 
 ```bash
 cd ~/uniubi_robot_sdk_py
