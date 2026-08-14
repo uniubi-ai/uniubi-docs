@@ -48,7 +48,7 @@ flowchart LR
 
 > The real-robot Low-level SDK must run on the robot's brain. It does not support direct hardware control from an external PC.
 
-### Body Coordinate System and Default Stance
+## 2. Body Coordinate System and Default Stance
 
 CYVET uses a right-handed coordinate system: +X points forward, +Y points left, and +Z points upward. Positive roll, pitch, and yaw follow the right-hand rule.
 
@@ -58,7 +58,7 @@ The dimensions below are based on the current robot asset and default joint pose
 
 ![CYVET default standing dimensions](images/cyvet-default-standing-dimensions.en.png)
 
-## 2. Two Control Abstractions
+## 3. Two Control Abstractions
 
 | Dimension | High-level | Low-level |
 |---|---|---|
@@ -118,7 +118,7 @@ flowchart LR
 
 Passing Mock / Sim2Sim validation does not complete real-robot validation. Recheck the target architecture, ABI, control rate, hardware behavior, emergency stop, and manual takeover on the physical robot. A Low-level policy application must also move to the robot's onboard runtime.
 
-## 3. Control Lifecycle
+## 4. Control Lifecycle
 
 Real-robot control should follow this lifecycle in either mode:
 
@@ -145,7 +145,7 @@ The continuous-control step differs by mode:
 
 See the [API Reference](../api-reference/README.md) for client state machines and lifecycle details.
 
-## 4. Component Responsibilities
+## 5. Component Responsibilities
 
 | Component | Responsible for | Not responsible for |
 |---|---|---|
@@ -157,7 +157,7 @@ See the [API Reference](../api-reference/README.md) for client state machines an
 
 The SDK, ROS 2 bridge, and message definitions are complementary components, not interchangeable entry points. Choose the control abstraction first, then choose an implementation that supports it.
 
-## 5. From Training to a Real Robot
+## 6. From Training to a Real Robot
 
 A typical Low-level policy validation flow is:
 
@@ -178,7 +178,7 @@ Each stage answers a different question:
 
 Passing simulation or Mock validation does not prove safe real-robot operation.
 
-## 6. Common Boundaries
+## 7. Common Boundaries
 
 - High-level and Low-level are control abstractions, not choices between C++, Python, and ROS 2.
 - High-level supports the SDK or ROS 2 Motion Bridge. Joint-level Low-level control uses the SDK.
