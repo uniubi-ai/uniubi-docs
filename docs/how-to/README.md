@@ -34,6 +34,7 @@ ROS 2 Motion Bridge does not provide an equivalent joint-level Low-level interfa
 
 | Task | Guide | When to use it |
 |---|---|---|
+| Connect a USB camera, sensor, storage device, or Ethernet peripheral | [Connect USB and Ethernet peripherals](connect-peripherals.md) | Before deploying an onboard perception or peripheral application |
 | Obtain device IPs from the app and confirm the login address and service ports | [Robot network access](../core-concepts/device-network.md) | Before connecting to a real robot |
 | Prepare the build environment | [Build, installation, and cross-compilation](../BUILD.md) | Before SDK or ROS 2 development |
 | Prepare an SDK project | [SDK first use](sdk-first-use.md) | After selecting High-level or Low-level SDK development |

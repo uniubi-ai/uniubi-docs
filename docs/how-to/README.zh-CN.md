@@ -34,6 +34,7 @@
 
 | 任务 | 导读 | 适用阶段 |
 |---|---|---|
+| 连接 USB 摄像头、传感器、存储设备或网络外设 | [连接 USB 与网络外设](connect-peripherals.zh-CN.md) | 部署板载感知或其他外设应用之前 |
 | 从 App 获取设备 IP，并确认登录地址和服务端口 | [机器人网络接入](../core-concepts/device-network.zh-CN.md) | 连接真实机器人之前 |
 | 准备构建和安装环境 | [构建、安装和交叉编译](../BUILD.zh-CN.md) | 进入 SDK 或 ROS 2 之前 |
 | SDK 通用准备 | [SDK 通用准备](sdk-first-use.zh-CN.md) | 已选 High-level 或 Low-level，准备使用 SDK |
