@@ -44,35 +44,48 @@
 
 ## Quick Start
 
-Minimum running process (see §5 for the complete version):
+Minimal read-only flow (see §5 for the full interactive CLI). This section only connects and queries the motor layout; it does not call `setMotionEnable(true)` or send control frames:
 
 **C++**
 
 ```cpp
-#include <unistd.h>
-#include "MotionSdkService.h"
-#include "MotionLowLevelClient.h"
+#include <chrono>
+#include <stdexcept>
+#include <thread>
+#include "uniubi/robot_sdk/MotionSdkService.h"
+#include "uniubi/robot_sdk/MotionLowLevelClient.h"
 
 using namespace uniubi::RobotSdk;
 using LLState = IMotionLowLevelClient::LowLevelState;
 
 int main() {
     auto svc = IMotionSdkService::instance();
-    svc->initialService(nullptr, "myApp");
+    if (!svc->initialService(nullptr, "myReadOnlyApp")) return 1;
 
-    auto client = IMotionLowLevelClient::create();   // On-board single device; no arguments; one instance per process
-    client->connect(/*observedHz=*/500);
-    while (client->getState() != static_cast<int32_t>(LLState::kConnected)) usleep(10000);
+    auto client = IMotionLowLevelClient::create();
+    try {
+        if (!client->connect(/*observedHz=*/500)) {
+            throw std::runtime_error("connect start failed");
+        }
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (client->getState() != static_cast<int32_t>(LLState::kConnected)) {
+            if (std::chrono::steady_clock::now() >= deadline) {
+                throw std::runtime_error("connect timeout");
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
 
-    client->setMotionEnable(true);
-    while (client->getState() != static_cast<int32_t>(LLState::kPrepared))  usleep(10000);
-
-    /// Periodically call sendControl(...) and pull getLatestObservation(...).
-    /// See §5 for MotorCtrlAction construction and the complete control loop.
-
-    client->setMotionEnable(false);
+        MotorLayout layout = {};
+        if (!client->getMotorLayout(layout)) {
+            throw std::runtime_error("getMotorLayout failed");
+        }
+    } catch (...) {
+        client->disconnect();
+        svc->shutdown();
+        return 1;
+    }
     client->disconnect();
-    IMotionSdkService::instance()->shutdown();
+    svc->shutdown();
     return 0;
 }
 ```
@@ -83,18 +96,21 @@ int main() {
 import time
 import robot_motion_sdk as sdk
 
-sdk.service.initial(None, "myApp")
-client = sdk.MotionLowLevelClient()              # On-board single device; no arguments
+if not sdk.service.initial(None, "myReadOnlyApp"):
+    raise RuntimeError("SDK initialization failed")
+client = sdk.MotionLowLevelClient()
 try:
-    client.connect(observed_hz=500)
-    while client.get_state() != sdk.LowLevelState.kConnected: time.sleep(0.01)
-
-    client.set_motion_enable(True)
-    while client.get_state() != sdk.LowLevelState.kPrepared:  time.sleep(0.01)
-
-    # Periodically call send_control(...) and get_latest_observation(...); see §6.3.
+    if not client.connect(observed_hz=500):
+        raise RuntimeError("connect start failed")
+    deadline = time.monotonic() + 10.0
+    while client.get_state() != sdk.LowLevelState.kConnected:
+        if time.monotonic() >= deadline:
+            raise TimeoutError("connect timeout")
+        time.sleep(0.05)
+    layout = client.get_motor_layout()
+    if layout is None:
+        raise RuntimeError("get_motor_layout failed")
 finally:
-    client.set_motion_enable(False)
     client.disconnect()
     sdk.service.shutdown()
 ```
@@ -113,8 +129,8 @@ This is the smallest buildable project template. Copy it, add the application co
 
 | Dependencies | Source | Description |
 |---|---|---|
-| `librobotMotionSdk.so` | SDK repository `lib/<arch>/` | Precompiled runtime library selected for the target architecture |
-| Public headers | SDK repository `include/uniubi/robot_sdk/` | `MotionSdkService.h` / `MotionLowLevelClient.h` / `MotionSdkProtocol.h` |
+| `librobotMotionSdk.so` | SDK install prefix `lib/<arch>/` | Precompiled runtime library selected for the target architecture |
+| Public headers | SDK install prefix `include/uniubi/robot_sdk/` | `MotionSdkService.h` / `MotionLowLevelClient.h` / `MotionSdkProtocol.h` |
 | Compiler | g++ ≥ 9 (supports C++14) | |
 | Runtime basic library | Pre-installed on target machine (standard dynamic library path) | No need for customers to install Cyclone DDS additionally - already linked into SDK .so |
 
@@ -130,44 +146,34 @@ my_robot_app/
 ### CMakeLists.txt sample
 
 ```cmake
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
 project(my_robot_app CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 1) Set the SDK prefix (default: /opt/uniubi/; source checkout: ~/uniubi_robot_sdk)
-set(UNIUBI_SDK_ROOT "$ENV{HOME}/uniubi_robot_sdk" CACHE PATH "Uniubi SDK install root")
-
-# 2) Select the library subdirectory for the target architecture (x86_64 / aarch64 / i386)
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
-    set(ARCH_DIR "x86_64")
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
-    set(ARCH_DIR "aarch64")
-else()
-    set(ARCH_DIR "i386")
-endif()
-
-# 3) Locate the SDK shared library and public headers
-find_library(SDK_LIB robotMotionSdk
-             PATHS ${UNIUBI_SDK_ROOT}/lib/${ARCH_DIR}
-             NO_DEFAULT_PATH REQUIRED)
+find_package(UniubiRobotSdk CONFIG REQUIRED)
 
 add_executable(my_robot_app src/main.cpp)
-target_include_directories(my_robot_app PRIVATE ${UNIUBI_SDK_ROOT}/include)
-target_link_libraries(my_robot_app PRIVATE ${SDK_LIB} pthread)
+target_link_libraries(my_robot_app PRIVATE Uniubi::RobotMotionSdk)
 ```
 
 ### Build + Run
 
 ```bash
-mkdir -p build && cd build
-cmake -DUNIUBI_SDK_ROOT=~/uniubi_robot_sdk ..
-make -j$(nproc)
+export UNIUBI_SDK_PREFIX=/path/to/installed/uniubi
+cmake -S . -B build -DCMAKE_PREFIX_PATH="$UNIUBI_SDK_PREFIX"
+cmake --build build -j"$(nproc)"
 
 # Ensure that the SDK shared libraries are on the runtime search path
-export LD_LIBRARY_PATH=~/uniubi_robot_sdk/lib/$(uname -m):$LD_LIBRARY_PATH
-sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./my_robot_app
+case "$(uname -m)" in
+  x86_64|amd64) SDK_ARCH=x86_64 ;;
+  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  i386|i486|i586|i686) SDK_ARCH=i386 ;;
+  *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
+esac
+export LD_LIBRARY_PATH="$UNIUBI_SDK_PREFIX/lib/$SDK_ARCH${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./build/my_robot_app
 ```
 
 The current device requires root permissions to run the SDK program. `sudo` is not required for the build; `LD_LIBRARY_PATH` is explicitly passed in during runtime to avoid `sudo` from not being able to find the SDK dynamic library after cleaning up the current user environment.
@@ -512,7 +518,7 @@ The `error` fields of Vector3f / Quaternionf share this enumeration, which indep
 
 > `PowerObserved` on the low-level data plane and high-level query `querySystemStatus.battery` (see Advanced Interface Manual §4.5.1 for details) describe the same physical battery, but `PowerObserved` is a lightweight subset embedded in the observation frame (real-time performance is priority), and `querySystemStatus.battery` is a more complete snapshot (including BMS status code, cycle times, etc., according to query response).
 
-#### 4.4.3 `MotorLayout` - Hardware layout
+#### 4.4.4 `MotorLayout` - Hardware layout
 
 ```cpp
 struct MotorLayout {
@@ -539,7 +545,7 @@ The application must call `getMotorLayout()` / `get_motor_layout()` to obtain an
 
 This order is the SDK/robot data contract; it does not define the policy model's input or output order. The model order is defined by its training and export contract. Deployment code must explicitly perform the bidirectional reorder `SDK order → model order → SDK order`.
 
-#### 4.4.4 `TRCStickFrame` ——Remote Controller Frame
+#### 4.4.5 `TRCStickFrame` ——Remote Controller Frame
 
 ```cpp
 struct TRCStickFrame {
@@ -571,7 +577,7 @@ struct TRCStickFrame {
 
 The external button names Stand / Motion correspond to `buttonBack` / `buttonStart` respectively in the SDK. The specific action combination is subject to `mapping` returned by device `getMotionCapabilities()`; see the high-level TRC document for the current standard mapping. RT condition corresponds to `axesRT`.
 
-#### 4.4.5 `SensorObserved` - Sensor Observation (GPS + UWB)
+#### 4.4.6 `SensorObserved` - Sensor Observation (GPS + UWB)
 
 Returned by `getSensorObservation(SensorObserved*, uint32_t timeout)` (`timeout` unit us, has nothing to do with prepare, any one of `kConnected` / `kPrepared` can be read).
 
@@ -623,7 +629,7 @@ struct UWBRawObserved {
 
 > If there is no data written to the device without corresponding sensor hardware, `getSensorObservation` will wait until timeout and return false.
 
-#### 4.4.6 Coordinate system type `GEOGCoordMode` (reserved)
+#### 4.4.7 Coordinate system type `GEOGCoordMode` (reserved)
 
 `GEOGCoordMode` (`gcj02` / `wgs84` / `bd09` / `mapBar`) has been defined in the public header and exported as Python `sdk.GEOGCoordMode`, but currently has no observation field reference (reserved for coordinate transformation purposes).
 
@@ -720,7 +726,7 @@ Never execute `walk` while the feet are suspended. Keep the emergency stop withi
 
 On exit, the TensorRT example calls `setMotionEnable(false)` only if the client is in the prepared state, then disconnects the client and shuts down the SDK. It does **not** call `emergencyStop()` or `restoreMotionControlMode()`. These exit semantics intentionally differ from the general posture-control example in §5.1.
 
-Both native compilation on Orin and cross-compilation on Ubuntu 22.04 x86_64 for JetPack 6.2.1 have been verified on hardware. Cross-compilation must use NVIDIA's `cross-linux-aarch64` repository and pin the complete TensorRT package set to 10.3; do not install the repository's latest default versions. For repository configuration, version pinning, CMake parameters, disk usage, and deployment instructions, see [`BUILD.md` §3.1](BUILD.md#31-additional-boundaries-for-cross-compiling-the-tensorrt-example).
+Both native compilation on Orin and cross-compilation on Ubuntu 22.04 x86_64 for JetPack 6.2.1 have been verified on hardware. Cross-compilation must use NVIDIA's `cross-linux-aarch64` repository and pin the complete TensorRT package set to 10.3; do not install the repository's latest default versions. For repository configuration, version pinning, CMake parameters, disk usage, and deployment instructions, see [`BUILD.md` §3.1](BUILD.md#31-additional-requirements-for-the-tensorrt-example).
 
 ---
 
@@ -762,7 +768,7 @@ Module: `robot_motion_sdk`, source code `uniubi_robot_sdk_py/`
 
 The data structure `MotorCtrl / MotorCtrlAction / LowLevelMotionCmd / MotorObserved / MotorInfo / MotorLayout / IMUObserved / Vector3f / Quaternionf / PowerObserved / TRCStickFrame / LowLevelMotionObserved / SensorObserved / GPSFrame / GEOGPoint / UWBRawObserved` is all exposed as Python classes (fields are named underlined: `limb_no`, `joint_no`, `kp_gain`, `kd_gain`, `motor_num`, `charge_voltage`, `velocity_x`, etc.).
 
-### 6.2 ⚠ Exit deadlock avoidance (must read)
+### 6.2 Exit deadlock avoidance (must read)
 
 **Typical deadlock scenario**:
 - Python main thread holds GIL → interpreter atexit phase starts GC

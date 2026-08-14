@@ -31,18 +31,3 @@ ROS 2 Motion Bridge does not provide an equivalent joint-level Low-level interfa
 | Write a ROS 2 application node | [Start and validate Motion Bridge](ros2-motion-bridge.md) | After selecting High-level + ROS 2 |
 | Train, export, and replay a policy | [Policy training and replay](train-export-replay.md) | During Low-level policy development |
 | Validate the SDK path without hardware | [Mock / Sim2Sim](mock-sim2sim.md) | Before real-robot SDK testing |
-
-## Guide Structure
-
-Each guide should contain:
-
-1. **Goal and scope**
-2. **Prerequisites**
-3. **Minimal procedure**
-4. **Expected results**
-5. **Success criteria**
-6. **Safety and cleanup**
-7. **Troubleshooting**
-8. **Next steps**
-
-Every procedure should include an observable result so that developers can distinguish successful execution from a command that merely returned.

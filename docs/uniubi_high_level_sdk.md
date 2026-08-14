@@ -3,7 +3,7 @@
 **English** | [简体中文](uniubi_high_level_sdk.zh-CN.md)
 
 > SDK entry class: `uniubi::RobotSdk::IMotionHighLevelClient`
-> C++ header file: `Include/MotionHighLevelClient.h`
+> C++ header file: `include/uniubi/robot_sdk/MotionHighLevelClient.h`
 
 ---
 
@@ -45,37 +45,49 @@
 
 ## Quick Start
 
-Minimal runnable flow (see §5 for the complete example):
+Minimal read-only flow (see §5 for the full interactive CLI). This section neither acquires control ownership nor starts an action:
 
 **C++**
 
 ```cpp
 #include <chrono>
+#include <stdexcept>
+#include <string>
 #include <thread>
-#include "MotionSdkService.h"
-#include "MotionHighLevelClient.h"
+#include "uniubi/robot_sdk/MotionSdkService.h"
+#include "uniubi/robot_sdk/MotionHighLevelClient.h"
 
 using namespace uniubi::RobotSdk;
 using HLState = IMotionHighLevelClient::HighLevelState;
 
 int main() {
     auto svc = IMotionSdkService::instance();
-    svc->setNetworkInterface("eth0");        // Default eth0; use the actual interface if absent (optional onboard)
-    svc->initialService(nullptr, "myApp");
+    // In remote mode, optionally pin the actual interface before initialService:
+    // svc->setNetworkInterface("wlan0");
+    if (!svc->initialService(nullptr, "myReadOnlyApp")) return 1;
 
-    auto client = IMotionHighLevelClient::create();  // Onboard single-device mode
-    client->connect();                              // Enter High-level mode
-    client->startControl(/*timeout=*/10000);        // Request control ownership
-    while (client->getState() != static_cast<int32_t>(HLState::kControlled))
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    auto client = IMotionHighLevelClient::create();
+    try {
+        if (!client->connect()) throw std::runtime_error("connect start failed");
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (client->getState() != static_cast<int32_t>(HLState::kConnected)) {
+            if (std::chrono::steady_clock::now() >= deadline) {
+                throw std::runtime_error("connect timeout");
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
 
-    client->standUp();
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    client->lieDown();
-
-    client->releaseControl();
+        std::string capabilities;
+        if (!client->getMotionCapabilities(capabilities)) {
+            throw std::runtime_error("getMotionCapabilities failed");
+        }
+    } catch (...) {
+        client->disconnect();
+        svc->shutdown();
+        return 1;
+    }
     client->disconnect();
-    IMotionSdkService::instance()->shutdown();
+    svc->shutdown();
     return 0;
 }
 ```
@@ -86,25 +98,30 @@ int main() {
 import time
 import robot_motion_sdk as sdk
 
-sdk.service.set_network_interface("eth0")       # Default eth0; use the actual interface if absent
-sdk.service.initial(None, "myApp")
-client = sdk.MotionHighLevelClient()             # Onboard single-device mode
+# In remote mode, optionally pin the actual interface before initial:
+# sdk.service.set_network_interface("wlan0")
+if not sdk.service.initial(None, "myReadOnlyApp"):
+    raise RuntimeError("SDK initialization failed")
+client = sdk.MotionHighLevelClient()
 try:
-    client.connect()
-    client.start_control(timeout_ms=10000)
-    while client.get_state() != sdk.HighLevelState.kControlled: time.sleep(0.05)
-
-    client.stand_up()
-    time.sleep(2)
-    client.lie_down()
-
-    client.release_control()
+    if not client.connect():
+        raise RuntimeError("connect start failed")
+    deadline = time.monotonic() + 10.0
+    while client.get_state() != sdk.HighLevelState.kConnected:
+        if time.monotonic() >= deadline:
+            raise TimeoutError("connect timeout")
+        time.sleep(0.05)
+    capabilities = client.get_motion_capabilities()
+    if capabilities is None:
+        raise RuntimeError("get_motion_capabilities failed")
 finally:
     client.disconnect()
     sdk.service.shutdown()
 ```
 
 > Python must exit via `try/finally`. For details, see [§6.2](#62-exit-deadlock-avoidance-must-read).
+
+> This Quick Start covers read-only checks for onboard or single-device use. From an external host or in a multi-device setup, discover the target first and create the client with its device ID as shown in [§5.3](#53-multi-device-example-remote-mode).
 
 ---
 
@@ -118,8 +135,8 @@ This minimal project template can be copied as a starting point for an applicati
 
 | Dependencies | Source | Description |
 |---|---|---|
-| `librobotMotionSdk.so` | SDK package `Lib/<arch>/` | Precompiled runtime library selected for the target architecture |
-| Public headers | SDK package `Include/` | `MotionSdkService.h` / `MotionHighLevelClient.h` / `MotionSdkProtocol.h` |
+| `librobotMotionSdk.so` | SDK install prefix `lib/<arch>/` | Precompiled runtime library selected for the target architecture |
+| Public headers | SDK install prefix `include/uniubi/robot_sdk/` | `MotionSdkService.h` / `MotionHighLevelClient.h` / `MotionSdkProtocol.h` |
 | Compiler | g++ ≥ 9 (supports C++14) | |
 | Runtime basic library | Pre-installed on target machine (standard dynamic library path) | No need for customers to install Cyclone DDS additionally - already linked into SDK .so |
 
@@ -135,45 +152,34 @@ my_robot_app/
 ### CMakeLists.txt sample
 
 ```cmake
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
 project(my_robot_app CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 1) Set the SDK installation prefix (default: /opt/uniubi/)
-set(UNIUBI_SDK_ROOT "/path/to/uniubi_sdk" CACHE PATH "Uniubi SDK install root")
-
-# 2) Select the Lib subdirectory for the target architecture (x86_64 / aarch64 / i386)
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
-    set(ARCH_DIR "x86_64")
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
-    set(ARCH_DIR "aarch64")
-else()
-    set(ARCH_DIR "i386")
-endif()
-
-# 3) Locate the SDK shared library and public headers
-find_library(SDK_LIB robotMotionSdk
-             PATHS ${UNIUBI_SDK_ROOT}/Lib/${ARCH_DIR}
-             NO_DEFAULT_PATH REQUIRED)
+find_package(UniubiRobotSdk CONFIG REQUIRED)
 
 add_executable(my_robot_app src/main.cpp)
-target_include_directories(my_robot_app PRIVATE ${UNIUBI_SDK_ROOT}/Include)
-target_link_libraries(my_robot_app PRIVATE ${SDK_LIB} pthread)
+target_link_libraries(my_robot_app PRIVATE Uniubi::RobotMotionSdk)
 ```
 
 ### Build + Run
 
 ```bash
-mkdir -p build && cd build
-cmake -DUNIUBI_SDK_ROOT=/path/to/uniubi_sdk ..
-make -j$(nproc)
+export UNIUBI_SDK_PREFIX=/path/to/installed/uniubi
+cmake -S . -B build -DCMAKE_PREFIX_PATH="$UNIUBI_SDK_PREFIX"
+cmake --build build -j"$(nproc)"
 
 # Ensure the SDK shared library is on the runtime library path
-export LD_LIBRARY_PATH=/path/to/uniubi_sdk/Lib/$(uname -m):$LD_LIBRARY_PATH
-sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./my_robot_app       # Default interface: eth0
-sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./my_robot_app wlan0 # Use wlan0 (remote mode only)
+case "$(uname -m)" in
+  x86_64|amd64) SDK_ARCH=x86_64 ;;
+  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  i386|i486|i586|i686) SDK_ARCH=i386 ;;
+  *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
+esac
+export LD_LIBRARY_PATH="$UNIUBI_SDK_PREFIX/lib/$SDK_ARCH${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./build/my_robot_app
 ```
 
 The current device runtime requires root privileges for SDK applications. Building does not require `sudo`. Pass `LD_LIBRARY_PATH` explicitly at runtime because `sudo` may sanitize the current user's environment and otherwise hide the SDK shared library.
@@ -355,7 +361,7 @@ bool discoverDevices(uint32_t timeoutMs = 10000);
 | `productDate` | string | Production date |
 | `network` | object | Network status (same as `querySystemStatus.network`, including `ether` / `hotspot` / `mobile` / `wlan` sub-objects) |
 
-> New fields may be added as device software evolves. Clients must tolerate unknown fields without treating them as errors. See [§4.5.1 `querySystemStatus`](#451-querysystemstatus-parameter-field) for the complete `network` structure.
+> New fields may be added as device software evolves. Clients must tolerate unknown fields without treating them as errors. See [§4.5.1 `querySystemStatus`](#451-querysystemstatus-fields) for the complete `network` structure.
 
 ##### About `setNetworkInterface`
 
@@ -1092,8 +1098,8 @@ Complete runnable example: `Examples/example_highlevel.cpp` (corresponding `CMak
 #include <thread>
 #include <cstdio>
 #include <string>
-#include "MotionSdkService.h"
-#include "MotionHighLevelClient.h"
+#include "uniubi/robot_sdk/MotionSdkService.h"
+#include "uniubi/robot_sdk/MotionHighLevelClient.h"
 
 using namespace uniubi::RobotSdk;
 using HLState = IMotionHighLevelClient::HighLevelState;
@@ -1210,8 +1216,8 @@ There are two differences from §5.1 (single device): use `discoverDevices` to c
 #include <thread>
 #include <vector>
 #include <cstdio>
-#include "MotionSdkService.h"
-#include "MotionHighLevelClient.h"
+#include "uniubi/robot_sdk/MotionSdkService.h"
+#include "uniubi/robot_sdk/MotionHighLevelClient.h"
 
 using namespace uniubi::RobotSdk;
 
@@ -1353,7 +1359,7 @@ Module: `robot_motion_sdk`, source code `Python/`
 
 The Python API does not expose a separate MediaBus package; the Motion SDK provides the frame wrappers directly. Encoded frames use `EncodedVideoFrame`, with no public Python `VideoPacket` type. `sdk.CMediaFrame` remains as a Low-level compatibility alias.
 
-### 6.2 ⚠ Exit deadlock avoidance (must read)
+### 6.2 Exit deadlock avoidance (must read)
 
 **Typical deadlock sequence:**
 - The Python main thread holds the GIL while interpreter shutdown starts garbage collection.

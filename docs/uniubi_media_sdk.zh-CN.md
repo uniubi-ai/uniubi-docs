@@ -24,8 +24,8 @@
 `IMediaBusClient` 不单独创建，由已连接的高级 / 低级客户端派生：
 
 ```cpp
-#include "MediaBusClient.h"
-#include "MotionHighLevelClient.h"
+#include "uniubi/robot_sdk/MediaBusClient.h"
+#include "uniubi/robot_sdk/MotionHighLevelClient.h"
 
 auto client = uniubi::RobotSdk::IMotionHighLevelClient::create(/*asMaster=*/false);
 auto media  = client->createMediaBusClient();   // 也可由 IMotionLowLevelClient::create() 派生
@@ -174,9 +174,9 @@ connect 客户端
 ## 7. C++ 示例
 
 ```cpp
-#include "MediaBusClient.h"
-#include "MotionHighLevelClient.h"
-#include "MotionSdkService.h"
+#include "uniubi/robot_sdk/MediaBusClient.h"
+#include "uniubi/robot_sdk/MotionHighLevelClient.h"
+#include "uniubi/robot_sdk/MotionSdkService.h"
 
 using namespace uniubi::RobotSdk;
 

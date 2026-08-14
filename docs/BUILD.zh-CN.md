@@ -84,8 +84,9 @@ IDL、ROS 2 msg/srv 和协议 schema 的统一源头是 [`uniubi_robot_msgs`](ht
 
 ```bash
 git clone https://github.com/uniubi-ai/uniubi_robot_sdk.git ~/uniubi_robot_sdk
-cd ~/uniubi_robot_sdk
-cmake -S . -B build [-DUNIUBI_SDK_ROOT=$PWD]
+export SDK_ROOT=~/uniubi_robot_sdk
+cd "$SDK_ROOT"
+cmake -S . -B build
 cmake --build build -j$(nproc)
 ```
 
@@ -174,8 +175,7 @@ PyTorch。非 Orin 构建和交叉编译默认关闭，不影响普通 SDK examp
 sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
 cmake -S . -B build-aarch64 \
-      -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-aarch64-linux-gnu.cmake \
-      [-DUNIUBI_SDK_ROOT=$SDK_ROOT]                   # 工具链文件已设 CMAKE_SYSTEM_PROCESSOR=aarch64，CMake 自动从 lib/aarch64/ 取 .so
+      -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-aarch64-linux-gnu.cmake
 cmake --build build-aarch64 -j
 cmake --install build-aarch64 --prefix "$HOME/.local/uniubi-aarch64"
 ```
@@ -271,6 +271,7 @@ SDK CMake 在 aarch64 交叉链接时允许这些目标端符号保持未解析�
 当前设备运行 SDK 程序需要 root 权限，构建过程不需要 `sudo`。由于 `sudo` 可能清理 `LD_LIBRARY_PATH`，运行时应通过 `sudo env` 显式传入动态库路径。
 
 ```bash
+export SDK_ROOT="${SDK_ROOT:-$HOME/uniubi_robot_sdk}"
 case "$(uname -m)" in
   x86_64|amd64) SDK_ARCH=x86_64 ;;
   aarch64|arm64) SDK_ARCH=aarch64 ;;
@@ -316,9 +317,14 @@ High-level CLI 启动后输入 `status`、`motors`、`sensor 5`、`odom 5` 做�
 
 ```bash
 git clone https://github.com/uniubi-ai/uniubi_robot_sdk_py.git ~/uniubi_robot_sdk_py
-ARCH=$(uname -m)
+case "$(uname -m)" in
+  x86_64|amd64) SDK_ARCH=x86_64 ;;
+  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  i386|i486|i586|i686) SDK_ARCH=i386 ;;
+  *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
+esac
 export UNIUBI_SDK_ROOT=~/uniubi_robot_sdk
-export LD_LIBRARY_PATH=$UNIUBI_SDK_ROOT/lib/$ARCH:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH="$UNIUBI_SDK_ROOT/lib/$SDK_ARCH${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export PYTHONPATH=~/uniubi_robot_sdk_py
 sudo env \
   LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
@@ -359,14 +365,14 @@ Python native binding 使用 `UNIUBI_SDK_ENABLE_MEDIA` 控制是否编译媒体�
 
 ```bash
 cd ~/uniubi_robot_sdk_py
-UNIUBI_SDK_ROOT=~/uniubi_robot_sdk pip wheel . -w dist/
+UNIUBI_SDK_ROOT=~/uniubi_robot_sdk python3 -m pip wheel . -w dist/
 # → dist/uniubi_robot_motion_sdk-1.0.0-cp310-cp310-linux_aarch64.whl
 ```
 
 客户端安装：
 
 ```bash
-pip install uniubi_robot_motion_sdk-1.0.0-cp310-cp310-linux_aarch64.whl
+python3 -m pip install uniubi_robot_motion_sdk-1.0.0-cp310-cp310-linux_aarch64.whl
 ```
 
 ---
@@ -404,8 +410,14 @@ pip install uniubi_robot_motion_sdk-1.0.0-cp310-cp310-linux_aarch64.whl
 构建完成后做最小化导入测试：
 
 ```bash
-ARCH=$(uname -m)
-LD_LIBRARY_PATH=$SDK_ROOT/lib/$ARCH \
+export SDK_ROOT="${SDK_ROOT:-$HOME/uniubi_robot_sdk}"
+case "$(uname -m)" in
+  x86_64|amd64) SDK_ARCH=x86_64 ;;
+  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  i386|i486|i586|i686) SDK_ARCH=i386 ;;
+  *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
+esac
+LD_LIBRARY_PATH="$SDK_ROOT/lib/$SDK_ARCH" \
 PYTHONPATH=~/uniubi_robot_sdk_py \
 python3 -c "
 import robot_motion_sdk as sdk
@@ -425,11 +437,18 @@ print('clients:', sdk.MotionLowLevelClient, sdk.MotionHighLevelClient)
 `LD_LIBRARY_PATH` 没有指向正确的 arch 子目录。检查：
 
 ```bash
+export SDK_ROOT="${SDK_ROOT:-$HOME/uniubi_robot_sdk}"
+case "$(uname -m)" in
+  x86_64|amd64) SDK_ARCH=x86_64 ;;
+  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  i386|i486|i586|i686) SDK_ARCH=i386 ;;
+  *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
+esac
 echo $LD_LIBRARY_PATH                          # 应包含 $SDK_ROOT/lib/<arch>
-ls $SDK_ROOT/lib/$(uname -m)/librobotMotionSdk.so   # 文件必须存在
+ls "$SDK_ROOT/lib/$SDK_ARCH/librobotMotionSdk.so"   # 文件必须存在
 ```
 
-注意 32 位 x86 系统 `uname -m` 返回 `i686`，需手改为 `i386` 对应子目录。
+上述映射会将 32 位 x86 的 `i686` 统一转换为 SDK 的 `i386` 子目录。
 
 ### 9.2 `/lib/.../libc.so.6: version 'GLIBC_2.34' not found`
 
@@ -466,7 +485,7 @@ python3 --version                                                # 确认与 whe
 file ~/uniubi_robot_sdk_py/robot_motion_sdk/_uniubi_robot_motion_py_native.*.so # 检查 ELF arch
 ```
 
-或重新本机编：`cd ~/uniubi_robot_sdk_py && UNIUBI_SDK_ROOT=$SDK_ROOT pip install . --force-reinstall`。
+或重新本机编：`cd ~/uniubi_robot_sdk_py && UNIUBI_SDK_ROOT=$SDK_ROOT python3 -m pip install . --force-reinstall`。
 
 ### 9.6 Python 程序退出时卡住 / 死锁
 

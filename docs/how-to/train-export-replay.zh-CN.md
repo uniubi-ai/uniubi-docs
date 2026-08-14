@@ -16,8 +16,8 @@
 
 ```bash
 cd /path/to/uniubi_rl_lab
-python -m pip install -e source/uniubi_rl_lab
-python scripts/list_envs.py
+python3 -m pip install -e source/uniubi_rl_lab
+python3 scripts/list_envs.py
 ```
 
 确认任务列表中包含 `Uniubi-Cyvet-Velocity`。
@@ -25,7 +25,7 @@ python scripts/list_envs.py
 ## 2. 运行最小训练
 
 ```bash
-python scripts/rsl_rl/train.py --task=Uniubi-Cyvet-Velocity --headless --num_envs=16 --max_iterations=1 --device cuda:0
+python3 scripts/rsl_rl/train.py --task=Uniubi-Cyvet-Velocity --headless --num_envs=16 --max_iterations=1 --device cuda:0
 ```
 
 成功标准：任务能启动，输出 observation/action shape，并生成可回放的运行记录。
@@ -33,7 +33,7 @@ python scripts/rsl_rl/train.py --task=Uniubi-Cyvet-Velocity --headless --num_env
 ## 3. 回放 checkpoint
 
 ```bash
-python scripts/rsl_rl/play.py --task=Uniubi-Cyvet-Velocity --checkpoint logs/rsl_rl/cyvet_velocity/<run>/model_<iter>.pt --num_envs=32
+python3 scripts/rsl_rl/play.py --task=Uniubi-Cyvet-Velocity --checkpoint logs/rsl_rl/cyvet_velocity/<run>/model_<iter>.pt --num_envs=32
 ```
 
 ## 4. 进入部署链路

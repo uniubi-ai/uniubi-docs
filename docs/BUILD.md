@@ -83,8 +83,9 @@ uniubi_robot_sdk_py/
 
 ```bash
 git clone https://github.com/uniubi-ai/uniubi_robot_sdk.git ~/uniubi_robot_sdk
-cd ~/uniubi_robot_sdk
-cmake -S . -B build [-DUNIUBI_SDK_ROOT=$PWD]
+export SDK_ROOT=~/uniubi_robot_sdk
+cd "$SDK_ROOT"
+cmake -S . -B build
 cmake --build build -j$(nproc)
 ```
 
@@ -171,8 +172,7 @@ This target uses the CUDA 12.6 and TensorRT 10.3 C++ development files provided 
 sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
 cmake -S . -B build-aarch64 \
-      -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-aarch64-linux-gnu.cmake \
-      [-DUNIUBI_SDK_ROOT=$SDK_ROOT]                   # the toolchain selects lib/aarch64/
+      -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-aarch64-linux-gnu.cmake
 cmake --build build-aarch64 -j
 cmake --install build-aarch64 --prefix "$HOME/.local/uniubi-aarch64"
 ```
@@ -253,6 +253,7 @@ Deploy the matching SDK `lib/aarch64/` runtime set with the program. Run `--vali
 SDK programs require root privileges on current devices; compilation does not. Because `sudo` may remove `LD_LIBRARY_PATH`, pass the dynamic-library path explicitly with `sudo env` at runtime.
 
 ```bash
+export SDK_ROOT="${SDK_ROOT:-$HOME/uniubi_robot_sdk}"
 case "$(uname -m)" in
   x86_64|amd64) SDK_ARCH=x86_64 ;;
   aarch64|arm64) SDK_ARCH=aarch64 ;;
@@ -299,9 +300,14 @@ SDK programs still require root privileges at runtime. Use the system `python3` 
 
 ```bash
 git clone https://github.com/uniubi-ai/uniubi_robot_sdk_py.git ~/uniubi_robot_sdk_py
-ARCH=$(uname -m)
+case "$(uname -m)" in
+  x86_64|amd64) SDK_ARCH=x86_64 ;;
+  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  i386|i486|i586|i686) SDK_ARCH=i386 ;;
+  *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
+esac
 export UNIUBI_SDK_ROOT=~/uniubi_robot_sdk
-export LD_LIBRARY_PATH=$UNIUBI_SDK_ROOT/lib/$ARCH:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH="$UNIUBI_SDK_ROOT/lib/$SDK_ARCH${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export PYTHONPATH=~/uniubi_robot_sdk_py
 sudo env \
   LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
@@ -342,14 +348,14 @@ Media-frame subscription supports only local on-board `aarch64` deployment. `x86
 
 ```bash
 cd ~/uniubi_robot_sdk_py
-UNIUBI_SDK_ROOT=~/uniubi_robot_sdk pip wheel . -w dist/
+UNIUBI_SDK_ROOT=~/uniubi_robot_sdk python3 -m pip wheel . -w dist/
 # → dist/uniubi_robot_motion_sdk-1.0.0-cp310-cp310-linux_aarch64.whl
 ```
 
 Install the wheel:
 
 ```bash
-pip install uniubi_robot_motion_sdk-1.0.0-cp310-cp310-linux_aarch64.whl
+python3 -m pip install uniubi_robot_motion_sdk-1.0.0-cp310-cp310-linux_aarch64.whl
 ```
 
 ---
@@ -387,8 +393,14 @@ Recommended approach:
 After building, run a minimal import test:
 
 ```bash
-ARCH=$(uname -m)
-LD_LIBRARY_PATH=$SDK_ROOT/lib/$ARCH \
+export SDK_ROOT="${SDK_ROOT:-$HOME/uniubi_robot_sdk}"
+case "$(uname -m)" in
+  x86_64|amd64) SDK_ARCH=x86_64 ;;
+  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  i386|i486|i586|i686) SDK_ARCH=i386 ;;
+  *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
+esac
+LD_LIBRARY_PATH="$SDK_ROOT/lib/$SDK_ARCH" \
 PYTHONPATH=~/uniubi_robot_sdk_py \
 python3 -c "
 import robot_motion_sdk as sdk
@@ -408,11 +420,18 @@ For end-to-end examples, see `examples/example_lowlevel.cpp`, `examples/example_
 `LD_LIBRARY_PATH` does not point to the correct architecture directory. Check:
 
 ```bash
+export SDK_ROOT="${SDK_ROOT:-$HOME/uniubi_robot_sdk}"
+case "$(uname -m)" in
+  x86_64|amd64) SDK_ARCH=x86_64 ;;
+  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  i386|i486|i586|i686) SDK_ARCH=i386 ;;
+  *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
+esac
 echo $LD_LIBRARY_PATH                          # must include $SDK_ROOT/lib/<arch>
-ls $SDK_ROOT/lib/$(uname -m)/librobotMotionSdk.so   # file must exist
+ls "$SDK_ROOT/lib/$SDK_ARCH/librobotMotionSdk.so"   # file must exist
 ```
 
-On 32-bit x86, `uname -m` may return `i686`; map it to the SDK's `i386` directory.
+The mapping above converts 32-bit x86 values such as `i686` to the SDK's `i386` directory.
 
 ### 9.2 `/lib/.../libc.so.6: version 'GLIBC_2.34' not found`
 
@@ -449,7 +468,7 @@ python3 --version                                                # must match th
 file ~/uniubi_robot_sdk_py/robot_motion_sdk/_uniubi_robot_motion_py_native.*.so # inspect ELF architecture
 ```
 
-Or rebuild and reinstall it: `cd ~/uniubi_robot_sdk_py && UNIUBI_SDK_ROOT=$SDK_ROOT pip install . --force-reinstall`.
+Or rebuild and reinstall it: `cd ~/uniubi_robot_sdk_py && UNIUBI_SDK_ROOT=$SDK_ROOT python3 -m pip install . --force-reinstall`.
 
 ### 9.6 Python program gets stuck/deadlocked when exiting
 

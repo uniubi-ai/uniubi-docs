@@ -24,8 +24,8 @@ Related documents:
 Create `IMediaBusClient` from a connected High-level or Low-level client; it cannot be created independently:
 
 ```cpp
-#include "MediaBusClient.h"
-#include "MotionHighLevelClient.h"
+#include "uniubi/robot_sdk/MediaBusClient.h"
+#include "uniubi/robot_sdk/MotionHighLevelClient.h"
 
 auto client = uniubi::RobotSdk::IMotionHighLevelClient::create(/*asMaster=*/false);
 auto media  = client->createMediaBusClient();   // Can also be obtained from an IMotionLowLevelClient instance
@@ -174,9 +174,9 @@ connect client
 ## 7. C++ example
 
 ```cpp
-#include "MediaBusClient.h"
-#include "MotionHighLevelClient.h"
-#include "MotionSdkService.h"
+#include "uniubi/robot_sdk/MediaBusClient.h"
+#include "uniubi/robot_sdk/MotionHighLevelClient.h"
+#include "uniubi/robot_sdk/MotionSdkService.h"
 
 using namespace uniubi::RobotSdk;
 

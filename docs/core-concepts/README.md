@@ -15,6 +15,39 @@ Uniubi robots use a cooperative brain-and-cerebellum architecture:
 
 The two modules complement each other: the cerebellum executes the standard functions, while the brain extends what the robot can do. Using the brain for extensions does not require an application to bypass or reimplement the built-in motion control, remote-controller, or UWB functions.
 
+### Control paths and deployment locations
+
+High-level and Low-level use the same SDK family, but their deployment locations and hardware-control paths differ on a real robot:
+
+```mermaid
+flowchart LR
+    subgraph DEV["Developer side"]
+        HAPP["High-level application<br/>External PC or brain"]
+        HSDK["SDK · High-level"]
+        HAPP <--> HSDK
+    end
+
+    subgraph ROBOT["Robot"]
+        subgraph BRAIN["Brain"]
+            LAPP["Low-level user controller"]
+            LSDK["SDK · Low-level<br/>Must run on the brain"]
+            LAPP <--> LSDK
+        end
+
+        CERE["Cerebellum<br/>High-level built-in motion"]
+        HW["Motion hardware<br/>Joint motors · IMU"]
+    end
+
+    HSDK -->|"Action and velocity commands"| CERE
+    CERE <-->|"High-level mode<br/>Joint control / state feedback"| HW
+
+    LSDK <-->|"Low-level mode<br/>Joint control / state feedback"| HW
+
+    BRAIN <-.->|"Control-ownership and state coordination"| CERE
+```
+
+> The real-robot Low-level SDK must run on the robot's brain. It does not support direct hardware control from an external PC.
+
 ## 2. Two Control Abstractions
 
 | Dimension | High-level | Low-level |
@@ -34,34 +67,46 @@ A Low-level application determines how each joint should be controlled on every 
 
 ### SDK and Runtime Targets
 
-Both High-level and Low-level applications can use the same SDK interfaces with Mock / Sim2Sim or a real robot. The application reuses its SDK integration and control logic across targets, while each runtime environment and its safety boundaries still require separate validation.
+Both High-level and Low-level applications can reuse the SDK API between Mock / Sim2Sim and a real robot, but API reuse does not mean that the underlying transport or deployment topology is identical. Real-robot Low-level control is onboard only. Low-level SDK use from an external x86_64 host selects the external-simulation backend; it is not a remote real-robot control path.
 
 ```mermaid
 flowchart LR
     APP["User application<br/>Action calls · State handling · Policy inference"]
 
-    subgraph SDK["Uniubi SDK"]
+    subgraph SDK["Uniubi SDK API"]
         CPP["C++ SDK<br/>uniubi_robot_sdk"]
         PY["Python SDK<br/>uniubi_robot_sdk_py"]
-        LINK["Unified observation and control interfaces<br/>DDS / RPC"]
+        API["Unified High-level / Low-level interfaces"]
 
-        CPP --> LINK
-        PY --> LINK
+        CPP --> API
+        PY --> API
     end
 
-    subgraph TARGET["Runtime target"]
-        SIM["Mock / Sim2Sim<br/>High-level / Low-level<br/>Validate SDK, messages, and control paths"]
-        ROBOT["Uniubi real robot<br/>High-level: built-in motion<br/>Low-level: custom joint control"]
+    subgraph BACKEND["Transport and deployment boundaries"]
+        HL["High-level backend<br/>DDS / RPC<br/>Onboard or external host"]
+        LLR["Low-level real-robot backend<br/>RPC control plane + onboard SHM data plane<br/>Onboard only"]
+        LLS["Low-level external-simulation backend<br/>DDS simulation path<br/>x86_64 host"]
     end
+
+    MOCKHL["Mock High-level<br/>Built-in action scheduling validation"]
+    MOCKLL["Mock / Sim2Sim Low-level<br/>Policy and control-loop validation"]
+    ROBOTHL["Uniubi real-robot High-level<br/>Built-in motion"]
+    ROBOTLL["Uniubi real-robot Low-level<br/>Onboard custom joint control"]
 
     APP -->|"C++"| CPP
     APP -->|"Python"| PY
-    LINK -->|"Simulation network"| SIM
-    LINK -->|"Robot network"| ROBOT
-    SIM -.->|"Migrate after validation"| ROBOT
+    API --> HL
+    API --> LLR
+    API --> LLS
+    HL --> MOCKHL
+    HL --> ROBOTHL
+    LLS --> MOCKLL
+    LLR --> ROBOTLL
+    MOCKHL -.->|"Migrate after validation"| ROBOTHL
+    MOCKLL -.->|"Migrate onboard after validation"| ROBOTLL
 ```
 
-Passing Mock / Sim2Sim validation does not complete real-robot validation. Recheck the architecture, ABI, control rate, hardware behavior, emergency stop, and manual takeover on the physical robot.
+Passing Mock / Sim2Sim validation does not complete real-robot validation. Recheck the target architecture, ABI, control rate, hardware behavior, emergency stop, and manual takeover on the physical robot. A Low-level policy application must also move to the robot's onboard runtime.
 
 ## 3. Control Lifecycle
 

@@ -15,6 +15,39 @@ Uniubi 机器狗采用大脑与小脑协同的系统架构：
 
 两者是分工协作关系：小脑稳定执行标准功能，大脑在此基础上扩展机器人的能力边界。大脑提供扩展能力，并不意味着应用需要绕过小脑重新实现遥控器、UWB 或机器人内置运动控制。
 
+### 控制路径与部署位置
+
+High-level 与 Low-level 使用同一套 SDK 接口，但在真实机器人上的部署位置和硬件控制路径不同：
+
+```mermaid
+flowchart LR
+    subgraph DEV["开发者侧"]
+        HAPP["High-level 应用<br/>外部 PC 或大脑"]
+        HSDK["SDK · High-level"]
+        HAPP <--> HSDK
+    end
+
+    subgraph ROBOT["机器人"]
+        subgraph BRAIN["大脑"]
+            LAPP["Low-level 用户控制算法"]
+            LSDK["SDK · Low-level<br/>必须运行在大脑"]
+            LAPP <--> LSDK
+        end
+
+        CERE["小脑<br/>High-level 内置运控"]
+        HW["运控硬件<br/>关节电机 · IMU"]
+    end
+
+    HSDK -->|"动作与速度命令"| CERE
+    CERE <-->|"High-level 模式<br/>关节控制 / 状态反馈"| HW
+
+    LSDK <-->|"Low-level 模式<br/>关节级控制 / 状态反馈"| HW
+
+    BRAIN <-.->|"控制权与状态协调"| CERE
+```
+
+> 真机 Low-level SDK 必须部署在机器人“大脑”侧运行，不支持从外部 PC 远程直连硬件。
+
 ## 2. 两种控制抽象
 
 | 维度 | High-level | Low-level |
@@ -34,34 +67,46 @@ Low-level 的应用自己决定“每个关节下一周期应该怎么控制”�
 
 ### SDK 与运行目标
 
-High-level 和 Low-level 均可通过同一套 SDK 接入 Mock / Sim2Sim 或真实机器人。用户程序复用的是 SDK 接口和控制逻辑；切换运行目标后，仍需分别验证运行环境和安全边界。
+High-level 和 Low-level 应用都能在 Mock / Sim2Sim 与真实机器人之间复用 SDK API，但“接口复用”不代表底层传输和部署拓扑相同。Low-level 真机只支持板内部署；外部主机上的 Low-level SDK 用于 x86_64 external-simulation backend，不是远程真机控制通道。
 
 ```mermaid
 flowchart LR
     APP["用户程序<br/>动作调用 · 状态处理 · 策略推理"]
 
-    subgraph SDK["Uniubi SDK"]
+    subgraph SDK["Uniubi SDK API"]
         CPP["C++ SDK<br/>uniubi_robot_sdk"]
         PY["Python SDK<br/>uniubi_robot_sdk_py"]
-        LINK["统一观测与控制接口<br/>DDS / RPC"]
+        API["High-level / Low-level 统一接口"]
 
-        CPP --> LINK
-        PY --> LINK
+        CPP --> API
+        PY --> API
     end
 
-    subgraph TARGET["运行目标"]
-        SIM["Mock / Sim2Sim<br/>High-level / Low-level<br/>验证 SDK、消息与控制链路"]
-        ROBOT["Uniubi 真机<br/>High-level：内置运动能力<br/>Low-level：自定义关节控制"]
+    subgraph BACKEND["底层传输与部署边界"]
+        HL["High-level backend<br/>DDS / RPC<br/>板内或外部主机"]
+        LLR["Low-level 真机 backend<br/>RPC 控制面 + 板内 SHM 数据面<br/>仅板内"]
+        LLS["Low-level external-simulation backend<br/>DDS 仿真链路<br/>x86_64 主机"]
     end
+
+    MOCKHL["Mock High-level<br/>内置动作调度验证"]
+    MOCKLL["Mock / Sim2Sim Low-level<br/>策略与控制闭环验证"]
+    ROBOTHL["Uniubi 真机 High-level<br/>内置运动能力"]
+    ROBOTLL["Uniubi 真机 Low-level<br/>板内自定义关节控制"]
 
     APP -->|"C++"| CPP
     APP -->|"Python"| PY
-    LINK -->|"仿真网络环境"| SIM
-    LINK -->|"真实设备网络"| ROBOT
-    SIM -.->|"验证通过后迁移"| ROBOT
+    API --> HL
+    API --> LLR
+    API --> LLS
+    HL --> MOCKHL
+    HL --> ROBOTHL
+    LLS --> MOCKLL
+    LLR --> ROBOTLL
+    MOCKHL -.->|"验证后迁移"| ROBOTHL
+    MOCKLL -.->|"验证后迁移到板内"| ROBOTLL
 ```
 
-Mock / Sim2Sim 验证通过不等于实机验证完成。迁移到真实机器人后，还需重新确认架构、ABI、控制周期、硬件行为、急停和人工接管。
+Mock / Sim2Sim 验证通过不等于实机验证完成。迁移到真实机器人后，还需重新确认目标架构、ABI、控制周期、硬件行为、急停和人工接管；Low-level 还必须将策略程序部署到机器人板内。
 
 ## 3. 控制权和生命周期
 

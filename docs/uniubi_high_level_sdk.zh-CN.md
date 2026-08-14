@@ -3,7 +3,7 @@
 [English](uniubi_high_level_sdk.md) | **简体中文**
 
 > SDK 入口类：`uniubi::RobotSdk::IMotionHighLevelClient`
-> C++ 头文件：`Include/MotionHighLevelClient.h`
+> C++ 头文件：`include/uniubi/robot_sdk/MotionHighLevelClient.h`
 
 ---
 
@@ -45,37 +45,49 @@
 
 ## Quick Start
 
-最小运行流程（完整版本见 §五）：
+最小只读流程（完整交互 CLI 见 §五）。本节不申请控制权，也不执行任何动作：
 
 **C++**
 
 ```cpp
 #include <chrono>
+#include <stdexcept>
+#include <string>
 #include <thread>
-#include "MotionSdkService.h"
-#include "MotionHighLevelClient.h"
+#include "uniubi/robot_sdk/MotionSdkService.h"
+#include "uniubi/robot_sdk/MotionHighLevelClient.h"
 
 using namespace uniubi::RobotSdk;
 using HLState = IMotionHighLevelClient::HighLevelState;
 
 int main() {
     auto svc = IMotionSdkService::instance();
-    svc->setNetworkInterface("eth0");        // 默认 eth0；如机器没有 eth0 必须改成实际网卡（板内可省略）
-    svc->initialService(nullptr, "myApp");
+    // 远程模式需固定网卡时，在 initialService 前调用：
+    // svc->setNetworkInterface("wlan0");
+    if (!svc->initialService(nullptr, "myReadOnlyApp")) return 1;
 
-    auto client = IMotionHighLevelClient::create();  // 板内单设备
-    client->connect();                              // 进入高级模式
-    client->startControl(/*timeout=*/10000);        // 请求控制权
-    while (client->getState() != static_cast<int32_t>(HLState::kControlled))
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    auto client = IMotionHighLevelClient::create();
+    try {
+        if (!client->connect()) throw std::runtime_error("connect start failed");
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (client->getState() != static_cast<int32_t>(HLState::kConnected)) {
+            if (std::chrono::steady_clock::now() >= deadline) {
+                throw std::runtime_error("connect timeout");
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
 
-    client->standUp();
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    client->lieDown();
-
-    client->releaseControl();
+        std::string capabilities;
+        if (!client->getMotionCapabilities(capabilities)) {
+            throw std::runtime_error("getMotionCapabilities failed");
+        }
+    } catch (...) {
+        client->disconnect();
+        svc->shutdown();
+        return 1;
+    }
     client->disconnect();
-    IMotionSdkService::instance()->shutdown();
+    svc->shutdown();
     return 0;
 }
 ```
@@ -86,25 +98,30 @@ int main() {
 import time
 import robot_motion_sdk as sdk
 
-sdk.service.set_network_interface("eth0")       # 默认 eth0；机器无 eth0 时改成实际网卡
-sdk.service.initial(None, "myApp")
-client = sdk.MotionHighLevelClient()             # 板内单设备
+# 远程模式需固定网卡时，在 initial 前调用：
+# sdk.service.set_network_interface("wlan0")
+if not sdk.service.initial(None, "myReadOnlyApp"):
+    raise RuntimeError("SDK initialization failed")
+client = sdk.MotionHighLevelClient()
 try:
-    client.connect()
-    client.start_control(timeout_ms=10000)
-    while client.get_state() != sdk.HighLevelState.kControlled: time.sleep(0.05)
-
-    client.stand_up()
-    time.sleep(2)
-    client.lie_down()
-
-    client.release_control()
+    if not client.connect():
+        raise RuntimeError("connect start failed")
+    deadline = time.monotonic() + 10.0
+    while client.get_state() != sdk.HighLevelState.kConnected:
+        if time.monotonic() >= deadline:
+            raise TimeoutError("connect timeout")
+        time.sleep(0.05)
+    capabilities = client.get_motion_capabilities()
+    if capabilities is None:
+        raise RuntimeError("get_motion_capabilities failed")
 finally:
     client.disconnect()
     sdk.service.shutdown()
 ```
 
 > Python 退出必须走 `try/finally`，原因详见 [§6.2](#62--退出死锁规避必读)。
+
+> 上述 Quick Start 用于板内/单设备只读检查。外部主机或多设备场景先发现目标设备，再按 [§5.3](#53-多设备示例远端模式) 使用设备 ID 创建客户端。
 
 ---
 
@@ -118,8 +135,8 @@ finally:
 
 | 依赖 | 来源 | 说明 |
 |---|---|---|
-| `librobotMotionSdk.so` | SDK 仓库 `Lib/<arch>/` | 预编译运行库，按目标架构选 |
-| 公开头 | SDK 仓库 `Include/` | `MotionSdkService.h` / `MotionHighLevelClient.h` / `MotionSdkProtocol.h` |
+| `librobotMotionSdk.so` | SDK 安装前缀 `lib/<arch>/` | 预编译运行库，按目标架构选 |
+| 公开头 | SDK 安装前缀 `include/uniubi/robot_sdk/` | `MotionSdkService.h` / `MotionHighLevelClient.h` / `MotionSdkProtocol.h` |
 | 编译器 | g++ ≥ 9（支持 C++14） | |
 | 运行时基础库 | 目标机预装（标准动态库路径） | 不需要客户额外装 Cyclone DDS —— 已链接进 SDK .so |
 
@@ -135,45 +152,34 @@ my_robot_app/
 ### CMakeLists.txt 样例
 
 ```cmake
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
 project(my_robot_app CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 1) 指定 SDK 安装前缀（默认 /opt/uniubi/）
-set(UNIUBI_SDK_ROOT "/path/to/uniubi_sdk" CACHE PATH "Uniubi SDK install root")
-
-# 2) 按目标架构自动选 Lib 子目录（x86_64 / aarch64 / i386）
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
-    set(ARCH_DIR "x86_64")
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
-    set(ARCH_DIR "aarch64")
-else()
-    set(ARCH_DIR "i386")
-endif()
-
-# 3) 定位 SDK .so 与公开头
-find_library(SDK_LIB robotMotionSdk
-             PATHS ${UNIUBI_SDK_ROOT}/Lib/${ARCH_DIR}
-             NO_DEFAULT_PATH REQUIRED)
+find_package(UniubiRobotSdk CONFIG REQUIRED)
 
 add_executable(my_robot_app src/main.cpp)
-target_include_directories(my_robot_app PRIVATE ${UNIUBI_SDK_ROOT}/Include)
-target_link_libraries(my_robot_app PRIVATE ${SDK_LIB} pthread)
+target_link_libraries(my_robot_app PRIVATE Uniubi::RobotMotionSdk)
 ```
 
 ### 构建 + 运行
 
 ```bash
-mkdir -p build && cd build
-cmake -DUNIUBI_SDK_ROOT=/path/to/uniubi_sdk ..
-make -j$(nproc)
+export UNIUBI_SDK_PREFIX=/path/to/installed/uniubi
+cmake -S . -B build -DCMAKE_PREFIX_PATH="$UNIUBI_SDK_PREFIX"
+cmake --build build -j"$(nproc)"
 
 # 运行前确保 SDK .so 在动态库路径
-export LD_LIBRARY_PATH=/path/to/uniubi_sdk/Lib/$(uname -m):$LD_LIBRARY_PATH
-sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./my_robot_app       # 默认网卡 eth0
-sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./my_robot_app wlan0 # 用 wlan0 网卡（仅远端模式）
+case "$(uname -m)" in
+  x86_64|amd64) SDK_ARCH=x86_64 ;;
+  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  i386|i486|i586|i686) SDK_ARCH=i386 ;;
+  *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
+esac
+export LD_LIBRARY_PATH="$UNIUBI_SDK_PREFIX/lib/$SDK_ARCH${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./build/my_robot_app
 ```
 
 当前设备运行 SDK 程序需要 root 权限。构建不需要 `sudo`；运行时显式传入 `LD_LIBRARY_PATH`，避免 `sudo` 清理当前用户环境后找不到 SDK 动态库。
@@ -1092,8 +1098,8 @@ if (client->getPowerInfo(&power, /*timeout_us=*/200000)) {
 #include <thread>
 #include <cstdio>
 #include <string>
-#include "MotionSdkService.h"
-#include "MotionHighLevelClient.h"
+#include "uniubi/robot_sdk/MotionSdkService.h"
+#include "uniubi/robot_sdk/MotionHighLevelClient.h"
 
 using namespace uniubi::RobotSdk;
 using HLState = IMotionHighLevelClient::HighLevelState;
@@ -1210,8 +1216,8 @@ sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
 #include <thread>
 #include <vector>
 #include <cstdio>
-#include "MotionSdkService.h"
-#include "MotionHighLevelClient.h"
+#include "uniubi/robot_sdk/MotionSdkService.h"
+#include "uniubi/robot_sdk/MotionHighLevelClient.h"
 
 using namespace uniubi::RobotSdk;
 

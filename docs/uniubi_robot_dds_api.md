@@ -2050,7 +2050,7 @@ If **any** non-0 subcode appears, it is recommended to immediately `emergencySto
 
 ---
 
-## Appendix A · Client self-check list
+## Appendix A Client self-check list
 
 Before the access is completed, please confirm that the client implementation meets the following check items:
 
@@ -2099,7 +2099,7 @@ Before the access is completed, please confirm that the client implementation me
 
 ---
 
-## Appendix B · Python access points
+## Appendix B Python access points
 
 Applicable to Python DDS bindings such as `cyclonedds-python`.
 
@@ -2132,7 +2132,7 @@ After the access is completed, it is recommended to adjust `getMotionCapabilitie
 
 ---
 
-## Appendix C · C++ access points
+## Appendix C C++ access points
 
 The C++ client can choose any OMG DDS implementation: Eclipse Cyclone DDS C++ / RTI Connext / eProsima Fast DDS / OpenDDS.
 
@@ -2182,7 +2182,7 @@ When switching DDS implementations, verify interoperability in the following ord
 
 ---
 
-## Appendix D · Error handling decision table and silent failure troubleshooting
+## Appendix D Error handling decision table and silent failure troubleshooting
 
 ### D.1 Error handling decision table
 

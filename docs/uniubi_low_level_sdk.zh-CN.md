@@ -44,35 +44,48 @@
 
 ## Quick Start
 
-最小运行流程（完整版本见 §五）：
+最小只读流程（完整交互 CLI 见 §五）。本节只连接并查询电机布局，不调用 `setMotionEnable(true)`，也不发送控制帧：
 
 **C++**
 
 ```cpp
-#include <unistd.h>
-#include "MotionSdkService.h"
-#include "MotionLowLevelClient.h"
+#include <chrono>
+#include <stdexcept>
+#include <thread>
+#include "uniubi/robot_sdk/MotionSdkService.h"
+#include "uniubi/robot_sdk/MotionLowLevelClient.h"
 
 using namespace uniubi::RobotSdk;
 using LLState = IMotionLowLevelClient::LowLevelState;
 
 int main() {
     auto svc = IMotionSdkService::instance();
-    svc->initialService(nullptr, "myApp");
+    if (!svc->initialService(nullptr, "myReadOnlyApp")) return 1;
 
-    auto client = IMotionLowLevelClient::create();   // 板内单设备，无参；同进程返回同一实例
-    client->connect(/*observedHz=*/500);
-    while (client->getState() != static_cast<int32_t>(LLState::kConnected)) usleep(10000);
+    auto client = IMotionLowLevelClient::create();
+    try {
+        if (!client->connect(/*observedHz=*/500)) {
+            throw std::runtime_error("connect start failed");
+        }
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (client->getState() != static_cast<int32_t>(LLState::kConnected)) {
+            if (std::chrono::steady_clock::now() >= deadline) {
+                throw std::runtime_error("connect timeout");
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
 
-    client->setMotionEnable(true);
-    while (client->getState() != static_cast<int32_t>(LLState::kPrepared))  usleep(10000);
-
-    /// 周期下发 sendControl(...) + 拉取 getLatestObservation(...)
-    /// 具体 MotorCtrlAction 构造与控制循环见 §五
-
-    client->setMotionEnable(false);
+        MotorLayout layout = {};
+        if (!client->getMotorLayout(layout)) {
+            throw std::runtime_error("getMotorLayout failed");
+        }
+    } catch (...) {
+        client->disconnect();
+        svc->shutdown();
+        return 1;
+    }
     client->disconnect();
-    IMotionSdkService::instance()->shutdown();
+    svc->shutdown();
     return 0;
 }
 ```
@@ -83,18 +96,21 @@ int main() {
 import time
 import robot_motion_sdk as sdk
 
-sdk.service.initial(None, "myApp")
-client = sdk.MotionLowLevelClient()              # 板内单设备，无参
+if not sdk.service.initial(None, "myReadOnlyApp"):
+    raise RuntimeError("SDK initialization failed")
+client = sdk.MotionLowLevelClient()
 try:
-    client.connect(observed_hz=500)
-    while client.get_state() != sdk.LowLevelState.kConnected: time.sleep(0.01)
-
-    client.set_motion_enable(True)
-    while client.get_state() != sdk.LowLevelState.kPrepared:  time.sleep(0.01)
-
-    # 周期 send_control(...) + get_latest_observation(...)，完整循环见 §6.3
+    if not client.connect(observed_hz=500):
+        raise RuntimeError("connect start failed")
+    deadline = time.monotonic() + 10.0
+    while client.get_state() != sdk.LowLevelState.kConnected:
+        if time.monotonic() >= deadline:
+            raise TimeoutError("connect timeout")
+        time.sleep(0.05)
+    layout = client.get_motor_layout()
+    if layout is None:
+        raise RuntimeError("get_motor_layout failed")
 finally:
-    client.set_motion_enable(False)
     client.disconnect()
     sdk.service.shutdown()
 ```
@@ -130,44 +146,34 @@ my_robot_app/
 ### CMakeLists.txt 样例
 
 ```cmake
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
 project(my_robot_app CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 1) 指定 SDK 安装前缀（默认 /opt/uniubi/；源码仓库可用 ~/uniubi_robot_sdk）
-set(UNIUBI_SDK_ROOT "$ENV{HOME}/uniubi_robot_sdk" CACHE PATH "Uniubi SDK install root")
-
-# 2) 按目标架构自动选 Lib 子目录（x86_64 / aarch64 / i386）
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
-    set(ARCH_DIR "x86_64")
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
-    set(ARCH_DIR "aarch64")
-else()
-    set(ARCH_DIR "i386")
-endif()
-
-# 3) 定位 SDK .so 与公开头
-find_library(SDK_LIB robotMotionSdk
-             PATHS ${UNIUBI_SDK_ROOT}/lib/${ARCH_DIR}
-             NO_DEFAULT_PATH REQUIRED)
+find_package(UniubiRobotSdk CONFIG REQUIRED)
 
 add_executable(my_robot_app src/main.cpp)
-target_include_directories(my_robot_app PRIVATE ${UNIUBI_SDK_ROOT}/include)
-target_link_libraries(my_robot_app PRIVATE ${SDK_LIB} pthread)
+target_link_libraries(my_robot_app PRIVATE Uniubi::RobotMotionSdk)
 ```
 
 ### 构建 + 运行
 
 ```bash
-mkdir -p build && cd build
-cmake -DUNIUBI_SDK_ROOT=~/uniubi_robot_sdk ..
-make -j$(nproc)
+export UNIUBI_SDK_PREFIX=/path/to/installed/uniubi
+cmake -S . -B build -DCMAKE_PREFIX_PATH="$UNIUBI_SDK_PREFIX"
+cmake --build build -j"$(nproc)"
 
 # 运行前确保 SDK .so 在动态库路径
-export LD_LIBRARY_PATH=~/uniubi_robot_sdk/lib/$(uname -m):$LD_LIBRARY_PATH
-sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./my_robot_app
+case "$(uname -m)" in
+  x86_64|amd64) SDK_ARCH=x86_64 ;;
+  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  i386|i486|i586|i686) SDK_ARCH=i386 ;;
+  *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
+esac
+export LD_LIBRARY_PATH="$UNIUBI_SDK_PREFIX/lib/$SDK_ARCH${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./build/my_robot_app
 ```
 
 当前设备运行 SDK 程序需要 root 权限。构建不需要 `sudo`；运行时显式传入 `LD_LIBRARY_PATH`，避免 `sudo` 清理当前用户环境后找不到 SDK 动态库。
@@ -512,7 +518,7 @@ Vector3f / Quaternionf 的 `error` 字段共用此枚举，分别独立标识 `a
 
 > 低级数据面的 `PowerObserved` 与高级查询 `querySystemStatus.battery`（详见高级接口手册 §4.5.1）描述同一物理电池，但 `PowerObserved` 是嵌入观测帧的轻量子集（实时性优先），`querySystemStatus.battery` 是更完整的快照（含 BMS 状态码、循环次数等，按查询响应）。
 
-#### 4.4.3 `MotorLayout` —— 硬件布局
+#### 4.4.4 `MotorLayout` —— 硬件布局
 
 ```cpp
 struct MotorLayout {
@@ -543,7 +549,7 @@ RR_ABAD, RR_HIP, RR_KNEE
 该顺序是 SDK/机器人数据契约，不代表策略模型的输入输出顺序。模型顺序由训练和导出
 契约定义；部署程序必须显式完成 `SDK 顺序 → 模型顺序 → SDK 顺序` 的双向重排。
 
-#### 4.4.4 `TRCStickFrame` —— 遥控手柄帧
+#### 4.4.5 `TRCStickFrame` —— 遥控手柄帧
 
 ```cpp
 struct TRCStickFrame {
@@ -575,7 +581,7 @@ struct TRCStickFrame {
 
 对外按键名 Stand / Motion 在 SDK 中分别对应 `buttonBack` / `buttonStart`。具体动作组合以设备 `getMotionCapabilities()` 返回的 `mapping` 为准；当前标准映射见高阶 TRC 文档。RT 条件对应 `axesRT`。
 
-#### 4.4.5 `SensorObserved` —— 传感器观测（GPS + UWB）
+#### 4.4.6 `SensorObserved` —— 传感器观测（GPS + UWB）
 
 由 `getSensorObservation(SensorObserved*, uint32_t timeout)` 返回（`timeout` 单位 us，与 prepare 无关，`kConnected` / `kPrepared` 任一即可读）。
 
@@ -627,7 +633,7 @@ struct UWBRawObserved {
 
 > 无对应传感器硬件的设备无数据写入，`getSensorObservation` 会等待至超时返回 false。
 
-#### 4.4.6 坐标系类型 `GEOGCoordMode`（保留）
+#### 4.4.7 坐标系类型 `GEOGCoordMode`（保留）
 
 `GEOGCoordMode`（`gcj02` / `wgs84` / `bd09` / `mapBar`）已在公开头定义、并导出为 Python `sdk.GEOGCoordMode`，但当前**无观测字段引用**（保留给坐标转换用途）。
 

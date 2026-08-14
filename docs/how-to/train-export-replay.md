@@ -16,8 +16,8 @@ Register a task, run a minimal training job, confirm that its checkpoint can be 
 
 ```bash
 cd /path/to/uniubi_rl_lab
-python -m pip install -e source/uniubi_rl_lab
-python scripts/list_envs.py
+python3 -m pip install -e source/uniubi_rl_lab
+python3 scripts/list_envs.py
 ```
 
 Confirm that `Uniubi-Cyvet-Velocity` appears in the task list.
@@ -25,7 +25,7 @@ Confirm that `Uniubi-Cyvet-Velocity` appears in the task list.
 ## 2. Run Minimal Training
 
 ```bash
-python scripts/rsl_rl/train.py --task=Uniubi-Cyvet-Velocity --headless --num_envs=16 --max_iterations=1 --device cuda:0
+python3 scripts/rsl_rl/train.py --task=Uniubi-Cyvet-Velocity --headless --num_envs=16 --max_iterations=1 --device cuda:0
 ```
 
 Success criteria: the task starts, reports the observation and action shapes, and creates a run directory that can be replayed.
@@ -33,7 +33,7 @@ Success criteria: the task starts, reports the observation and action shapes, an
 ## 3. Replay a Checkpoint
 
 ```bash
-python scripts/rsl_rl/play.py --task=Uniubi-Cyvet-Velocity --checkpoint logs/rsl_rl/cyvet_velocity/<run>/model_<iter>.pt --num_envs=32
+python3 scripts/rsl_rl/play.py --task=Uniubi-Cyvet-Velocity --checkpoint logs/rsl_rl/cyvet_velocity/<run>/model_<iter>.pt --num_envs=32
 ```
 
 ## 4. Continue to Deployment
