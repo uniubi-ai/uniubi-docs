@@ -4,7 +4,6 @@
 
 This section explains the compute architecture, control abstractions, and system boundaries used in Uniubi robot development: how responsibilities are divided between the brain and cerebellum, what an application controls, where the feedback loop runs, and what responsibilities belong to the SDK, ROS 2 components, and robot services.
 
-Before connecting to a robot, read [Device Network and Robot Compute Module Access](device-network.md) to understand wireless bridging, wired addressing, and exposed ports.
 
 ## 1. Brain and Cerebellum
 
@@ -48,7 +47,14 @@ flowchart LR
 
 > The real-robot Low-level SDK must run on the robot's brain. It does not support direct hardware control from an external PC.
 
-## 2. Body Coordinate System and Default Stance
+## 2. Device Network and Robot Compute Module Access
+
+Before connecting to a real robot, understand the wireless-bridge and wired-direct access paths, then confirm the target IP address, exposed ports, and network interface.
+A High-level application can connect to a real robot from an external computer or the robot's compute module. A real-robot Low-level SDK application must run on the compute module.
+
+[Read Device Network and Robot Compute Module Access](device-network.md)
+
+## 3. Body Coordinate System and Default Stance
 
 CYVET uses a right-handed coordinate system: +X points forward, +Y points left, and +Z points upward. Positive roll, pitch, and yaw follow the right-hand rule.
 
@@ -58,7 +64,7 @@ The dimensions below are based on the current robot asset and default joint pose
 
 ![CYVET default standing dimensions](images/cyvet-default-standing-dimensions.en.png)
 
-## 3. Two Control Abstractions
+## 4. Two Control Abstractions
 
 | Dimension | High-level | Low-level |
 |---|---|---|
@@ -118,7 +124,7 @@ flowchart LR
 
 Passing Mock / Sim2Sim validation does not complete real-robot validation. Recheck the target architecture, ABI, control rate, hardware behavior, emergency stop, and manual takeover on the physical robot. A Low-level policy application must also move to the robot's onboard runtime.
 
-## 4. Control Lifecycle
+## 5. Control Lifecycle
 
 Real-robot control should follow this lifecycle in either mode:
 
@@ -145,7 +151,7 @@ The continuous-control step differs by mode:
 
 See the [API Reference](../api-reference/README.md) for client state machines and lifecycle details.
 
-## 5. Component Responsibilities
+## 6. Component Responsibilities
 
 | Component | Responsible for | Not responsible for |
 |---|---|---|
@@ -157,7 +163,7 @@ See the [API Reference](../api-reference/README.md) for client state machines an
 
 The SDK, ROS 2 bridge, and message definitions are complementary components, not interchangeable entry points. Choose the control abstraction first, then choose an implementation that supports it.
 
-## 6. From Training to a Real Robot
+## 7. From Training to a Real Robot
 
 A typical Low-level policy validation flow is:
 
@@ -178,7 +184,7 @@ Each stage answers a different question:
 
 Passing simulation or Mock validation does not prove safe real-robot operation.
 
-## 7. Common Boundaries
+## 8. Common Boundaries
 
 - High-level and Low-level are control abstractions, not choices between C++, Python, and ROS 2.
 - High-level supports the SDK or ROS 2 Motion Bridge. Joint-level Low-level control uses the SDK.
@@ -187,7 +193,6 @@ Passing simulation or Mock validation does not prove safe real-robot operation.
 
 ## Continue Reading
 
-- [Device Network and Robot Compute Module Access](device-network.md)
 - [Quick Start](../../README.md#quick-start)
 - [How-to Guides](../how-to/README.md)
 - [API Reference](../api-reference/README.md)

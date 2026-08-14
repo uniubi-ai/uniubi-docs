@@ -8,6 +8,8 @@ Uniubi Docs is the central documentation site for developing with Uniubi robots.
 
 Choose a control mode first, then choose an implementation. Do not begin by choosing a programming language or repository.
 
+> Before connecting to a real robot, read [Device Network and Robot Compute Module Access](docs/core-concepts/device-network.md) to confirm the wireless or wired access point, target IP address, exposed ports, and network interface. Skip this when working only with Mock / Sim2Sim, offline builds, or training.
+
 ### 1. Choose a control mode
 
 | Goal | Control mode | Start here |
@@ -28,7 +30,7 @@ Joint-level Low-level control uses the SDK. ROS 2 Motion Bridge does not provide
 ### 3. Continue with your task
 
 - [Build and install the SDK](docs/BUILD.md): prepare a native, on-board, or cross-compilation environment for C++ and Python development.
-- [Use High-level control](docs/how-to/high-level-control.md): read robot state and invoke built-in actions.
+- [Use High-level control](docs/how-to/high-level-control.md): use High-level interfaces from an external computer or the robot's compute module to read state and invoke built-in actions; target Mock / Sim2Sim or a real robot.
 - [Use ROS 2 Motion Bridge](docs/how-to/ros2-motion-bridge.md): access High-level capabilities from ROS 2.
 - [Use Low-level control](docs/how-to/low-level-control.md): validate posture on a safety rig before validating policy walking on clear, level ground.
 - [Train, export, and replay a policy](docs/how-to/train-export-replay.md): develop and deploy a custom Low-level policy.

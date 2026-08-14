@@ -9,6 +9,8 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 
 根 README 先帮助你判断控制模式，再引导你选择实现方式和具体仓库。不要先按语言或仓库选择入口。
 
+> 需要连接真实机器人时，先阅读 [设备网络与大脑访问](docs/core-concepts/device-network.zh-CN.md)，确认无线/有线访问入口、目标 IP、开放端口和通信网卡；仅进行 Mock / Sim2Sim、离线构建或训练时可按需跳过。
+
 ### 1. 选择控制模式
 
 | 你要做什么 | 控制模式 | 先读哪篇导读 |
@@ -31,7 +33,7 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 确定控制模式和实现方式后，直接进入当前要完成的任务：
 
 - [构建和安装 SDK](docs/BUILD.zh-CN.md)：准备本机或板端的 C++ / Python 开发环境。
-- [使用 High-level 控制](docs/how-to/high-level-control.zh-CN.md)：在真实机器人上读取状态并调用内置动作。
+- [使用 High-level 控制](docs/how-to/high-level-control.zh-CN.md)：通过外部电脑或机器人“大脑”使用 High-level 接口，读取状态并调用内置动作；目标可为 Mock / Sim2Sim 或真实机器人。
 - [使用 ROS 2 Motion Bridge](docs/how-to/ros2-motion-bridge.zh-CN.md)：通过 ROS 2 接入 High-level 能力。
 - [使用 Low-level 控制](docs/how-to/low-level-control.zh-CN.md)：先在安全吊架上验证姿态，再到空旷平整地面验证策略行走。
 - [训练、导出和回放策略](docs/how-to/train-export-replay.zh-CN.md)：开发并部署自己的 Low-level 策略。

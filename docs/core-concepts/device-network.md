@@ -6,6 +6,12 @@ A Uniubi robot includes a cerebellum (motion controller) for standard functions 
 
 ## Network Topology
 
+The diagram shows only the access paths developers need to understand. It intentionally omits the robot's internal network, interfaces, and implementation details:
+
+![Robot network access topology](images/device-network-topology.en.png)
+
+> Network reachability does not change control deployment requirements. The real-robot Low-level SDK must still run on the robot's compute module.
+
 | Connection | Available address | Notes |
 |---|---|---|
 | Wireless | Motion-controller IP shown in the app | Access to the compute module is bridged through the motion controller |
