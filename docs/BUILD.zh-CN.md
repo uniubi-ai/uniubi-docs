@@ -5,9 +5,9 @@
 本指南覆盖 C++ SDK、Python SDK、ROS 2 消息包和 ROS 2 示例包的分仓构建方式。C++ SDK 与 Python SDK 分别构建；`uniubi_robot_sdk` 不再把 Python binding 作为子目录一起编译。
 
 相关文档：
-- **高级接口手册**：[`uniubi_high_level_sdk.md`](uniubi_high_level_sdk.zh-CN.md) —— 高级控制接口（C++/Python）公开接口、枚举、回调、字段定义
-- **低级接口手册**：[`uniubi_low_level_sdk.md`](uniubi_low_level_sdk.zh-CN.md) —— 低级控制接口（C++/Python）公开接口、枚举、回调、字段定义
-- **媒体总线手册**：[`uniubi_media_sdk.md`](uniubi_media_sdk.zh-CN.md) —— 摄像头 / 麦克风帧订阅（音视频原始帧 + 编码帧）接口
+- **High-level API**：[Python](api-reference/python/high-level.zh-CN.md) · [C++](api-reference/cpp/high-level.zh-CN.md)
+- **Low-level API**：[Python](api-reference/python/low-level.zh-CN.md) · [C++](api-reference/cpp/low-level.zh-CN.md)
+- **MediaBus API**：[Python](api-reference/python/media.zh-CN.md) · [C++](api-reference/cpp/media.zh-CN.md)
 - **DDS / ROS 2 直连接入手册**：[`uniubi_robot_dds_api.md`](uniubi_robot_dds_api.zh-CN.md) —— 不走 SDK，直接用 OMG DDS 或 ROS 2 对接设备的协议契约 + 工程模板
 - **构建说明**：本文件
 

@@ -77,7 +77,7 @@ python3 -c "import robot_motion_sdk as sdk; print(sdk.MotionHighLevelClient)"
 
 ## 下一步
 
-- High-level：[使用机器人内置动作](high-level-control.zh-CN.md) 和 [`uniubi_high_level_sdk.md`](../uniubi_high_level_sdk.zh-CN.md)
-- Low-level：[自定义关节控制策略](low-level-control.zh-CN.md) 和 [`uniubi_low_level_sdk.md`](../uniubi_low_level_sdk.zh-CN.md)
-- 媒体帧：[`uniubi_media_sdk.md`](../uniubi_media_sdk.zh-CN.md)
+- High-level：[使用机器人内置动作](high-level-control.zh-CN.md)、[Python API](../api-reference/python/high-level.zh-CN.md) 或 [C++ API](../api-reference/cpp/high-level.zh-CN.md)
+- Low-level：[自定义关节控制策略](low-level-control.zh-CN.md)、[Python API](../api-reference/python/low-level.zh-CN.md) 或 [C++ API](../api-reference/cpp/low-level.zh-CN.md)
+- 媒体帧：[Python API](../api-reference/python/media.zh-CN.md) 或 [C++ API](../api-reference/cpp/media.zh-CN.md)
 - 项目级构建细节：[`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) 和 [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py) 的 README

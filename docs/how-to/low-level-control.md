@@ -66,7 +66,8 @@ Never execute `walk` while the robot is suspended. During both stages, keep the 
 
 ## Detailed Interfaces
 
-- [Low-level SDK API](../uniubi_low_level_sdk.md)
+- [Python Low-level API](../api-reference/python/low-level.md)
+- [C++ Low-level API](../api-reference/cpp/low-level.md)
 - [`uniubi_robot_sdk` Low-level example](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel.cpp)
 - [`uniubi_robot_sdk_py` examples](https://github.com/uniubi-ai/uniubi_robot_sdk_py/tree/main/examples)
 

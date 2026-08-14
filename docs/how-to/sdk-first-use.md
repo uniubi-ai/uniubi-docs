@@ -79,7 +79,7 @@ Success criteria:
 
 ## Next Steps
 
-- High-level: [Use Built-in Robot Actions](high-level-control.md) and the [High-level SDK API](../uniubi_high_level_sdk.md)
-- Low-level: [Run a Custom Joint-control Policy](low-level-control.md) and the [Low-level SDK API](../uniubi_low_level_sdk.md)
-- Media frames: [Media SDK API](../uniubi_media_sdk.md)
+- High-level: [Use Built-in Robot Actions](high-level-control.md), then choose the [Python API](../api-reference/python/high-level.md) or [C++ API](../api-reference/cpp/high-level.md)
+- Low-level: [Run a Custom Joint-control Policy](low-level-control.md), then choose the [Python API](../api-reference/python/low-level.md) or [C++ API](../api-reference/cpp/low-level.md)
+- Media frames: choose the [Python API](../api-reference/python/media.md) or [C++ API](../api-reference/cpp/media.md)
 - Repository-specific build details: [`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) and [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py)

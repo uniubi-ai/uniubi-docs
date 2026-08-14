@@ -5,9 +5,9 @@
 This guide covers the C++ SDK, Python SDK, ROS 2 message package, and ROS 2 examples. The C++ and Python SDKs are built separately; `uniubi_robot_sdk` no longer builds the Python binding as a subdirectory.
 
 Related documents:
-- **High-level SDK API**: [`uniubi_high_level_sdk.md`](uniubi_high_level_sdk.md) — public C++/Python interfaces, enums, callbacks, and fields
-- **Low-level SDK API**: [`uniubi_low_level_sdk.md`](uniubi_low_level_sdk.md) — public C++/Python interfaces, enums, callbacks, and fields
-- **Media SDK API**: [`uniubi_media_sdk.md`](uniubi_media_sdk.md) — camera, microphone, raw-frame, and encoded-frame subscription
+- **High-level API:** [Python](api-reference/python/high-level.md) · [C++](api-reference/cpp/high-level.md)
+- **Low-level API:** [Python](api-reference/python/low-level.md) · [C++](api-reference/cpp/low-level.md)
+- **MediaBus API:** [Python](api-reference/python/media.md) · [C++](api-reference/cpp/media.md)
 - **Direct DDS / ROS 2 API**: [`uniubi_robot_dds_api.md`](uniubi_robot_dds_api.md) — device protocol contracts and project templates for direct OMG DDS or ROS 2 integration without the SDK
 
 ---

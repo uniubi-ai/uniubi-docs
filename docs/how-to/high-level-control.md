@@ -62,6 +62,6 @@ For SDK development, first complete [SDK First Use](sdk-first-use.md). For ROS 2
 2. Complete read-only observation checks before requesting control.
 3. With the emergency stop reachable and an operator ready to intervene, validate low-risk actions such as standing and lying down before low-speed locomotion.
 
-See the [High-level SDK API](../uniubi_high_level_sdk.md) and [ROS 2 Motion Bridge guide](ros2-motion-bridge.md) for lifecycle and safety details.
+See the High-level [Python API](../api-reference/python/high-level.md), [C++ API](../api-reference/cpp/high-level.md), and [ROS 2 Motion Bridge guide](ros2-motion-bridge.md) for lifecycle and safety details.
 
 The external-host C++ SDK path is documented here as a supported deployment mode. This page does not claim external-host real-robot validation for Python or ROS 2.

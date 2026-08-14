@@ -62,6 +62,6 @@ Low-level 真机的部署边界不同：关节控制应用仍运行在板内。�
 2. 先完成只读观测验证。
 3. 在具备急停和人工接管条件后，再执行站立、趴下或低速运动等低风险动作。
 
-High-level 控制流程和安全边界见 [C++ 高级控制 SDK](../uniubi_high_level_sdk.zh-CN.md) 及 [ROS 2 Motion bridge 导读](ros2-motion-bridge.zh-CN.md)。
+High-level 控制流程和安全边界见 [Python API](../api-reference/python/high-level.zh-CN.md)、[C++ API](../api-reference/cpp/high-level.zh-CN.md) 及 [ROS 2 Motion bridge 导读](ros2-motion-bridge.zh-CN.md)。
 
 本文将外部主机 C++ SDK 作为受支持部署模式说明，但不据此声称 Python 或 ROS 2 已完成外部主机真机验证。

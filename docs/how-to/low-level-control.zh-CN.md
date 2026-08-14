@@ -78,7 +78,8 @@ observation 契约。
 
 ## 详细接口
 
-- [C++ 低级控制 SDK](../uniubi_low_level_sdk.zh-CN.md)
+- [Python Low-level API](../api-reference/python/low-level.zh-CN.md)
+- [C++ Low-level API](../api-reference/cpp/low-level.zh-CN.md)
 - [`uniubi_robot_sdk` Low-level 示例](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel.cpp)
 - [`uniubi_robot_sdk_py` Low-level 示例](https://github.com/uniubi-ai/uniubi_robot_sdk_py/tree/main/examples)
 
