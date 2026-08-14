@@ -24,6 +24,21 @@ The diagram follows the actual installed orientation shown in the hardware photo
 
 The two Type-C connectors look similar, but only the connector marked `USB-EXT` is available to applications running on the robot brain. Identify the connector by its PCB silkscreen, not by connector position alone.
 
+## Back-Rail Mounting Dimensions
+
+The robot back cover provides two rails of the same specification for mounting payload brackets or other peripherals. The rails are parallel and use the same cross-section.
+
+![CYVET back-rail mounting dimensions](images/cyvet-back-rail-mounting-dimensions.en.png)
+
+The key mechanical dimensions are:
+
+- Each rail is 212.15 mm long, and the rail center spacing is 118.00 mm.
+- Each rail provides three mounting positions. Adjacent mounting holes are 83.00 mm apart, and the first-to-last mounting-hole span is 166.00 mm.
+- The rail cross-section is 12 mm wide and 13 mm high, with an 8 mm inner channel, a 5.2 mm opening, and 2 mm wall and base thicknesses.
+- The bottom mounting hole is 4.5 mm in diameter, with an 8 mm upper relief.
+
+When selecting a slider, nut, or custom bracket, check both the rail opening and the full cross-section. After mounting a payload, recheck the robot center of mass, leg clearance, cable routing, and fastener security.
+
 ## 1. Connect a USB Peripheral
 
 1. Power off the peripheral if its installation procedure requires it.
