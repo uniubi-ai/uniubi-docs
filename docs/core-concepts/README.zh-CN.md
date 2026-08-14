@@ -159,13 +159,13 @@ Mock / Sim2Sim 验证通过不等于实机验证完成。迁移到真实机器�
 
 ## 5. 训练、仿真和真实机器人的关系
 
-Low-level 策略通常经过以下验证链路：
+Low-level 策略的典型验证链路如下：
 
 ```text
 训练
   → checkpoint 回放
   → 本地 Sim2Sim
-  → Mock / SDK Sim2Sim
+  → [可选：Mock / SDK Sim2Sim]
   → 真实机器人
 ```
 
@@ -173,7 +173,7 @@ Low-level 策略通常经过以下验证链路：
 
 - checkpoint 回放验证策略和接口是否能运行；
 - Sim2Sim 验证策略与仿真控制器的闭环行为；
-- Mock / SDK Sim2Sim 验证 SDK、仿真 bridge 和消息链路；
+- 可选的 Mock / SDK Sim2Sim 在需要覆盖该集成链路时，验证 SDK client、仿真 bridge 和消息链路；它不是每个策略的必经阶段；
 - 真实机器人还必须额外验证架构、ABI、控制周期、关节顺序、急停和人工接管。
 
 仿真或 Mock 通过，不等于真实机器人安全通过。

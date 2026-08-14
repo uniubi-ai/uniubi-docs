@@ -159,13 +159,13 @@ The SDK, ROS 2 bridge, and message definitions are complementary components, not
 
 ## 5. From Training to a Real Robot
 
-A Low-level policy normally progresses through these validation stages:
+A typical Low-level policy validation flow is:
 
 ```text
 training
   → checkpoint replay
   → local Sim2Sim
-  → Mock / SDK Sim2Sim
+  → [optional: Mock / SDK Sim2Sim]
   → real robot
 ```
 
@@ -173,7 +173,7 @@ Each stage answers a different question:
 
 - Checkpoint replay verifies that the policy and environment can execute.
 - Local Sim2Sim verifies the policy and simulated controller loop.
-- Mock / SDK Sim2Sim verifies the SDK client, simulation bridge, and message path.
+- Optional Mock / SDK Sim2Sim verifies the SDK client, simulation bridge, and message path when that integration path needs coverage; it is not a prerequisite for every policy.
 - Real-robot testing additionally verifies architecture, ABI, control rate, joint order, emergency stop, and manual takeover.
 
 Passing simulation or Mock validation does not prove safe real-robot operation.
