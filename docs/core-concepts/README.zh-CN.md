@@ -32,6 +32,37 @@ High-level 的应用告诉机器人“要做什么”。机器人内部已有的
 
 Low-level 的应用自己决定“每个关节下一周期应该怎么控制”。策略可以来自自己的训练流程，也可以是自己实现的控制器；SDK 负责提供观测、控制接口和实时通信链路，但不替应用训练策略或决定关节目标。
 
+### SDK 与运行目标
+
+High-level 和 Low-level 均可通过同一套 SDK 接入 Mock / Sim2Sim 或真实机器人。用户程序复用的是 SDK 接口和控制逻辑；切换运行目标后，仍需分别验证运行环境和安全边界。
+
+```mermaid
+flowchart LR
+    APP["用户程序<br/>动作调用 · 状态处理 · 策略推理"]
+
+    subgraph SDK["Uniubi SDK"]
+        CPP["C++ SDK<br/>uniubi_robot_sdk"]
+        PY["Python SDK<br/>uniubi_robot_sdk_py"]
+        LINK["统一观测与控制接口<br/>DDS / RPC"]
+
+        CPP --> LINK
+        PY --> LINK
+    end
+
+    subgraph TARGET["运行目标"]
+        SIM["Mock / Sim2Sim<br/>High-level / Low-level<br/>验证 SDK、消息与控制链路"]
+        ROBOT["Uniubi 真机<br/>High-level：内置运动能力<br/>Low-level：自定义关节控制"]
+    end
+
+    APP -->|"C++"| CPP
+    APP -->|"Python"| PY
+    LINK -->|"仿真网络环境"| SIM
+    LINK -->|"真实设备网络"| ROBOT
+    SIM -.->|"验证通过后迁移"| ROBOT
+```
+
+Mock / Sim2Sim 验证通过不等于实机验证完成。迁移到真实机器人后，还需重新确认架构、ABI、控制周期、硬件行为、急停和人工接管。
+
 ## 3. 控制权和生命周期
 
 无论使用哪种模式，真实机器人控制都应遵循相同的生命周期：

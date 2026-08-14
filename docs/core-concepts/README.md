@@ -32,6 +32,37 @@ A High-level application tells the robot what to do. The robot's built-in motion
 
 A Low-level application determines how each joint should be controlled on every cycle. The controller may be a trained policy or a conventional control algorithm. The SDK provides observations, control interfaces, and the real-time communication path, but it does not supply the policy or choose joint targets.
 
+### SDK and Runtime Targets
+
+Both High-level and Low-level applications can use the same SDK interfaces with Mock / Sim2Sim or a real robot. The application reuses its SDK integration and control logic across targets, while each runtime environment and its safety boundaries still require separate validation.
+
+```mermaid
+flowchart LR
+    APP["User application<br/>Action calls · State handling · Policy inference"]
+
+    subgraph SDK["Uniubi SDK"]
+        CPP["C++ SDK<br/>uniubi_robot_sdk"]
+        PY["Python SDK<br/>uniubi_robot_sdk_py"]
+        LINK["Unified observation and control interfaces<br/>DDS / RPC"]
+
+        CPP --> LINK
+        PY --> LINK
+    end
+
+    subgraph TARGET["Runtime target"]
+        SIM["Mock / Sim2Sim<br/>High-level / Low-level<br/>Validate SDK, messages, and control paths"]
+        ROBOT["Uniubi real robot<br/>High-level: built-in motion<br/>Low-level: custom joint control"]
+    end
+
+    APP -->|"C++"| CPP
+    APP -->|"Python"| PY
+    LINK -->|"Simulation network"| SIM
+    LINK -->|"Robot network"| ROBOT
+    SIM -.->|"Migrate after validation"| ROBOT
+```
+
+Passing Mock / Sim2Sim validation does not complete real-robot validation. Recheck the architecture, ABI, control rate, hardware behavior, emergency stop, and manual takeover on the physical robot.
+
 ## 3. Control Lifecycle
 
 Real-robot control should follow this lifecycle in either mode:
