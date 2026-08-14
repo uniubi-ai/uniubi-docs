@@ -1,10 +1,10 @@
-# Connect USB and Ethernet Peripherals
+# Connect Peripherals
 
 **English** | [简体中文](connect-peripherals.zh-CN.md)
 
 ## Goal
 
-Connect a USB or Ethernet peripheral to the robot compute module (the “brain”), then verify that the operating system can reach it.
+Connect a USB or Ethernet peripheral to the robot compute module (the “brain”), provide power through the external DC outputs when required, and verify the resulting connection.
 
 This guide applies to the Creator version. It describes external peripheral connectivity only; it does not change the control path between the robot brain and motion-control subsystem (the “cerebellum”).
 
@@ -15,6 +15,12 @@ This guide applies to the Creator version. It describes external peripheral conn
 | `USB-EXT` Type-C | Robot brain | USB cameras, sensors, storage devices, and other supported USB peripherals |
 | `USB-BASE` Type-C | Motion-control subsystem | Reserved for the cerebellum; do not use it as a robot-brain peripheral port |
 | RJ45 Ethernet | Robot brain | Ethernet cameras, LiDAR units, and other network peripherals |
+| DC 12V output | Onboard power system | Standard XT30 power output; total 12V output power must not exceed 36W |
+| DC 24V output | Onboard power system | Standard XT30 power output; 24V output power must not exceed 120W |
+
+![CYVET external interface layout](images/cyvet-peripheral-interface-layout.svg)
+
+The diagram follows the actual installed orientation shown in the hardware photo: `USB-BASE` is above `USB-EXT`, RJ45 is to their right, and the two DC power outputs are further to the right.
 
 The two Type-C connectors look similar, but only the connector marked `USB-EXT` is available to applications running on the robot brain. Identify the connector by its PCB silkscreen, not by connector position alone.
 
@@ -64,7 +70,21 @@ Do not copy an interface name or IP address from another robot without checking 
 
 Success means that the robot brain has an address in the peripheral's subnet and can reach the peripheral's IP address without an address conflict.
 
-## 3. Troubleshooting
+## 3. Power an External Peripheral
+
+The DC 12V and DC 24V connectors are power outputs for external equipment. They do not carry USB or Ethernet data.
+
+Before connecting a peripheral:
+
+1. Confirm the peripheral's rated input voltage, power requirement, connector, and polarity.
+2. Select the output whose voltage matches the peripheral.
+3. Include startup and peak power when checking the power budget.
+4. Keep total 12V output power at or below 36W and 24V output power at or below 120W.
+5. Establish the USB or Ethernet data connection separately when the peripheral also exchanges data with the robot brain.
+
+Do not connect a device to an output voltage that does not match its rated input. Identify the power outputs by the PCB silkscreen and the delivered hardware documentation before wiring.
+
+## 4. Troubleshooting
 
 ### The USB peripheral is not visible on the robot brain
 
@@ -82,6 +102,13 @@ Success means that the robot brain has an address in the peripheral's subnet and
 ### The peripheral is reachable but the application cannot open it
 
 Network or USB reachability proves only the transport path. Continue by checking device permissions, the required driver or runtime library, and application-specific configuration.
+
+### The peripheral has a data connection but does not power on
+
+- Confirm that the selected output voltage matches the peripheral.
+- Confirm the connector and polarity.
+- Check both continuous and startup power requirements against the output limit.
+- Remember that a USB or Ethernet data connection does not imply that the separate DC power connection is correct.
 
 ## Next Steps
 

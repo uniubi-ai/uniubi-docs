@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640">
+  <title>CYVET peripheral interface layout</title>
+  <desc>Technical layout redrawn from the supplied hardware photo after rotating the photo 90 degrees counterclockwise to the actual installation direction. USB-BASE is above USB-EXT on the left, RJ45 is in the middle, and the two DC outputs are on the right.</desc>
+
+  <rect width="1200" height="640" fill="#070707"/>
+
+  <g fill="none" stroke="#6e6e6e" stroke-width="2">
+    <rect x="40" y="76" width="1120" height="488" rx="28"/>
+    <path d="M98 116 H1102"/>
+    <path d="M98 524 H1102"/>
+    <circle cx="78" cy="114" r="15"/>
+    <circle cx="1122" cy="114" r="15"/>
+    <circle cx="78" cy="526" r="15"/>
+    <circle cx="1122" cy="526" r="15"/>
+  </g>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="600" y="42" fill="#b9b9b9" font-size="16" text-anchor="middle" letter-spacing="2">CYVET EXTERNAL INTERFACE BOARD</text>
+
+    <g id="usb-base">
+      <rect x="140" y="162" width="118" height="72" rx="19" fill="#111111" stroke="#d7d7d7" stroke-width="3"/>
+      <rect x="155" y="176" width="88" height="44" rx="15" fill="#050505" stroke="#f4f4f4" stroke-width="3"/>
+      <path d="M173 198 H225" stroke="#bfbfbf" stroke-width="3"/>
+      <path d="M258 198 H292" fill="none" stroke="#d7d7d7" stroke-width="2"/>
+      <text x="310" y="205" fill="#f4f4f4" font-size="23" font-weight="700">USB-BASE</text>
+      <text x="310" y="228" fill="#a7a7a7" font-size="15">TYPE-C</text>
+    </g>
+
+    <g id="usb-ext">
+      <rect x="140" y="326" width="118" height="72" rx="19" fill="#111111" stroke="#f3a321" stroke-width="4"/>
+      <rect x="155" y="340" width="88" height="44" rx="15" fill="#050505" stroke="#f4f4f4" stroke-width="3"/>
+      <path d="M173 362 H225" stroke="#bfbfbf" stroke-width="3"/>
+      <path d="M258 362 H292" fill="none" stroke="#f3a321" stroke-width="2"/>
+      <text x="310" y="369" fill="#f3a321" font-size="23" font-weight="700">USB-EXT</text>
+      <text x="310" y="392" fill="#f3a321" font-size="15">TYPE-C</text>
+    </g>
+
+    <g id="rj45">
+      <path d="M570 192 H756 V448 H726 L706 474 H620 L600 448 H570 Z" fill="#101010" stroke="#f4f4f4" stroke-width="4"/>
+      <rect x="597" y="226" width="132" height="185" fill="#050505" stroke="#a9a9a9" stroke-width="2"/>
+      <g stroke="#d8d8d8" stroke-width="5">
+        <path d="M611 242 H636"/>
+        <path d="M611 264 H636"/>
+        <path d="M611 286 H636"/>
+        <path d="M611 308 H636"/>
+        <path d="M611 330 H636"/>
+        <path d="M611 352 H636"/>
+        <path d="M611 374 H636"/>
+        <path d="M611 396 H636"/>
+      </g>
+      <text x="663" y="168" fill="#f4f4f4" font-size="24" font-weight="700" text-anchor="middle">RJ45</text>
+      <text x="663" y="504" fill="#a7a7a7" font-size="16" text-anchor="middle">1000 Mbps</text>
+    </g>
+
+    <g id="power">
+      <rect x="842" y="178" width="142" height="86" rx="8" fill="#121212" stroke="#f4f4f4" stroke-width="3"/>
+      <circle cx="882" cy="221" r="20" fill="#050505" stroke="#f3a321" stroke-width="4"/>
+      <circle cx="944" cy="221" r="20" fill="#050505" stroke="#f3a321" stroke-width="4"/>
+      <rect x="842" y="342" width="142" height="86" rx="8" fill="#121212" stroke="#f4f4f4" stroke-width="3"/>
+      <circle cx="882" cy="385" r="20" fill="#050505" stroke="#f3a321" stroke-width="4"/>
+      <circle cx="944" cy="385" r="20" fill="#050505" stroke="#f3a321" stroke-width="4"/>
+      <path d="M984 221 H1004 M984 385 H1004" fill="none" stroke="#d7d7d7" stroke-width="2"/>
+      <text x="1020" y="229" fill="#f4f4f4" font-size="21" font-weight="700">DC 24V</text>
+      <text x="1020" y="393" fill="#f4f4f4" font-size="21" font-weight="700">DC 12V</text>
+    </g>
+  </g>
+</svg>
