@@ -1,10 +1,11 @@
-# Uniubi Docs
+# 宇泛开发者文档
 
 [English](README.md) | **简体中文**
 
 Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读和最小验证，再进入对应仓库。
 
-## Quick Start
+<a id="quick-start"></a>
+## 快速开始
 
 根 README 先帮助你判断控制模式，再引导你选择实现方式和具体仓库。不要先按语言或仓库选择入口。
 
@@ -35,11 +36,12 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 - [使用 Low-level 控制](docs/how-to/low-level-control.zh-CN.md)：先在安全吊架上验证姿态，再到空旷平整地面验证策略行走。
 - [训练、导出和回放策略](docs/how-to/train-export-replay.zh-CN.md)：开发并部署自己的 Low-level 策略。
 
-每篇导读都从一个具体任务开始，不要求先认识全部仓库，也不要求先读完整 API。其他开发和排查专题可在 [How-to 指南](docs/how-to/README.zh-CN.md) 中按需查阅。
+每篇导读都从一个具体任务开始，不要求先认识全部仓库，也不要求先读完整 API。其他开发和排查专题可在 [操作指南](docs/how-to/README.zh-CN.md) 中按需查阅。
 
-## Core Concepts
+<a id="core-concepts"></a>
+## 核心概念
 
-先理解大小脑分工、High-level / Low-level 的定义、实现边界和仓库职责，再进入具体 How-to 或 API 文档。
+先理解大小脑分工、High-level / Low-level 的定义、实现边界和仓库职责，再进入具体操作指南或 API 文档。
 
 包含：
 
@@ -48,9 +50,10 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 - High-level / Low-level 控制抽象；
 - 控制权生命周期与各层组件职责。
 
-[进入 Core Concepts](docs/core-concepts/README.zh-CN.md)
+[进入核心概念](docs/core-concepts/README.zh-CN.md)
 
-## How-to
+<a id="how-to"></a>
+## 操作指南
 
 按具体开发任务完成环境准备、最小验证和后续操作。
 
@@ -61,9 +64,10 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 - ROS 2 Motion Bridge 接入；
 - Low-level 策略训练、导出和回放。
 
-[进入 How-to 指南](docs/how-to/README.zh-CN.md)
+[进入操作指南](docs/how-to/README.zh-CN.md)
 
-## API Reference
+<a id="api-reference"></a>
+## API 参考
 
 在确定控制模式并完成最小验证后，查阅 SDK 和媒体接口的字段、生命周期与示例。
 
@@ -73,9 +77,10 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 - Low-level SDK API；
 - 摄像头、麦克风和编码帧等 Media SDK API。
 
-[进入 API Reference](docs/api-reference/README.zh-CN.md)
+[进入 API 参考](docs/api-reference/README.zh-CN.md)
 
-## Advanced
+<a id="advanced"></a>
+## 高级主题
 
 DDS / ROS 2 直连、协议映射和特殊集成等内容只在确有需要时阅读。
 
@@ -85,7 +90,7 @@ DDS / ROS 2 直连、协议映射和特殊集成等内容只在确有需要时�
 - Discovery、QoS 和底层协议字段；
 - ROS 2 topic、service 与 DDS wire contract 映射。
 
-[进入 Advanced](docs/advanced/README.zh-CN.md)
+[进入高级主题](docs/advanced/README.zh-CN.md)
 
 ## 安全说明
 

@@ -1,10 +1,10 @@
-# API Reference
+# API 参考
 
 [English](README.md) | **简体中文**
 
-本页面向已经确定控制模式并完成最小验证的开发者。先看对应 How-to，再把本页作为接口查询入口。
+本页面向已经确定控制模式并完成最小验证的开发者。先看对应操作指南，再把本页作为接口查询入口。
 
-## SDK API
+## SDK 接口
 
 | 领域 | 文档 | 适用场景 |
 |---|---|---|
@@ -14,6 +14,6 @@
 
 ## 使用建议
 
-- 还没有确定 High-level / Low-level：先回到 [Core Concepts](../core-concepts/README.zh-CN.md)。
-- 还没有完成构建、导入和只读验证：先阅读 [How-to](../how-to/README.zh-CN.md)。
-- 需要原始 DDS / RPC、QoS 或协议字段：进入 [Advanced](../advanced/README.zh-CN.md)，不要从本页直接开始。
+- 还没有确定 High-level / Low-level：先回到 [核心概念](../core-concepts/README.zh-CN.md)。
+- 还没有完成构建、导入和只读验证：先阅读 [操作指南](../how-to/README.zh-CN.md)。
+- 需要原始 DDS / RPC、QoS 或协议字段：进入 [高级主题](../advanced/README.zh-CN.md)，不要从本页直接开始。

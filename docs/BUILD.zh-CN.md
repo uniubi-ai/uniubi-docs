@@ -1,4 +1,4 @@
-# Uniubi Robot Motion SDK 构建指南
+# 宇泛机器人运动 SDK 构建指南
 
 [English](BUILD.md) | **简体中文**
 
@@ -80,7 +80,7 @@ IDL、ROS 2 msg/srv 和协议 schema 的统一源头是 [`uniubi_robot_msgs`](ht
 
 ## 2. C++ SDK 构建（本机架构）
 
-### A. 构建 C++ examples
+### A. 构建 C++ 示例
 
 ```bash
 git clone https://github.com/uniubi-ai/uniubi_robot_sdk.git ~/uniubi_robot_sdk
@@ -332,7 +332,7 @@ sudo env \
   python3 ~/uniubi_robot_sdk_py/examples/example_lowlevel.py
 ```
 
-### B. pip install（装到 site-packages）
+### B. 使用 pip 安装（安装到 site-packages）
 
 ```bash
 git clone https://github.com/uniubi-ai/uniubi_robot_sdk_py.git ~/uniubi_robot_sdk_py
@@ -349,7 +349,7 @@ sudo -H env UNIUBI_SDK_ROOT=~/uniubi_robot_sdk \
 
 `uniubi_robot_sdk_py/CMakeLists.txt` 自包含，pip 通过 `scikit-build-core` 后端调用 cmake（支持 `pip install -e .` 可编辑安装与 `-Ccmake.define.*` 透传）。
 
-### Python MediaBus 构建开关
+### MediaBus Python 绑定构建开关
 
 Python native binding 使用 `UNIUBI_SDK_ENABLE_MEDIA` 控制是否编译媒体帧绑定：
 
@@ -361,7 +361,7 @@ Python native binding 使用 `UNIUBI_SDK_ENABLE_MEDIA` 控制是否编译媒体�
 
 媒体帧订阅仍只支持 `aarch64` 板内本地部署；`x86_64` / `i386` wheel 默认关闭媒体绑定，不能调用 media client 接口。
 
-### C. 生成 wheel（分发给客户）
+### C. 生成 wheel 包（分发给客户）
 
 ```bash
 cd ~/uniubi_robot_sdk_py
@@ -430,7 +430,8 @@ print('clients:', sdk.MotionLowLevelClient, sdk.MotionHighLevelClient)
 
 ---
 
-## 9. Troubleshooting / FAQ
+<a id="troubleshooting--faq"></a>
+## 9. 故障排查 / 常见问题
 
 ### 9.1 `error while loading shared libraries: librobotMotionSdk.so: cannot open shared object file`
 

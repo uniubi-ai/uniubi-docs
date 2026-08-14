@@ -1,4 +1,4 @@
-# Advanced
+# 高级主题
 
 [English](README.md) | **简体中文**
 

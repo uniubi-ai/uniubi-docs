@@ -1,4 +1,4 @@
-# Core Concepts
+# 核心概念
 
 [English](README.md) | **简体中文**
 
@@ -143,7 +143,7 @@ Mock / Sim2Sim 验证通过不等于实机验证完成。迁移到真实机器�
 - High-level 发送动作或运动意图，由机器人内置能力完成后续闭环。
 - Low-level 必须按约定周期持续运行自己的策略，并发送关节位置或扭矩控制量；控制循环、周期和退出行为都属于应用需要验证的内容。
 
-控制权生命周期的具体 API 和状态机见 [API Reference](../api-reference/README.zh-CN.md)。
+控制权生命周期的具体 API 和状态机见 [API 参考](../api-reference/README.zh-CN.md)。
 
 ## 5. 各层组件的职责
 
@@ -188,7 +188,7 @@ Low-level 策略的典型验证链路如下：
 ## 继续阅读
 
 - [设备网络与大脑访问](device-network.zh-CN.md)：确认无线和有线连接下的地址与端口边界。
-- [Quick Start](../../README.zh-CN.md#quick-start)：选择控制模式和实现方式。
-- [How-to](../how-to/README.zh-CN.md)：按任务完成环境准备和最小验证。
-- [API Reference](../api-reference/README.zh-CN.md)：查阅接口、字段和生命周期。
-- [Advanced](../advanced/README.zh-CN.md)：处理协议、DDS、QoS 和特殊集成场景。
+- [快速开始](../../README.zh-CN.md#快速开始)：选择控制模式和实现方式。
+- [操作指南](../how-to/README.zh-CN.md)：按任务完成环境准备和最小验证。
+- [API 参考](../api-reference/README.zh-CN.md)：查阅接口、字段和生命周期。
+- [高级主题](../advanced/README.zh-CN.md)：处理协议、DDS、QoS 和特殊集成场景。

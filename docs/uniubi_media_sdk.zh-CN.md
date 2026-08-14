@@ -1,4 +1,4 @@
-# Uniubi Robot Motion SDK 媒体总线接口手册
+# 宇泛机器人运动 SDK 媒体总线接口手册
 
 [English](uniubi_media_sdk.md) | **简体中文**
 
