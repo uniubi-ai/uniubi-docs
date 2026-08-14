@@ -17,11 +17,22 @@ Build or import the C++ or Python SDK and complete read-only validation before e
 
 Joint-level Low-level control uses `MotionLowLevelClient`. ROS 2 Motion Bridge does not provide an equivalent interface.
 
+## Choose the Deployment Mode
+
+| Mode | High-level real robot | Low-level real robot |
+|---|---|---|
+| External Linux PC / industrial computer | Supported. Select the actual robot-facing network interface and provide the target device ID (SN), obtained from the Basic Information page in the Uniubi App or SDK discovery. The built-in motion service remains on the robot. | Not the hardware deployment path; run the joint-control application onboard. |
+| Robot compute module (“brain”) | Supported. No device ID is required. | Required for current real-hardware joint control. |
+
+For High-level discovery from an external host, configure in this order: register the discovery callback and set the network interface, then initialize the service. Discovery is asynchronous: a `true` return means only that the request was issued. Wait up to 5 seconds for callbacks, retry if none arrive, deduplicate by SN, and require explicit target selection instead of automatically choosing the first response. When the robot IP is known, match it against `network.*.ipv4Addr` in callback `info` to identify the corresponding SN; the client still receives the SN, not the IP.
+
+The external-host C++ SDK path is documented as a supported deployment mode. Do not interpret this page as evidence that Python or ROS 2 has been validated on a real robot from an external host.
+
 ## Prerequisites
 
 - A Linux environment and SDK runtime libraries for the target architecture
 - Device IPs obtained from the app, plus a confirmed login address, externally accessible service ports, and robot-facing network interface; see [Robot Network Access](../core-concepts/device-network.md). External High-level mode must use the interface that actually reaches the robot network; onboard High-level mode must select `eth0.100`
-- Root privileges when running SDK programs on current devices; C++ compilation itself does not require `sudo`
+- An external Linux High-level application does not have a blanket root requirement. Onboard, Low-level, and Media runtimes follow the permissions required by the target device; C++ compilation itself does not require `sudo`
 - Matching C++ SDK, Python binding, architecture, version, and ABI
 - Completion of the [Build, Installation, and Cross-compilation Guide](../BUILD.md)
 

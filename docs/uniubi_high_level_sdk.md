@@ -39,11 +39,20 @@
 - Control ownership is acquired explicitly with `startControl` and maintained by periodic SDK lease renewal.
 - Ownership remains active until `releaseControl()` or `disconnect()` releases it, or until the server session expires.
 - Protocol field encoding: UTF-8 JSON string
-- Supports applications deployed directly on the robot's compute board (onboard mode) and remote access from external hosts.
+High-level real-robot applications support two deployment modes. The built-in motion service always remains on the robot.
+
+| Deployment mode | Application and SDK client | Required target information |
+|---|---|---|
+| External host | Linux PC or industrial computer | Set the host interface that is actually connected to the robot network and create the client with the target device ID (SN). Obtain the SN from the Basic Information page in the Uniubi App or SDK discovery. |
+| Onboard | Robot compute module (“brain”) | No device ID is required; use `create(bool asMaster = false)`. |
+
+This boundary is specific to High-level control. For Low-level control on real hardware, the joint-control application still runs onboard.
+
+The external-host C++ SDK path is documented as supported. API coverage or examples for Python and ROS 2 do not, by themselves, establish external-host real-robot validation.
 
 ---
 
-## Quick Start
+## Quick Start: onboard application
 
 Minimal read-only flow (see §5 for the full interactive CLI). This section neither acquires control ownership nor starts an action:
 
@@ -62,8 +71,6 @@ using HLState = IMotionHighLevelClient::HighLevelState;
 
 int main() {
     auto svc = IMotionSdkService::instance();
-    // In remote mode, optionally pin the actual interface before initialService:
-    // svc->setNetworkInterface("wlan0");
     if (!svc->initialService(nullptr, "myReadOnlyApp")) return 1;
 
     auto client = IMotionHighLevelClient::create();
@@ -98,7 +105,7 @@ int main() {
 import time
 import robot_motion_sdk as sdk
 
-# In remote mode, optionally pin the actual interface before initial:
+# In external-host device-addressing mode, optionally pin the actual interface before initial:
 # sdk.service.set_network_interface("wlan0")
 if not sdk.service.initial(None, "myReadOnlyApp"):
     raise RuntimeError("SDK initialization failed")
@@ -121,7 +128,34 @@ finally:
 
 > Python must exit via `try/finally`. For details, see [§6.2](#62-exit-deadlock-avoidance-must-read).
 
-> This Quick Start covers read-only checks for onboard or single-device use. From an external host or in a multi-device setup, discover the target first and create the client with its device ID as shown in [§5.3](#53-multi-device-example-remote-mode).
+> This Quick Start is the onboard single-device flow and therefore does not take a device ID. An external host always supplies a target SN, even when only one robot is present; see [§5.3](#53-external-host-example-device-addressing).
+
+### Quick Start: external Linux PC or industrial computer
+
+The built-in motion service remains on the robot. The external C++ application selects its actual robot-facing interface and supplies a device ID (SN) obtained from the Basic Information page in the Uniubi App or SDK discovery:
+
+```cpp
+auto svc = IMotionSdkService::instance();
+svc->setNetworkInterface("enp3s0");  // actual interface connected to the robot network
+if (!svc->initialService(nullptr, "myExternalReadOnlyApp")) return 1;
+
+const std::string targetSn = loadDeviceSnFromConfig();  // App/config/operator selection
+auto client = IMotionHighLevelClient::create(targetSn);
+if (!client) {
+    svc->shutdown();
+    return 1;
+}
+client->setConnectCallback(onConnect);  // register before connect()
+if (!client->connect()) {
+    svc->shutdown();
+    return 1;
+}
+// Wait for kConnected, then perform read-only queries.
+client->disconnect();
+svc->shutdown();
+```
+
+The external-host C++ path is documented as supported. This example does not claim external-host real-robot validation for Python or ROS 2.
 
 ---
 
@@ -328,23 +362,23 @@ static const char* version();
 /// Register the log callback
 void setLogCallback(LogCallback cb);
 
-/// Select the SDK network interface in multi-device mode (e.g. "eth0" or "wlan0")
-/// Ignored in onboard single-device mode; Cyclone DDS selects automatically if unset remotely
+/// Select the SDK network interface in external-host device-addressing mode (e.g. "eth0" or "wlan0")
+/// Ignored onboard; an external host must set the actual robot-facing interface before initialization
 void setNetworkInterface(const char* iface);
 
-/// Register the device-discovery callback for multi-device mode
+/// Register the device-discovery callback for external-host device-addressing mode
 /// cb(sn, infoJson): infoJson is a device-details JSON string; typical fields are listed below
 void setDiscoverCallback(DeviceDiscover cb);
 
-/// Return whether the current deployment is multi-device
+/// Return whether the current deployment uses external-host device addressing
 ///   Onboard (SDK and robot on the same machine) -> false
-///   Remote host / multiple robots               -> true
+///   External host (even one robot)               -> true
 bool isMultiDevice() const;
 
 /// Start one non-blocking device-discovery window
 ///   - If a discovery window is active, extend it to at least timeoutMs
 ///   - If the previous window expired, open a new one
-/// Each robot response is delivered through the callback registered by setDiscoverCallback
+/// A true return means only that the request was issued; responses arrive asynchronously through the callback
 bool discoverDevices(uint32_t timeoutMs = 10000);
 ```
 
@@ -365,7 +399,7 @@ bool discoverDevices(uint32_t timeoutMs = 10000);
 
 ##### About `setNetworkInterface`
 
-In remote mode, the SDK generates a Cyclone DDS QoS profile at `/tmp/motion_sdk_host_<pid>.xml` and removes it during `shutdown()`. This profile selects the network interface used by DDS:
+In external-host device-addressing mode, the SDK generates a Cyclone DDS QoS profile at `/tmp/motion_sdk_host_<pid>.xml` and removes it during `shutdown()`. This profile selects the network interface used by DDS:
 
 - **Default:** without `setNetworkInterface`, the generated profile uses `eth0`: `<NetworkInterface name="eth0" priority="3" multicast="default" presence_required="true" />`. With `presence_required="true"`, SDK startup fails immediately if that interface does not exist, exposing configuration problems early.
 - Calling `setNetworkInterface("wlan0")`, for example, overrides the default and generates the profile for that interface.
@@ -406,21 +440,28 @@ Just pass the selected name directly to `setNetworkInterface("eth0")`.
 ```cpp
 auto svc = IMotionSdkService::instance();
 
-/// 1. Register callbacks and select the interface before initialService (required order)
+/// 1. Register the discovery callback first, then select the actual interface
 svc->setLogCallback(...);
-svc->setNetworkInterface("eth0");
-svc->setDiscoverCallback([](const std::string& sn, const std::string& info) {
+std::atomic<bool> gotResponse{false};
+svc->setDiscoverCallback([&](const std::string& sn, const std::string& info) {
     /// Maintain an application device table by parsing deviceModel, network, version, etc. from info JSON
     printf("device online: sn=%s info=%s\n", sn.c_str(), info.c_str());
+    gotResponse.store(true);
 });
+svc->setNetworkInterface("eth0");
 
 /// 2. Initialize the global service
 svc->initialService(nullptr, "myApp");
 
-/// 3. Discover devices when required
+/// 3. Open a full 5 s discovery window; true means only that the request was issued
 if (svc->isMultiDevice()) {
-    svc->discoverDevices(2000);     // Non-blocking; callbacks report devices during the 2 s window
-    // ... application thread collects SNs and selects target
+    if (!svc->discoverDevices(5000)) return 1;
+    std::this_thread::sleep_for(std::chrono::milliseconds(5100));
+    if (!gotResponse.load()) {
+        svc->discoverDevices(5000);  // retry once after checking interface / robot status
+        std::this_thread::sleep_for(std::chrono::milliseconds(5100));
+    }
+    // Deduplicate by SN and require explicit target selection; never pick the first response implicitly.
     auto client = IMotionHighLevelClient::create(target_sn);
 } else {
     auto client = IMotionHighLevelClient::create();   // Onboard single-device overload: create(bool)
@@ -435,21 +476,22 @@ if (svc->isMultiDevice()) {
 /// Onboard single-device process singleton; asMaster selects the master role
 static std::shared_ptr<IMotionHighLevelClient> create(bool asMaster = false);
 
-/// Remote multi-device mode: create a client for the target robot SN
+/// external-host device-addressing mode: create a client for the target robot SN
 static std::shared_ptr<IMotionHighLevelClient> create(std::string deviceId);
 ```
 
 | Overload | Parameters | Description |
 |---|---|---|
 | `create(bool asMaster = false)` | `asMaster` | **Onboard single-device:** process singleton; `asMaster` selects whether the client joins with the master role |
-| `create(std::string deviceId)` | `deviceId` | **Remote multi-device:** target robot SN; an empty string returns `nullptr` |
+| `create(std::string deviceId)` | `deviceId` | **External host (device addressed):** target robot SN; an empty string returns `nullptr` |
 
-In remote mode, the SDK inserts `deviceId` into every RPC request for routing, and only the matching robot responds. Each High-level client retains its own target SN, preventing cross-talk between clients.
+In external-host device-addressing mode, the SDK inserts `deviceId` into every RPC request for routing, and only the matching robot responds. Each High-level client retains its own target SN, preventing cross-talk between clients.
 
-##### Two ways to get `deviceId`
+##### Ways to get `deviceId`
 
-1. **Discover online devices:** register `setDiscoverCallback`, call `discoverDevices(timeoutMs)`, and obtain each SN from the callback. Use this when the client does not know which robots are present.
-2. **Create directly from a known SN:** if the target SN comes from configuration, user input, a QR code, an asset-management system, or a previous session, call `create(sn)` directly. Calling `discoverDevices` first is unnecessary.
+1. **Uniubi App (recommended for first use):** open the robot's **Basic Information** page and copy its Device ID / SN.
+2. **SDK device discovery:** register `setDiscoverCallback`, call `discoverDevices(timeoutMs)`, and obtain each SN from the callback. If several robots respond and the target IP is known, parse `info` and match that IP against `network.ether.ipv4Addr`, `network.wlan.ipv4Addr`, `network.hotspot.ipv4Addr`, and `network.mobile.ipv4Addr`. Use the SN from the matching result; the IP itself is not a `deviceId`.
+3. **Another trusted source:** if the target SN comes from configuration, user input, a QR code, an asset-management system, or a previous session, call `create(sn)` directly. Calling `discoverDevices` first is unnecessary.
 
 ```cpp
 /// Example: obtain the SN from application configuration or a deployment manifest
@@ -1133,7 +1175,7 @@ int main(int argc, char** argv) {
 
     std::string deviceId;
     if (svc->isMultiDevice()) {
-        fprintf(stderr, "multi-device mode: use discoverDevices() first to obtain a SN\n");
+        fprintf(stderr, "external-host device-addressing mode: use discoverDevices() first to obtain a SN\n");
         svc->shutdown();
         return 1;
     }
@@ -1206,15 +1248,17 @@ Output content:
 - By default, 10 frames of each of the first three categories are saved to `/tmp/media_frame_dump`
 - raw video save logic is written plane by plane and line by line according to `virAddr[] + stride[]`, compatible with NVIDIA non-contiguous memory
 
-### 5.3 Multi-device example (remote mode)
+### 5.3 External-host example (device addressing)
 
-There are two differences from §5.1 (single device): use `discoverDevices` to collect SNs on the Internet, and use specific SNs to create clients.
+Register the discovery callback first, set the actual robot-facing interface, and only then initialize the service. A `true` return from `discoverDevices` means only that the request was issued; responses arrive asynchronously.
+
+The example deduplicates callbacks by SN, waits 5 seconds, and retries once if no callback arrives. It only prints discovery results and never creates a client or acquires control. If the robot IP is already known, match it against `network.ether.ipv4Addr`, `network.wlan.ipv4Addr`, `network.hotspot.ipv4Addr`, or `network.mobile.ipv4Addr` in `info` to identify the corresponding SN. The IP filters discovery results; the final High-level client is still created with the SN.
 
 ```cpp
 #include <chrono>
 #include <mutex>
 #include <thread>
-#include <vector>
+#include <map>
 #include <cstdio>
 #include "uniubi/robot_sdk/MotionSdkService.h"
 #include "uniubi/robot_sdk/MotionHighLevelClient.h"
@@ -1223,19 +1267,21 @@ using namespace uniubi::RobotSdk;
 
 int main(int argc, char** argv) {
     auto svc = IMotionSdkService::instance();
-    svc->setNetworkInterface(argc > 1 ? argv[1] : "eth0");
 
-    /// 1) Collect discovered SNs; callbacks record lightweight state only and never block
+    if (argc < 2) {
+        fprintf(stderr, "usage: %s <robot-facing-interface>\n", argv[0]);
+        return 2;
+    }
+
+    /// 1) Store the latest info JSON for each SN; callback work stays lightweight
     std::mutex devMutex;
-    std::vector<std::string> devices;
+    std::map<std::string, std::string> devices;
     svc->setDiscoverCallback([&](const std::string& sn, const std::string& info) {
         std::lock_guard<std::mutex> lk(devMutex);
-        if (std::find(devices.begin(), devices.end(), sn) == devices.end()) {
-            printf("[discover] sn=%s info=%s\n", sn.c_str(), info.c_str());
-            devices.push_back(sn);
-        }
+        devices[sn] = info;
     });
 
+    svc->setNetworkInterface(argv[1]);  // actual robot-facing interface, before init
     if (!svc->initialService(nullptr, "myMultiApp")) return 1;
 
     if (!svc->isMultiDevice()) {
@@ -1244,46 +1290,35 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    /// 2) Start discovery and collect responses for 2 seconds
-    svc->discoverDevices(2000);
-    std::this_thread::sleep_for(std::chrono::milliseconds(2100));
+    /// 2) true means only that the request was issued; responses arrive via callback
+    if (!svc->discoverDevices(5000)) {
+        fprintf(stderr, "failed to issue discovery request\n");
+        svc->shutdown();
+        return 1;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(5100));
 
-    std::vector<std::string> snapshot;
+    std::map<std::string, std::string> snapshot;
     { std::lock_guard<std::mutex> lk(devMutex); snapshot = devices; }
+    if (snapshot.empty()) {
+        fprintf(stderr, "no callback in 5 s; check interface / robot status and retry\n");
+        svc->discoverDevices(5000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(5100));
+        { std::lock_guard<std::mutex> lk(devMutex); snapshot = devices; }
+    }
     if (snapshot.empty()) {
         fprintf(stderr, "no device discovered, check network interface / robot status\n");
         svc->shutdown();
         return 1;
     }
     printf("found %zu device(s)\n", snapshot.size());
-
-    /// 3) Create one High-level client per robot and run them concurrently
-    std::vector<std::shared_ptr<IMotionHighLevelClient>> clients;
-    for (const auto& sn : snapshot) {
-        auto c = IMotionHighLevelClient::create(sn);
-        if (!c) { fprintf(stderr, "create(%s) failed\n", sn.c_str()); continue; }
-        if (!c->connect()) { fprintf(stderr, "connect(%s) failed\n", sn.c_str()); continue; }
-        clients.push_back(c);
+    for (const auto& [sn, info] : snapshot) {
+        printf("SN=%s info=%s\n", sn.c_str(), info.c_str());
     }
+    printf("Choose an SN explicitly, or match the known robot IP against "
+           "network.*.ipv4Addr, then use that SN in the external-host Quick Start.\n");
 
-    /// 4) Operate independently; each client is bound to its own deviceId
-    for (auto& c : clients) {
-        c->startControl(10000);
-    }
-    for (auto& c : clients) {
-        while (c->getState() != IMotionHighLevelClient::kControlled)
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        c->startAction("walking", R"({"lineVelocityX":0.3})");
-    }
-
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-
-    /// 5) Release and disconnect each client before exit
-    for (auto& c : clients) {
-        c->stopAction();
-        c->releaseControl();
-        c->disconnect();
-    }
+    /// Discovery only: do not create a client, acquire control, or select a robot automatically.
     svc->shutdown();
     return 0;
 }
@@ -1306,7 +1341,7 @@ Module: `robot_motion_sdk`, source code `Python/`
 |---|---|
 | `version()` | `sdk.service.version()` —— Returns the SDK version string |
 | `setLogCallback` | `sdk.service.set_log_callback(cb)`; signature `(level: LogLevel, msg: str) -> None` |
-| `setNetworkInterface` | `sdk.service.set_network_interface(iface: str)` — select the remote/multi-device network interface; ignored onboard |
+| `setNetworkInterface` | `sdk.service.set_network_interface(iface: str)` — select the external-host device-addressing interface; ignored onboard |
 | `setDiscoverCallback` | `sdk.service.set_discover_callback(cb)`; signature `(sn: str, info_json: str) -> None` |
 | `isMultiDevice` | `sdk.service.is_multi_device() -> bool` |
 | `discoverDevices` | `sdk.service.discover_devices(timeout_ms=10000) -> bool` (non-blocking) |
@@ -1317,7 +1352,7 @@ Module: `robot_motion_sdk`, source code `Python/`
 
 | C++ interface | Python wrapper |
 |---|---|
-| `create(asMaster=false)` / `create(deviceId)` | `MotionHighLevelClient(device_id="", as_master=False)` constructor; use an empty ID onboard (role selected by `as_master`), while remote mode requires an SN |
+| `create(asMaster=false)` / `create(deviceId)` | `MotionHighLevelClient(device_id="", as_master=False)` constructor; use an empty ID onboard (role selected by `as_master`), while external-host device addressing requires an SN |
 | `connect / disconnect` | `connect(lease_ms=0)` / `disconnect()` |
 | `startControl / releaseControl` | `start_control(timeout_ms=10000)` / `release_control()` |
 | `getState / getLastError` | `get_state()` / `get_last_error()` (return enum) |
@@ -1546,8 +1581,8 @@ journalctl -u robotServer -f
 | Phenomenon | Check items | Solution ideas |
 |---|---|---|
 | `initialService` returns false | Log `errorf` output | See error code: `kRpcConnectFailed` → DDS domain cannot be started (network card/multicast/domain id is incorrect) |
-| `discoverDevices` The callback did not come in once after being triggered | 1. Whether setNetworkInterface has selected the network card <br>2 that can reach the robot. Whether `isMultiDevice()` returns true<br>3. Whether the `robotServer.discoverDevice.request` topic on the robot side is subscribed | The network card must be correctly specified in multi-device mode; if isMultiDevice returns false Description The SDK self-checks into on-board mode and should not go through the discover process |
-| `create(sn)` returns nullptr | SDK self-checks as remote but deviceId is passed empty | Remote mode deviceId must be non-empty (empty is allowed only on the board) |
+| `discoverDevices` The callback did not come in once after being triggered | 1. Whether setNetworkInterface has selected the network card <br>2 that can reach the robot. Whether `isMultiDevice()` returns true<br>3. Whether the `robotServer.discoverDevice.request` topic on the robot side is subscribed | The network card must be correctly specified in external-host device-addressing mode; if isMultiDevice returns false Description The SDK self-checks into on-board mode and should not go through the discover process |
+| `create(sn)` returns nullptr | SDK reports external-host device addressing but deviceId is empty | External-host deviceId must be non-empty (empty is allowed only on the board) |
 | After `connect()`, the state has stopped at `kDisconnected` | 1. Check the error code <br>2 pushed by ConnectCallback. Whether `tcpdump` has packets in both directions <br>3. Is the SN assigned to `checkDeviceId` on the robot side consistent with what you passed | `kRpcConnectFailed` → DDS channel / robotServer RPC has not started yet; deviceId does not match → robot filter silently discards all requests |
 | `startControl` did not transition to `kControlled` | 1. Error reported by `ConnectCallback`<br>2. Whether another client took control | `kRpcAcquireRejected` → control held elsewhere or acquisition timeout; `kSessionRevoked` → another client took over |
 | Action class interface (`startAction` / `setActionParams` / `stopAction`) returns false, state displays `kControlled` | `getLastError()` value | `kSessionExpired` → lease expires; `kSessionRevoked` → is taken over; `kActionRejected` → Rejected by the server (processed according to business code) |

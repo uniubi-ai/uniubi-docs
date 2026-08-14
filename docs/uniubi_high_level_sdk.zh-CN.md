@@ -39,12 +39,21 @@
 - 控制权由 `startControl` 显式获取，SDK 内部周期续约维持
 - 直到 `releaseControl` / `disconnect` 主动释放，或服务端 session 超时被动失效
 - 协议字段编码：UTF-8 JSON 字符串
-- 支持直接部署在机器人大脑主板上开发自有应用（板内模式），也支持外部主机远端接入
+High-level 真机应用支持两种部署模式。无论哪种模式，内置运动服务都始终运行在机器人端。
+
+| 部署模式 | 应用与 SDK 客户端位置 | 必需的目标信息 |
+|---|---|---|
+| 外部主机 | Linux PC 或工控机 | 设置实际连接机器人网络的主机网卡，并用目标设备 ID（SN）创建客户端。SN 可在 Uniubi App 的“基础信息”页面查看，也可通过 SDK discovery 获取。 |
+| 板内 | 机器人大脑 | 不需要设备 ID，使用 `create(bool asMaster = false)`。 |
+
+该边界仅针对 High-level 控制。Low-level 真机关节控制应用仍运行在板内。
+
+外部主机 C++ SDK 在本文中作为受支持路径说明；Python 与 ROS 2 的 API 覆盖或示例本身不代表已完成外部主机真机验证。
 
 ---
 
 <a id="quick-start"></a>
-## 快速开始
+## 快速开始：板载应用
 
 最小只读流程（完整交互 CLI 见 §五）。本节不申请控制权，也不执行任何动作：
 
@@ -63,8 +72,6 @@ using HLState = IMotionHighLevelClient::HighLevelState;
 
 int main() {
     auto svc = IMotionSdkService::instance();
-    // 远程模式需固定网卡时，在 initialService 前调用：
-    // svc->setNetworkInterface("wlan0");
     if (!svc->initialService(nullptr, "myReadOnlyApp")) return 1;
 
     auto client = IMotionHighLevelClient::create();
@@ -122,7 +129,34 @@ finally:
 
 > Python 退出必须走 `try/finally`，原因详见 [§6.2](#62--退出死锁规避必读)。
 
-> 上述 Quick Start 用于板内/单设备只读检查。外部主机或多设备场景先发现目标设备，再按 [§5.3](#53-多设备示例远端模式) 使用设备 ID 创建客户端。
+> 上述 Quick Start 是板内单设备流程，因此不传设备 ID。外部主机即使只连接一台机器人也必须传目标 SN；见 [§5.3](#53-外部主机示例设备寻址)。
+
+### 快速开始：外部 Linux PC 或工控机
+
+内置运动服务仍运行在机器人端。外部 C++ 应用选择实际连接机器人网络的网卡，并传入从 Uniubi App 的“基础信息”页面或 SDK discovery 获得的设备 ID（SN）：
+
+```cpp
+auto svc = IMotionSdkService::instance();
+svc->setNetworkInterface("enp3s0");  // 实际连接机器人网络的网卡
+if (!svc->initialService(nullptr, "myExternalReadOnlyApp")) return 1;
+
+const std::string targetSn = loadDeviceSnFromConfig();  // App / 配置 / 操作员明确选择
+auto client = IMotionHighLevelClient::create(targetSn);
+if (!client) {
+    svc->shutdown();
+    return 1;
+}
+client->setConnectCallback(onConnect);  // 必须在 connect() 前注册
+if (!client->connect()) {
+    svc->shutdown();
+    return 1;
+}
+// 等待 kConnected，再执行只读查询。
+client->disconnect();
+svc->shutdown();
+```
+
+外部主机 C++ 路径在本文中作为受支持模式说明；本示例不声称 Python 或 ROS 2 已完成外部主机真机验证。
 
 ---
 
@@ -329,23 +363,23 @@ static const char* version();
 /// 注册日志回调
 void setLogCallback(LogCallback cb);
 
-/// 多设备场景下指定 SDK 使用的网络接口（如 "eth0"、"wlan0"）
-/// 板内单设备模式忽略；远端模式不指定时由 Cyclone DDS 自动选择
+/// 外部主机设备寻址时指定 SDK 使用的网络接口（如 "eth0"、"wlan0"）
+/// 板内模式忽略；外部主机必须在初始化前设置实际通信网卡
 void setNetworkInterface(const char* iface);
 
-/// 多设备场景下注册设备发现回调
+/// 外部主机设备寻址时注册设备发现回调
 /// cb(sn, infoJson) —— infoJson 是设备详情 JSON 字符串，典型字段见下方
 void setDiscoverCallback(DeviceDiscover cb);
 
-/// 查询当前部署是否多设备
+/// 查询当前部署是否使用外部主机设备寻址
 ///   板内（SDK 与机器人同机）→ false
-///   远端主机 / 多机器人      → true
+///   外部主机（即使只有一台机器人）      → true
 bool isMultiDevice() const;
 
 /// 主动发起一次设备发现（非阻塞）
 ///   - 当前已有发现窗口未过期 → 延长窗口到至少 timeoutMs
 ///   - 窗口已过期            → 开新窗口
-/// 期间收到的每条机器人响应通过 setDiscoverCallback 注册的回调上抛
+/// 返回 true 只表示请求已发出；响应通过 setDiscoverCallback 回调异步到达
 bool discoverDevices(uint32_t timeoutMs = 10000);
 ```
 
@@ -366,7 +400,7 @@ bool discoverDevices(uint32_t timeoutMs = 10000);
 
 ##### 关于 `setNetworkInterface`
 
-远端模式下 SDK 在 `/tmp/motion_sdk_host_<pid>.xml` 自动渲染 Cyclone DDS QoS profile（`shutdown` 时清理）。该 profile 决定 DDS 走哪张网卡：
+外部主机模式下 SDK 在 `/tmp/motion_sdk_host_<pid>.xml` 自动渲染 Cyclone DDS QoS profile（`shutdown` 时清理）。该 profile 决定 DDS 走哪张网卡：
 
 - **默认值** `"eth0"` —— 不调 `setNetworkInterface` 时 SDK 用 eth0 渲染 profile。`<NetworkInterface name="eth0" priority="3" multicast="default" presence_required="true" />`。`presence_required="true"` 表示该网卡若不存在 SDK 启动直接失败（早期暴露问题）
 - **调** `setNetworkInterface("wlan0")` 等 → 覆盖默认值，按你指定的网卡名渲染
@@ -402,26 +436,33 @@ ls /sys/class/net/
 
 把挑出的名字直接传给 `setNetworkInterface("eth0")` 即可。
 
-##### 多设备场景下完整流程
+##### 外部主机设备寻址时完整流程
 
 ```cpp
 auto svc = IMotionSdkService::instance();
 
-/// 1. 在 initialService 之前注册回调 + 网卡（必须的顺序）
+/// 1. 先注册发现回调，再设置实际通信网卡
 svc->setLogCallback(...);
-svc->setNetworkInterface("eth0");
-svc->setDiscoverCallback([](const std::string& sn, const std::string& info) {
+std::atomic<bool> gotResponse{false};
+svc->setDiscoverCallback([&](const std::string& sn, const std::string& info) {
     /// 用户自己维护设备表：解析 info（JSON 字符串）拿到 deviceModel / network / version 等
     printf("device online: sn=%s info=%s\n", sn.c_str(), info.c_str());
+    gotResponse.store(true);
 });
+svc->setNetworkInterface("eth0");
 
 /// 2. 全局初始化
 svc->initialService(nullptr, "myApp");
 
-/// 3. 判断是否需要发现
+/// 3. 打开完整 5 秒发现窗口；true 只表示请求已发出
 if (svc->isMultiDevice()) {
-    svc->discoverDevices(2000);     // 非阻塞；2s 内回调上抛在线设备
-    // ... 用户线程等 SN 收齐后选 target
+    if (!svc->discoverDevices(5000)) return 1;
+    std::this_thread::sleep_for(std::chrono::milliseconds(5100));
+    if (!gotResponse.load()) {
+        svc->discoverDevices(5000);  // 检查网卡/机器人状态后重试一次
+        std::this_thread::sleep_for(std::chrono::milliseconds(5100));
+    }
+    // 按 SN 去重并明确选择目标；不要隐式选择第一条响应。
     auto client = IMotionHighLevelClient::create(target_sn);
 } else {
     auto client = IMotionHighLevelClient::create();   // 板内单设备，create(bool)
@@ -430,27 +471,28 @@ if (svc->isMultiDevice()) {
 
 #### 4.1.3 客户端实例创建
 
-`create` 提供两个重载，分别对应板内单设备与远端按 SN 两种部署：
+`create` 提供两个重载，分别对应板内单设备与外部主机按 SN 两种部署：
 
 ```cpp
 /// 板内单设备：进程单例。asMaster 指定是否以 master 角色入会
 static std::shared_ptr<IMotionHighLevelClient> create(bool asMaster = false);
 
-/// 远端多设备：按目标机器人 SN 创建
+/// 外部主机（设备寻址）：按目标机器人 SN 创建
 static std::shared_ptr<IMotionHighLevelClient> create(std::string deviceId);
 ```
 
 | 重载 | 参数 | 说明 |
 |---|---|---|
 | `create(bool asMaster = false)` | `asMaster` | **板内单设备**用，进程单例；`asMaster` 指定本端是否以 master 角色入会 |
-| `create(std::string deviceId)` | `deviceId` | **远端多设备**用，目标机器人 SN；空串会返回 `nullptr` |
+| `create(std::string deviceId)` | `deviceId` | **外部主机（设备寻址）**用，目标机器人 SN；空串会返回 `nullptr` |
 
-远端模式下 SDK 内部把 `deviceId` 作为路由字段塞进每个 RPC 请求，只有 SN 匹配的机器人响应；多个 HL client 各自持有自己的目标 SN，互不串扰。
+外部主机设备寻址时，SDK 内部把 `deviceId` 作为路由字段放入每个 RPC 请求，只有 SN 匹配的机器人响应；多个 High-level client 各自持有自己的目标 SN，互不串扰。
 
-##### 拿到 `deviceId` 的两种途径
+##### 获取 `deviceId` 的方式
 
-1. **通过 `discoverDevices` 在线搜索**：调 `setDiscoverCallback` 注册回调 + `discoverDevices(timeoutMs)` 主动扫，回调里拿到 SN。适合"客户端不预先知道有哪些机器人在网内"的场景（详见下面 §4.1.2 多设备完整流程）。
-2. **跳过搜索，直接用已知 SN 构造**：如果调用方已经通过**其他途径**（配置文件 / 用户输入 / 二维码扫描 / 资产管理系统 / 上一次会话保存的 SN 等）知道目标机器人 SN，**直接** `create(sn)` 即可，**不需要先调 `discoverDevices`**。
+1. **Uniubi App（首次使用推荐）**：进入机器人的**“基础信息”页面**，复制设备 ID / SN。
+2. **SDK 设备发现**：先注册 `setDiscoverCallback`，再调用 `discoverDevices(timeoutMs)`，从回调获得每台机器人的 SN。若发现多台设备且已知目标机器人 IP，可解析 `info`，将该 IP 与 `network.ether.ipv4Addr`、`network.wlan.ipv4Addr`、`network.hotspot.ipv4Addr`、`network.mobile.ipv4Addr` 比对，取匹配结果的 SN。IP 只是筛选条件，不能直接作为 `deviceId`。
+3. **其他可信来源**：如果调用方已经通过配置文件、用户输入、二维码、资产管理系统或上一次会话保存值知道目标 SN，可直接 `create(sn)`，不需要先调用 `discoverDevices`。
 
 ```cpp
 /// 场景：SN 来自用户配置 / 部署清单
@@ -1128,7 +1170,7 @@ static void onEvent(const std::string& topic, const std::string& payload) {
 
 int main(int argc, char** argv) {
     auto svc = IMotionSdkService::instance();
-    svc->setNetworkInterface(argc > 1 ? argv[1] : "eth0");   // 远端/多设备指定网卡；板内忽略
+    svc->setNetworkInterface(argc > 1 ? argv[1] : "eth0");   // 外部主机（设备寻址）指定网卡；板内忽略
 
     if (!svc->initialService(nullptr, "myAppHighLevel")) return 1;
 
@@ -1207,15 +1249,17 @@ sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
 - 默认保存前三类各 10 帧到 `/tmp/media_frame_dump`
 - raw video 保存逻辑按 `virAddr[] + stride[]` 逐平面逐行写入，兼容 NVIDIA 非连续内存
 
-### 5.3 多设备示例（远端模式）
+### 5.3 外部主机示例（设备寻址）
 
-跟 §五.1（单设备）不同的两个点：用 `discoverDevices` 收集网上的 SN，用具体 SN 创建 client。
+先注册发现回调，再设置实际连接机器人网络的网卡，最后初始化 service。`discoverDevices` 返回 `true` 只表示请求已发出，响应通过回调异步到达。
+
+示例按 SN 去重，等待 5 秒；没有回调时重试一次。它只打印发现结果，不创建客户端、不获取控制权。如果已知机器人 IP，可将它与 `info` 中的 `network.ether.ipv4Addr`、`network.wlan.ipv4Addr`、`network.hotspot.ipv4Addr` 或 `network.mobile.ipv4Addr` 比对，从而筛出对应 SN。IP 只用于筛选发现结果，最终 High-level 客户端仍使用 SN 创建。
 
 ```cpp
 #include <chrono>
 #include <mutex>
 #include <thread>
-#include <vector>
+#include <map>
 #include <cstdio>
 #include "uniubi/robot_sdk/MotionSdkService.h"
 #include "uniubi/robot_sdk/MotionHighLevelClient.h"
@@ -1224,19 +1268,21 @@ using namespace uniubi::RobotSdk;
 
 int main(int argc, char** argv) {
     auto svc = IMotionSdkService::instance();
-    svc->setNetworkInterface(argc > 1 ? argv[1] : "eth0");
 
-    /// 1) 收集发现到的 SN（回调里只做轻量记录，不能阻塞）
+    if (argc < 2) {
+        fprintf(stderr, "usage: %s <robot-facing-interface>\n", argv[0]);
+        return 2;
+    }
+
+    /// 1) 按 SN 保存最新 info JSON（回调里只做轻量记录，不能阻塞）
     std::mutex devMutex;
-    std::vector<std::string> devices;
+    std::map<std::string, std::string> devices;
     svc->setDiscoverCallback([&](const std::string& sn, const std::string& info) {
         std::lock_guard<std::mutex> lk(devMutex);
-        if (std::find(devices.begin(), devices.end(), sn) == devices.end()) {
-            printf("[discover] sn=%s info=%s\n", sn.c_str(), info.c_str());
-            devices.push_back(sn);
-        }
+        devices[sn] = info;
     });
 
+    svc->setNetworkInterface(argv[1]);  // 初始化前设置实际通信网卡
     if (!svc->initialService(nullptr, "myMultiApp")) return 1;
 
     if (!svc->isMultiDevice()) {
@@ -1245,46 +1291,35 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    /// 2) 发起一次发现，2s 内收集所有响应
-    svc->discoverDevices(2000);
-    std::this_thread::sleep_for(std::chrono::milliseconds(2100));
+    /// 2) true 只表示请求已发出；响应通过回调异步到达
+    if (!svc->discoverDevices(5000)) {
+        fprintf(stderr, "failed to issue discovery request\n");
+        svc->shutdown();
+        return 1;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(5100));
 
-    std::vector<std::string> snapshot;
+    std::map<std::string, std::string> snapshot;
     { std::lock_guard<std::mutex> lk(devMutex); snapshot = devices; }
+    if (snapshot.empty()) {
+        fprintf(stderr, "5 秒内无回调；检查网卡和机器人状态后重试\n");
+        svc->discoverDevices(5000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(5100));
+        { std::lock_guard<std::mutex> lk(devMutex); snapshot = devices; }
+    }
     if (snapshot.empty()) {
         fprintf(stderr, "no device discovered, check network interface / robot status\n");
         svc->shutdown();
         return 1;
     }
     printf("found %zu device(s)\n", snapshot.size());
-
-    /// 3) 对每台机器人各开一个 HL client，并发执行
-    std::vector<std::shared_ptr<IMotionHighLevelClient>> clients;
-    for (const auto& sn : snapshot) {
-        auto c = IMotionHighLevelClient::create(sn);
-        if (!c) { fprintf(stderr, "create(%s) failed\n", sn.c_str()); continue; }
-        if (!c->connect()) { fprintf(stderr, "connect(%s) failed\n", sn.c_str()); continue; }
-        clients.push_back(c);
+    for (const auto& [sn, info] : snapshot) {
+        printf("SN=%s info=%s\n", sn.c_str(), info.c_str());
     }
+    printf("请明确选择 SN，或用已知机器人 IP 匹配 network.*.ipv4Addr，"
+           "再将该 SN 传给外部主机 Quick Start。\n");
 
-    /// 4) 各自独立操作（每个 client 内部 deviceId 已绑定，互不串扰）
-    for (auto& c : clients) {
-        c->startControl(10000);
-    }
-    for (auto& c : clients) {
-        while (c->getState() != IMotionHighLevelClient::kControlled)
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        c->startAction("walking", R"({"lineVelocityX":0.3})");
-    }
-
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-
-    /// 5) 退出 —— 各 client 各自 release + disconnect
-    for (auto& c : clients) {
-        c->stopAction();
-        c->releaseControl();
-        c->disconnect();
-    }
+    /// 仅发现：不创建客户端、不获取控制权，也不自动选择机器人。
     svc->shutdown();
     return 0;
 }
@@ -1307,7 +1342,7 @@ int main(int argc, char** argv) {
 |---|---|
 | `version()` | `sdk.service.version()` —— 返回 SDK 版本字符串 |
 | `setLogCallback` | `sdk.service.set_log_callback(cb)`；签名 `(level: LogLevel, msg: str) -> None` |
-| `setNetworkInterface` | `sdk.service.set_network_interface(iface: str)` —— 远端/多设备指定网卡，板内忽略 |
+| `setNetworkInterface` | `sdk.service.set_network_interface(iface: str)` —— 外部主机（设备寻址）指定网卡，板内忽略 |
 | `setDiscoverCallback` | `sdk.service.set_discover_callback(cb)`；签名 `(sn: str, info_json: str) -> None` |
 | `isMultiDevice` | `sdk.service.is_multi_device() -> bool` |
 | `discoverDevices` | `sdk.service.discover_devices(timeout_ms=10000) -> bool`（非阻塞） |
@@ -1548,7 +1583,7 @@ journalctl -u robotServer -f
 |---|---|---|
 | `initialService` 返回 false | 日志 `errorf` 输出 | 看错误码：`kRpcConnectFailed` → DDS 域起不来（网卡 / 多播 / domain id 不对） |
 | `discoverDevices` 触发后回调一次没进 | 1. 是否 setNetworkInterface 选了能到机器人的网卡<br>2. `isMultiDevice()` 是否返 true<br>3. 机器人侧 `robotServer.discoverDevice.request` topic 是否被订阅 | 多设备模式必须正确指定网卡；若 isMultiDevice 返 false 说明 SDK 自检成板内模式，不该走 discover 流程 |
-| `create(sn)` 返回 nullptr | SDK 自检成远端但 deviceId 传空 | 远端模式 deviceId 必须非空（板内才允许空） |
+| `create(sn)` 返回 nullptr | SDK 报告外部主机设备寻址但 deviceId 为空 | 外部主机模式 deviceId 必须非空（板内才允许空） |
 | `connect()` 之后 state 一直停在 `kDisconnected` | 1. 看 ConnectCallback 推过来的 error 码<br>2. `tcpdump` 是否双向有包<br>3. 机器人侧 `checkDeviceId` 配的 SN 与你传的是否一致 | `kRpcConnectFailed` → DDS 通道 / robotServer RPC 还没起；deviceId 不匹配 → 机器人 filter 静默丢弃所有请求 |
 | `startControl` 后没切 `kControlled` | 1. ConnectCallback 是否报了 error<br>2. 是否被另一台 client 抢权 | `kRpcAcquireRejected` → 控制权被别人占 / acquireMode 超时；`kSessionRevoked` → 别人接管 |
 | 动作类接口（`startAction` / `setActionParams` / `stopAction`）返 false，state 显示 `kControlled` | `getLastError()` 取值 | `kSessionExpired` → lease 到期；`kSessionRevoked` → 被接管；`kActionRejected` → 服务端拒绝（按业务码处理）|

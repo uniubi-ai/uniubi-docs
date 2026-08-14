@@ -2,6 +2,8 @@
 
 **English** | [简体中文](high-level-control.zh-CN.md)
 
+![High-level dual-deployment topology](../core-concepts/images/high-level-dual-deployment.en.png)
+
 ## Goal
 
 Use motion and locomotion capabilities already provided by the robot. The application sends actions or motion intent and does not generate position, velocity, or torque commands for individual joints.
@@ -11,6 +13,27 @@ Typical goals include:
 - making the robot stand, lie down, or perform another built-in action;
 - using built-in walking, steering, and speed control; and
 - writing a ROS 2 application node that invokes robot motion capabilities.
+
+## Choose Where the Application Runs
+
+High-level real-robot applications support two deployment modes. In both modes, the built-in motion service continues to run on the robot; only the application and SDK client location changes.
+
+| Deployment mode | Application location | Network and target selection |
+|---|---|---|
+| External host | Linux PC or industrial computer | Select the host interface that is actually connected to the robot network, then create the client with the target device ID (SN). Obtain the SN from the Basic Information page in the Uniubi App or SDK discovery. |
+| Onboard | Robot compute module (“brain”) | No device ID is required; use the onboard single-device client overload. |
+
+For external-host discovery, follow this order:
+
+1. Register the discovery callback and set the robot-facing network interface.
+2. Initialize the SDK service.
+3. Start discovery. A `true` return only means that the request was issued; device responses arrive asynchronously through the callback.
+4. If no callback arrives within 5 seconds, retry discovery after checking the interface and robot status.
+5. Deduplicate responses by SN and require the application or operator to choose the intended robot. Do not silently select the first response. If the robot IP is known, compare it with `network.ether.ipv4Addr`, `network.wlan.ipv4Addr`, `network.hotspot.ipv4Addr`, and `network.mobile.ipv4Addr` in the callback `info` to identify the corresponding SN.
+
+The IP provides reachability and filters discovery results. The High-level client still receives the Device ID (SN); never pass an IP address as `device_id`.
+
+Low-level control on real hardware is different: the joint-control application still runs onboard. See the Low-level guide for that deployment boundary.
 
 ## Out of Scope
 
@@ -40,3 +63,5 @@ For SDK development, first complete [SDK First Use](sdk-first-use.md). For ROS 2
 3. With the emergency stop reachable and an operator ready to intervene, validate low-risk actions such as standing and lying down before low-speed locomotion.
 
 See the [High-level SDK API](../uniubi_high_level_sdk.md) and [ROS 2 Motion Bridge guide](ros2-motion-bridge.md) for lifecycle and safety details.
+
+The external-host C++ SDK path is documented here as a supported deployment mode. This page does not claim external-host real-robot validation for Python or ROS 2.

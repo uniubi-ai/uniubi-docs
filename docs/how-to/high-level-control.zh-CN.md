@@ -2,6 +2,8 @@
 
 [English](high-level-control.md) | **简体中文**
 
+![High-level 双部署拓扑](../core-concepts/images/high-level-dual-deployment.zh-CN.png)
+
 ## 目标
 
 使用机器人已经提供的动作和运动能力。应用表达的是动作或运动意图，不单独生成每个关节的位置、速度或扭矩控制量。
@@ -11,6 +13,27 @@
 - 让机器人站立、趴下或执行已有动作；
 - 使用机器人已有的行走、转向和速度控制能力；
 - 在 ROS 2 中编写调用机器人运动能力的业务节点。
+
+## 先选择应用部署位置
+
+High-level 真机应用支持两种部署模式。两种模式下，内置运动服务都继续运行在机器人端；变化的只是业务应用与 SDK 客户端的位置。
+
+| 部署模式 | 应用位置 | 网络与目标选择 |
+|---|---|---|
+| 外部主机 | Linux PC 或工控机 | 选择实际连接机器人网络的主机网卡，再用目标设备 ID（SN）创建客户端。SN 可在 Uniubi App 的“基础信息”页面查看，也可通过 SDK discovery 获取。 |
+| 板内 | 机器人大脑 | 不需要设备 ID，使用板内单设备客户端重载。 |
+
+外部主机使用 discovery 时，按以下顺序执行：
+
+1. 先注册发现回调，并设置实际连接机器人网络的网卡。
+2. 再初始化 SDK service。
+3. 发起发现。`true` 只表示请求已发出；设备响应通过回调异步到达。
+4. 5 秒内没有任何回调时，检查网卡和机器人状态后重试发现。
+5. 按 SN 去重，并由应用或操作员明确选择目标机器人；不要静默自动选择第一台。若已知机器人 IP，可将它与回调 `info` 中 `network.ether.ipv4Addr`、`network.wlan.ipv4Addr`、`network.hotspot.ipv4Addr`、`network.mobile.ipv4Addr` 比对，筛出对应 SN。
+
+IP 只用于网络可达性和筛选发现结果；创建 High-level 客户端时仍传入设备 ID（SN），不能把 IP 当作 `device_id`。
+
+Low-level 真机的部署边界不同：关节控制应用仍运行在板内。具体见 Low-level 文档。
 
 ## 这条路径不解决什么问题
 
@@ -40,3 +63,5 @@
 3. 在具备急停和人工接管条件后，再执行站立、趴下或低速运动等低风险动作。
 
 High-level 控制流程和安全边界见 [C++ 高级控制 SDK](../uniubi_high_level_sdk.zh-CN.md) 及 [ROS 2 Motion bridge 导读](ros2-motion-bridge.zh-CN.md)。
+
+本文将外部主机 C++ SDK 作为受支持部署模式说明，但不据此声称 Python 或 ROS 2 已完成外部主机真机验证。

@@ -17,11 +17,22 @@
 
 Low-level 关节控制使用 SDK 的 `MotionLowLevelClient`。ROS 2 Motion Bridge 不提供等价的关节级控制入口。
 
+## 选择部署模式
+
+| 模式 | High-level 真机 | Low-level 真机 |
+|---|---|---|
+| 外部 Linux PC / 工控机 | 支持。选择实际连接机器人网络的网卡，并传入目标设备 ID（SN）；SN 可在 Uniubi App 的“基础信息”页面查看，也可通过 SDK discovery 获取。内置运动服务仍运行在机器人端。 | 不属于当前真机部署路径；关节控制应用应运行在板内。 |
+| 机器人大脑 | 支持，不需要设备 ID。 | 当前真机关节控制要求运行在板内。 |
+
+外部主机做 High-level discovery 时，顺序是：先注册发现回调并设置网卡，再初始化 service。发现是异步的：返回 `true` 只表示请求已发出。最多等待 5 秒接收回调；没有回调时重试；按 SN 去重，并要求明确选择目标设备，不自动取第一台。已知机器人 IP 时，可与回调 `info` 的 `network.*.ipv4Addr` 比对，筛出对应 SN；最终客户端仍传 SN，而不是 IP。
+
+外部主机 C++ SDK 在本文中作为受支持部署模式说明；不要据此声称 Python 或 ROS 2 已完成外部主机真机验证。
+
 ## 前置条件
 
 - Linux 环境，以及目标架构对应的 SDK 运行库。
 - 已按 [机器人网络接入](../core-concepts/device-network.zh-CN.md) 从 App 获取当前设备 IP，并确认登录地址、对外服务端口和通信网卡。外部 High-level 模式必须选择实际连接机器人网络的网卡；大脑侧 High-level 模式必须指定 `eth0.100`。
-- 当前设备运行 SDK 程序需要 root 权限；C++ 构建不要求 `sudo`，Python SDK 在大脑上直接安装到系统 `python3`，运行示例时按对应 README 使用 `sudo env` 保留动态库环境。
+- 外部 Linux High-level 应用不统一要求 root；板载、Low-level 与 Media 运行时按目标设备要求配置权限。C++ 构建不要求 `sudo`；Python SDK 在大脑上直接安装到系统 `python3`，板载示例按对应 README 使用 `sudo env` 保留动态库环境。
 - C++ SDK 与 Python binding 使用同一套 ABI、架构和版本。
 - 先阅读 [构建、安装和交叉编译](../BUILD.zh-CN.md)。
 

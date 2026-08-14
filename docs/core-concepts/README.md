@@ -14,7 +14,24 @@ Uniubi robots use a cooperative brain-and-cerebellum architecture:
 
 The two modules complement each other: the cerebellum executes the standard functions, while the brain extends what the robot can do. Using the brain for extensions does not require an application to bypass or reimplement the built-in motion control, remote-controller, or UWB functions.
 
-### Control paths and deployment locations
+### Two Deployment Locations for High-level Applications
+
+High-level is a control abstraction, not a fixed runtime location. A developer application can run on an external Linux PC / industrial PC or on the robot brain. In both cases, the robot's built-in motion service retains the real-time motion loop and safety boundary.
+
+![High-level dual-deployment architecture](images/high-level-dual-deployment.en.png)
+
+| Dimension | External Linux host | Robot brain |
+|---|---|---|
+| Application runtime | PC or industrial PC | Onboard compute platform |
+| Typical target architecture | x86_64 | aarch64 |
+| SDK client | Device-addressed client with the robot SN | Onboard single-device client without a Device ID |
+| Network interface | Select the actual interface that reaches the robot | Select the robot's internal communication interface |
+| Real-robot High-level | Supported | Supported |
+| Real-robot Low-level | Not supported | Supported |
+
+The Device ID identifies the target robot for High-level RPC, while the IP address and network interface provide network reachability. These values are not interchangeable. Obtain the Device ID from the Uniubi App or through SDK device discovery.
+
+### Real-robot High-level and Low-level Control Paths
 
 High-level and Low-level use the same SDK family, but their deployment locations and hardware-control paths differ on a real robot:
 

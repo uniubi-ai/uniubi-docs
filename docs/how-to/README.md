@@ -11,7 +11,16 @@ Each guide addresses a specific development task. It defines the goal and prereq
 | Use built-in motion capabilities without controlling individual joints | High-level | [Use built-in robot actions](high-level-control.md) |
 | Train or run your own controller and directly command joint position or torque | Low-level | [Run a custom joint-control policy](low-level-control.md) |
 
-## Step 2: Choose an Implementation
+## Step 2: Choose the High-level Application Runtime
+
+| Runtime location | Real-robot communication requirements | Key boundary |
+|---|---|---|
+| External Linux PC / industrial PC | Actual network interface + Device ID (robot SN) | Only the application moves; the built-in motion service remains on the robot |
+| Robot brain | Robot internal interface; the onboard single-device client needs no Device ID | The application and SDK run on the onboard compute platform |
+
+Obtain the Device ID from the Basic Information page in the Uniubi App or through SDK device discovery. Real-robot Low-level control has no external-host path and must run on the robot brain.
+
+## Step 3: Choose an Implementation
 
 | Control mode | Implementation | Entry point |
 |---|---|---|

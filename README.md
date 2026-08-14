@@ -6,7 +6,7 @@ Uniubi Docs is the central documentation site for developing with Uniubi robots.
 
 ## Quick Start
 
-Choose a control mode first, then choose an implementation. Do not begin by choosing a programming language or repository.
+Choose a control mode first. For High-level, choose the application runtime next, then select an implementation. Do not begin by choosing a programming language or repository.
 
 > Before connecting to a real robot, read [Robot Network Access](docs/core-concepts/device-network.md) to obtain the device IPs from the app and confirm the login address, externally accessible service ports, and network interface. Skip this when working only with Mock / Sim2Sim, offline builds, or training.
 
@@ -17,7 +17,16 @@ Choose a control mode first, then choose an implementation. Do not begin by choo
 | Use the robot's built-in motion capabilities without controlling individual joints | High-level | [High-level: use built-in robot actions](docs/how-to/high-level-control.md) |
 | Train or run your own controller and directly command joint position or torque | Low-level | [Low-level: run a custom joint-control policy](docs/how-to/low-level-control.md) |
 
-### 2. Choose an implementation
+### 2. For High-level, choose the application runtime
+
+| Runtime location | When to use it | Real-robot connection requirements |
+|---|---|---|
+| External Linux PC / industrial PC | Keep the application off the robot brain | The actual network interface that reaches the robot + Device ID (robot SN) |
+| Robot brain | Deploy the application and SDK on the onboard compute platform | The robot's internal communication interface; the onboard single-device client needs no Device ID |
+
+Both locations use the same High-level capabilities, and the real-time motion service always remains on the robot. Obtain the Device ID from the Basic Information page in the Uniubi App or through SDK device discovery. See the [High-level dual-deployment architecture](docs/core-concepts/README.md#two-deployment-locations-for-high-level-applications) for the complete boundary.
+
+### 3. Choose an implementation
 
 | Control mode | Implementation | Entry point |
 |---|---|---|
@@ -27,7 +36,7 @@ Choose a control mode first, then choose an implementation. Do not begin by choo
 
 Joint-level Low-level control uses the SDK. ROS 2 Motion Bridge does not provide an equivalent joint-level control interface.
 
-### 3. Continue with your task
+### 4. Continue with your task
 
 - [Build and install the SDK](docs/BUILD.md): prepare a native, on-board, or cross-compilation environment for C++ and Python development.
 - [Use High-level control](docs/how-to/high-level-control.md): use High-level interfaces from an external computer or the robot's compute module to read state and invoke built-in actions; target Mock / Sim2Sim or a real robot.
