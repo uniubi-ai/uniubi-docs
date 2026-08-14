@@ -48,6 +48,16 @@ flowchart LR
 
 > 真机 Low-level SDK 必须部署在机器人“大脑”侧运行，不支持从外部 PC 远程直连硬件。
 
+### 机身坐标系与默认站姿
+
+CYVET 采用右手坐标系：+X 向前，+Y 向左，+Z 向上；roll、pitch 和 yaw 的正方向遵循右手定则。
+
+![CYVET 机身坐标系](images/cyvet-coordinate-system.zh-CN.png)
+
+以下尺寸基于当前机器人资产和默认关节姿态 `[0, 0.8, -1.5]`。其中 `0.392 m` 是沿穿过 base 原点的竖直线测得的躯体上表面离地高度，不是机器人或网格的全局最高点。
+
+![CYVET 默认站姿尺寸](images/cyvet-default-standing-dimensions.zh-CN.png)
+
 ## 2. 两种控制抽象
 
 | 维度 | High-level | Low-level |

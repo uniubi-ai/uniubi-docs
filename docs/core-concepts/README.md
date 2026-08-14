@@ -48,6 +48,16 @@ flowchart LR
 
 > The real-robot Low-level SDK must run on the robot's brain. It does not support direct hardware control from an external PC.
 
+### Body Coordinate System and Default Stance
+
+CYVET uses a right-handed coordinate system: +X points forward, +Y points left, and +Z points upward. Positive roll, pitch, and yaw follow the right-hand rule.
+
+![CYVET body coordinate system](images/cyvet-coordinate-system.en.png)
+
+The dimensions below are based on the current robot asset and default joint pose `[0, 0.8, -1.5]`. The `0.392 m` value is the torso upper-surface height measured vertically through the base origin, not the robot's or mesh's global highest point.
+
+![CYVET default standing dimensions](images/cyvet-default-standing-dimensions.en.png)
+
 ## 2. Two Control Abstractions
 
 | Dimension | High-level | Low-level |
