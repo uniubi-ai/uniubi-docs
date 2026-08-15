@@ -46,6 +46,9 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 - [使用 ROS 2 Motion Bridge](docs/how-to/ros2-motion-bridge.zh-CN.md)：通过 ROS 2 接入 High-level 能力。
 - [使用 Low-level 控制](docs/how-to/low-level-control.zh-CN.md)：先在安全吊架上验证姿态，再到空旷平整地面验证策略行走。
 - [训练、导出和回放策略](docs/how-to/train-export-replay.zh-CN.md)：开发并部署自己的 Low-level 策略。
+- [读取传感器与运动观测](docs/how-to/read-sensor-data.zh-CN.md)：读取 GPS、UWB、电机、IMU、电源和 High-level Walk 里程计。
+- [查询设备状态](docs/how-to/query-device-status.zh-CN.md)：区分完整系统状态与 Low-level 轻量电源观测。
+- [使用语音、灯光和媒体帧](docs/how-to/use-media-and-device-io.zh-CN.md)：接入语音播放、摄像头灯光、视频和麦克风数据。
 
 每篇导读都从一个具体任务开始，不要求先认识全部仓库，也不要求先读完整 API。其他开发和排查专题可在 [操作指南](docs/how-to/README.zh-CN.md) 中按需查阅。
 
@@ -74,6 +77,7 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 - USB、以太网外设接入与直流供电；
 - High-level、Low-level 实机控制；
 - ROS 2 Motion Bridge 接入；
+- GPS、UWB、设备状态、语音、灯光和媒体数据接入；
 - Low-level 策略训练、导出和回放。
 
 [进入操作指南](docs/how-to/README.zh-CN.md)

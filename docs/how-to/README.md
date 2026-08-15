@@ -23,6 +23,14 @@ Each guide addresses a specific development task. It defines the goal and prereq
 | Run a custom controller and directly command joint position or torque | [Run a custom joint-control policy](low-level-control.md) | After selecting Low-level in the Quick Start |
 | Write a ROS 2 application node | [Start and validate Motion Bridge](ros2-motion-bridge.md) | After selecting High-level + ROS 2 |
 
+## Application data and device capabilities
+
+| Task | Guide | Support scope |
+|---|---|---|
+| Read GPS, UWB, motors, IMU, power, and Walk odometry | [Read sensor and motion observations](read-sensor-data.md) | GPS/UWB are available in both clients; Walk odometry is High-level only |
+| Query device, battery, and network status | [Query device status](query-device-status.md) | Complete status is High-level only; Low-level exposes lightweight power observations |
+| Use voice, camera lights, video, and microphone data | [Use voice, lights, and media frames](use-media-and-device-io.md) | Voice/lights are High-level only; either client can create MediaBus |
+
 ## Training and Validation
 
 | Task | Guide | When to use it |

@@ -43,6 +43,9 @@ Joint-level Low-level control uses the SDK. ROS 2 Motion Bridge does not provide
 - [Use ROS 2 Motion Bridge](docs/how-to/ros2-motion-bridge.md): access High-level capabilities from ROS 2.
 - [Use Low-level control](docs/how-to/low-level-control.md): validate posture on a safety rig before validating policy walking on clear, level ground.
 - [Train, export, and replay a policy](docs/how-to/train-export-replay.md): develop and deploy a custom Low-level policy.
+- [Read sensor and motion observations](docs/how-to/read-sensor-data.md): read GPS, UWB, motors, IMU, power, and High-level Walk odometry.
+- [Query device status](docs/how-to/query-device-status.md): distinguish complete system status from Low-level lightweight power observations.
+- [Use voice, lights, and media frames](docs/how-to/use-media-and-device-io.md): integrate voice playback, camera lights, video, and microphone data.
 
 Each guide begins with a concrete task and an observable success criterion. See the [How-to guides](docs/how-to/README.md) for additional development and troubleshooting workflows.
 
@@ -54,7 +57,7 @@ Understand brain and cerebellum responsibilities, High-level and Low-level contr
 
 ## How-to Guides
 
-Follow task-oriented instructions for environment setup, first connection, peripheral connectivity and power, real-robot control, ROS 2 integration, and policy deployment.
+Follow task-oriented instructions for environment setup, first connection, peripheral connectivity and power, real-robot control, ROS 2 integration, sensor and device data, media integration, and policy deployment.
 
 [Browse the How-to guides](docs/how-to/README.md)
 

@@ -611,7 +611,7 @@ business_ok = (response.code == 0) AND (payload.result == true)
 | `robotAppService` | `stopMotionAction` | 停止当前动作 | 是 |
 | `robotAppService` | `setMotionActionParams` | 运行期改动作子参数 | 是 |
 | `robotAppService` | `emergencyStopMotion` | 紧急制动 | 是 |
-| `robotAppService` | `setMotionObservedEnable` | 开关运控观测量 | 否 |
+| `robotAppService` | `setMotionObservedEnable` | 开关运控观测量 | 是 |
 | `robotAppService` | `queryMotionState` | 查询运控状态 | 是 |
 | `robotAppService` | `getMotionCapabilities` | 查询设备支持的动作集合 | 否 |
 | `robotAppService` | `getSystemStatus` | 拉取系统状态快照 | 否 |
@@ -653,7 +653,7 @@ business_ok = (response.code == 0) AND (payload.result == true)
 | `stopMotionAction` | 持权 | — | [§3.3.2](#332-动作控制) |
 | `setMotionActionParams` | 持权 | `params`（按当前 action schema） | [§3.3.2](#332-动作控制) |
 | `emergencyStopMotion` | 持权 | — | [§3.3.2](#332-动作控制) |
-| `setMotionObservedEnable` | 无 | `motionEnable`(bool), `sensorEnable`(bool) | [§3.3.3](#333-数据上报) |
+| `setMotionObservedEnable` | 持权 | `motionEnable`(bool), `sensorEnable`(bool) | [§3.3.3](#333-数据上报) |
 | `queryMotionState` | 无 | — | [§3.3.4](#334-状态查询) |
 | `getMotionCapabilities` | 无 | — | [§3.3.4](#334-状态查询) |
 | `getSystemStatus` | 无 | — | [§3.3.4](#334-状态查询) |
@@ -898,7 +898,7 @@ business_ok = (response.code == 0) AND (payload.result == true)
 **使用注意**
 
 - 默认关闭，且不持久化到配置：服务端重启后回到关闭态，需重新调用开启
-- 不强制要求持权，但 `payload.call.clientId` 不能为空
+- `payload.call.clientId` 必须对应当前持权客户端；未持权时调用会被拒绝。目标 MotionServer 还必须已是 master；slave 端的电机/IMU 不在本端，`requireObserved()` 会直接返回 `false`。裸 DDS 的 `takeMotionControl` 只负责取控，不替代 High-level `startControl()` 中的 master role 切换
 - 调用顺序见 [§3.5](#35-运控观测量订阅)：**先订阅 reader 再调用本 RPC 开启推送**；反序会丢前若干毫秒的帧
 
 #### 3.3.4 状态查询
@@ -1429,15 +1429,17 @@ DDS write 到 rt/motion/trc，不等响应，立即返回
 ```
 开启：
   ① reader 已订阅 rt/motion/observed
-  ② 调用 RPC setMotionObservedEnable（[§3.3.3](#333-数据上报)），params: {"motionEnable": true}
-  ③ 设备开始按 50 Hz 推送
+  ② 确认目标 MotionServer 已是 master，再调用 takeMotionControl 取得控制权
+  ③ 调用 RPC setMotionObservedEnable（[§3.3.3](#333-数据上报)），params: {"motionEnable": true}
+  ④ 设备开始按 50 Hz 推送
 
 关闭：
-  ④ 调用 RPC setMotionObservedEnable，params: {"motionEnable": false}
-  ⑤ 销毁 reader（可选；session 不关闭可保留）
+  ⑤ 调用 RPC setMotionObservedEnable，params: {"motionEnable": false}
+  ⑥ 释放控制权
+  ⑦ 销毁 reader（可选；session 不关闭可保留）
 ```
 
-必须**先订阅再开推送**，反序会丢前若干毫秒的帧。`setMotionObservedEnable` 不强制要求持权，但 `payload.call.clientId` 不能为空 —— 未持权时也可调用。
+必须**先订阅、确认目标端为 master、取控，再开推送**。未持权时调用会被拒绝。`takeMotionControl` 不负责 master role 切换；若目标端仍为 slave，即使取控也无法提供本端电机/IMU 观测。
 
 #### 传感器观测量（`rt/sensor/observed`）
 
@@ -1452,6 +1454,8 @@ DDS write 到 rt/motion/trc，不等响应，立即返回
 QoS、启停约定与运控观测量一致（同上：`BEST_EFFORT` / `KEEP_LAST` / `VOLATILE` / `ALLOW_TYPE_COERCION`；先订阅再开推送），开关同样经 [§3.3.3](#333-数据上报) 的数据上报 RPC 控制。无对应传感器硬件的设备不写入数据。
 
 > `odom` 不依赖 GPS / UWB 硬件；开启 `sensorEnable` 后随本 topic 发布。GPS / UWB 不存在时，其各自的 `valid` 字段保持无效。
+
+> 这里描述的是 DDS wire contract。`SensorObserved_` 在线路上包含 `odom`，不代表 Low-level SDK 支持 Walk 里程计；Low-level 的公开 `SensorObserved` 契约仅包含 GPS/UWB。
 
 ### 3.6 事件接收与分发
 

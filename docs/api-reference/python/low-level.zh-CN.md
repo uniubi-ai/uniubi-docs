@@ -55,12 +55,14 @@ finally:
 | `sendControl(action[, cmd])` | `send_control(action, cmd=None)`；`action` 是 `sdk.MotorCtrlAction()`，动作相关控制帧传 `sdk.LowLevelMotionCmd()` 并填写 `action/ac_name` |
 | `sendMaxTorque(action)` | `send_max_torque(action)`；使用 `action.motors[i].torque` 表示目标最大扭矩 |
 | `getLatestObservation` | `get_latest_observation(timeout_ms=5)`；返回 `LowLevelMotionObserved` 或 `None` |
-| `getSensorObservation` | `get_sensor_observation(timeout_us=5000)`；返回 `SensorObserved` 或 `None`（GPS + UWB，timeout 单位 us，默认 5000us=5ms） |
+| `getSensorObservation` | `get_sensor_observation(timeout_us=5000)`；返回 `SensorObserved` 或 `None`（仅 GPS + UWB，不支持 Walk 里程计；timeout 单位 us，默认 5000us=5ms） |
 | `getMotorLayout` | `get_motor_layout(timeout_ms=5000)`；返回 `MotorLayout` 或 `None` |
 | `restoreMotionControlMode` | `restore_motion_control_mode(timeout_ms=5000)`；返回 bool |
 | `setConnectCallback` | `set_connect_callback(cb)` 或装饰器 `@client.on_connect`；签名 `(state, error)` |
 
 数据结构 `MotorCtrl / MotorCtrlAction / LowLevelMotionCmd / MotorObserved / MotorInfo / MotorLayout / IMUObserved / Vector3f / Quaternionf / PowerObserved / TRCStickFrame / LowLevelMotionObserved / SensorObserved / GPSFrame / GEOGPoint / UWBRawObserved` 全部 expose 为 Python 类（字段下划线命名：`limb_no`, `joint_no`, `kp_gain`, `kd_gain`, `motor_num`, `charge_voltage`, `velocity_x` 等）。
+
+> Low-level 不支持 Walk 里程计。即使共享协议结构或某个 binding 版本出现 `odom` 字段，也不属于公开支持契约，应用不得依赖。
 
 ## 三、退出死锁规避（必读）
 

@@ -324,7 +324,7 @@ auto client = IMotionLowLevelClient::create();
 | `bool sendControl(const MotorCtrlAction& action, const LowLevelMotionCmd* cmd = nullptr)` | `kPrepared` | 下发一帧控制；动作相关控制帧建议传 `cmd`，并同时填写 `action` 和 `acName`；`motorNum` 必须 ∈ `[1, kLowLevelMaxMotorNum]`，否则返 `kInvalidArgument` |
 | `bool sendMaxTorque(const MotorCtrlAction& action)` | `kPrepared` | 设置电机最大扭矩；使用各元素的 `header` 定位电机、`torque` 携带目标上限；`motorNum` 必须 ∈ `[1, kLowLevelMaxMotorNum]`，否则返 `kInvalidArgument` |
 | `bool getLatestObservation(LowLevelMotionObserved* obs, uint32_t timeout)` | `kPrepared` | 在指定 `timeout`（**ms**）内获取一帧运控观测量（电机/IMU/TRC/电源）；未取到返回 false |
-| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout)` | `kConnected` / `kPrepared` 任一 | 获取一帧传感器观测（GPS + UWB），与 prepare 无关、传感器常驻采集；`timeout` 单位 **us**；无传感器硬件设备会等到超时返 false |
+| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout)` | `kConnected` / `kPrepared` 任一 | 获取一帧传感器观测（GPS + UWB），不提供 Walk 里程计；与 prepare 无关；`timeout` 单位 **us**；无传感器硬件时等到超时返 false |
 | `bool getMotorLayout(MotorLayout& layout, uint32_t timeout = 5000)` | `kConnected` 后即可 | 硬件电机布局（启动后不变，SDK 内部缓存；首次走 RPC，timeout 单位 ms） |
 
 #### 4.3.1 `sendMaxTorque` —— 设置电机最大扭矩
@@ -548,6 +548,8 @@ struct TRCStickFrame {
 #### 4.4.6 `SensorObserved` —— 传感器观测（GPS + UWB）
 
 由 `getSensorObservation(SensorObserved*, uint32_t timeout)` 返回（`timeout` 单位 us，与 prepare 无关，`kConnected` / `kPrepared` 任一即可读）。
+
+> Low-level 的正式支持契约仅包含 GPS 和 UWB，不支持 Walk 里程计。即使共享协议结构中存在 `odom`，Low-level 应用也不得读取或依赖该字段。
 
 ```cpp
 struct SensorObserved {

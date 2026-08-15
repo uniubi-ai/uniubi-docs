@@ -323,7 +323,7 @@ auto client = IMotionLowLevelClient::create();
 | `bool sendControl(const MotorCtrlAction& action, const LowLevelMotionCmd* cmd = nullptr)` | `kPrepared` | Send a frame of control; action-related control frames are recommended to be transmitted to `cmd`, and fill in `action` and `acName` at the same time; `motorNum` must ∈ `[1, kLowLevelMaxMotorNum]`, otherwise `kInvalidArgument` will be returned |
 | `bool sendMaxTorque(const MotorCtrlAction& action)` | `kPrepared` | Set the maximum torque of the motor; use each element of `header` to position the motor and `torque` to carry the target upper limit; `motorNum` must ∈ `[1, kLowLevelMaxMotorNum]`, otherwise `kInvalidArgument` |
 | `bool getLatestObservation(LowLevelMotionObserved* obs, uint32_t timeout)` | `kPrepared` | Obtain one frame of motion observation (motor/IMU/TRC/power supply) within the specified `timeout` (**ms**); return false if not obtained |
-| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout)` | `kConnected` / `kPrepared` any one | Obtain a frame of sensor observation (GPS + UWB), independent of prepare, sensor resident acquisition; `timeout` unit **us**; no sensor hardware device will wait until timeout and return false |
+| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout)` | `kConnected` / `kPrepared` | Read GPS + UWB sensor observations; Walk odometry is not provided. The call is independent of prepare; `timeout` is in **us**; without sensor hardware it waits until timeout and returns false |
 | `bool getMotorLayout(MotorLayout& layout, uint32_t timeout = 5000)` | `kConnected` | Hardware motor layout (unchanged after startup, SDK internal cache; first time RPC, timeout unit ms) |
 
 #### 4.3.1 `sendMaxTorque` ——Set the maximum torque of the motor
@@ -543,6 +543,8 @@ The external button names Stand / Motion correspond to `buttonBack` / `buttonSta
 #### 4.4.6 `SensorObserved` - Sensor Observation (GPS + UWB)
 
 Returned by `getSensorObservation(SensorObserved*, uint32_t timeout)` (`timeout` unit us, has nothing to do with prepare, any one of `kConnected` / `kPrepared` can be read).
+
+> The supported Low-level contract contains GPS and UWB only; Walk odometry is not supported. Even if a shared protocol structure contains `odom`, Low-level applications must not read or depend on it.
 
 ```cpp
 struct SensorObserved {

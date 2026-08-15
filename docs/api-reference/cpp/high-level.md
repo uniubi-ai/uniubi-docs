@@ -801,7 +801,7 @@ media->stopRawAudioFrame(0);
 | Method | Status | Description |
 |---|---|---|
 | `bool querySystemStatus(std::string& out, uint32_t timeout = 5000)` | `kConnected` | Output parameter JSON, including two sub-objects `battery` + `network`, see 4.5.1 |
-| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kConnected` | Enable or disable motion and sensor observations; `ret` returns the switches actually in effect. See §4.7 |
+| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kControlled` | Enable or disable motion and complete sensor observations; control must be acquired first. `ret` returns the switches actually in effect. See §4.7 |
 
 The camera headlight brightness is directly hung on the main client:
 
@@ -1041,14 +1041,16 @@ The complete C++ test program is `Examples/example_media_frames.cpp`. It subscri
 High-level clients can enable observation reporting and receive motion observations (IMU, motors, and power) and complete sensor observations (GPS, UWB, and Walk odometry) through callbacks:
 
 1. Register `setMotionObservedCallback` / `setSensorObservedCallback` before `connect`;
-2. Call `setObservedEnable(json, ret)` with the JSON switches; `ret` returns the switches currently in effect.
-3. The server publishes frames through `MotionObservedCallback` and `SensorObservedCallback`.
-4. The caller reads the corresponding data through `sensor.gps` / `sensor.uwb` / `sensor.odom`, and can also use `getSensorObservation` to read the complete sensor cache;
-5. Power observation still reads the latest frame buffer through `getPowerInfo`.
+2. call `connect()`;
+3. call `startControl()` and wait for the target endpoint to complete the master-role switch and enter `kControlled`;
+4. call `setObservedEnable(json, ret)` with the JSON switches; `ret` returns the switches currently in effect;
+5. the server publishes frames through `MotionObservedCallback` and `SensorObservedCallback`;
+6. read through `sensor.gps` / `sensor.uwb` / `sensor.odom` or the `getSensorObservation` cache; use `getPowerInfo` for power;
+7. disable observation reporting before calling `releaseControl()`.
 
 | Method | Status | Description |
 |---|---|---|
-| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kConnected` | Observation reporting switch, `json` is the switch field (such as `{"motionEnable":true,"sensorEnable":true}`); the output parameter `ret` returns the currently effective switch JSON. Server-side hook does not perform authentication |
+| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kControlled` | Observation reporting switch. `startControl()` switches the target endpoint to the master role before acquiring control; a slave endpoint does not own motor/IMU data and cannot provide valid motion observations. Calling this method while only `kConnected` is rejected with `kActionRejected` |
 | `void setMotionObservedCallback(MotionObservedCallback cb)` | Any | Register the motion-observation callback with signature `void(const LowLevelMotionObserved&)`, including power |
 | `void setSensorObservedCallback(SensorObservedCallback cb)` | `kDisconnected` | Register full sensor observation callback, signature `void(const SensorObserved&)`; data includes GPS, UWB and odometry |
 | `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout = 5000)` | `kConnected` | Read the complete sensor observation cache without sending RPC; `timeout` is the data freshness window (ms) |

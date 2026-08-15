@@ -12,6 +12,21 @@ The API reference is separated by programming language. Application developers c
 | Low-level | [Python](python/low-level.md) | [C++](cpp/low-level.md) | Running a custom policy and commanding joint position or torque |
 | MediaBus | [Python](python/media.md) | [C++](cpp/media.md) | Subscribing to camera, microphone, and encoded frames |
 
+## Common application capability index
+
+| Capability | High-level entry point | Low-level entry point | Guide |
+|---|---|---|---|
+| Motors / IMU / remote controller | `setObservedEnable(motionEnable)` + callback; Python: `set_observed_enable()` | `getLatestObservation()`; Python: `get_latest_observation()` | [Read sensor and motion observations](../how-to/read-sensor-data.md) |
+| GPS / UWB | `setObservedEnable(sensorEnable)` + callback/cache | `getSensorObservation()` | [Read sensor and motion observations](../how-to/read-sensor-data.md) |
+| Walk odometry | `SensorObserved.odom` | **Not supported** | [Read sensor and motion observations](../how-to/read-sensor-data.md) |
+| Complete device / battery / network status | `querySystemStatus()`; Python: `query_system_status()` | **Not supported** | [Query device status](../how-to/query-device-status.md) |
+| Lightweight power observation | `getPowerInfo()`; Python: `get_power_info()` | `getLatestObservation().power` | [Query device status](../how-to/query-device-status.md) |
+| Voice playback and file management | High-level `startAudioPlay()` and related methods | **Not supported** | [Use voice, lights, and media frames](../how-to/use-media-and-device-io.md) |
+| Camera light | `get/setCameraLightBrightness()` | **Not supported** | [Use voice, lights, and media frames](../how-to/use-media-and-device-io.md) |
+| Camera video / microphone audio | `createMediaBusClient()` | `createMediaBusClient()` | [Use voice, lights, and media frames](../how-to/use-media-and-device-io.md) |
+
+> A field in a shared protocol structure does not imply the same supported contract in every client. In particular, Walk odometry is supported by High-level and is not supported by Low-level.
+
 ## Choosing Between Them
 
 - If you use the Python package and want the shortest path to application validation, begin with the Python API.

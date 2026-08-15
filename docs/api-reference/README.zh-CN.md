@@ -12,6 +12,21 @@ API 参考按编程语言分开。普通应用开发者可以直接从 Python �
 | Low-level | [Python](python/low-level.zh-CN.md) | [C++](cpp/low-level.zh-CN.md) | 自己运行策略并控制关节位置或扭矩 |
 | MediaBus | [Python](python/media.zh-CN.md) | [C++](cpp/media.zh-CN.md) | 订阅摄像头、麦克风和编码帧 |
 
+## 常用应用能力索引
+
+| 能力 | High-level 入口 | Low-level 入口 | 操作指南 |
+|---|---|---|---|
+| 电机 / IMU / 遥控器 | `setObservedEnable(motionEnable)` + 回调；Python 为 `set_observed_enable()` | `getLatestObservation()`；Python 为 `get_latest_observation()` | [读取传感器与运动观测](../how-to/read-sensor-data.zh-CN.md) |
+| GPS / UWB | `setObservedEnable(sensorEnable)` + 回调/缓存 | `getSensorObservation()` | [读取传感器与运动观测](../how-to/read-sensor-data.zh-CN.md) |
+| Walk 里程计 | `SensorObserved.odom` | **不支持** | [读取传感器与运动观测](../how-to/read-sensor-data.zh-CN.md) |
+| 完整设备 / 电池 / 网络状态 | `querySystemStatus()`；Python 为 `query_system_status()` | **不支持** | [查询设备状态](../how-to/query-device-status.zh-CN.md) |
+| 轻量电源观测 | `getPowerInfo()`；Python 为 `get_power_info()` | `getLatestObservation().power` | [查询设备状态](../how-to/query-device-status.zh-CN.md) |
+| 语音播放与文件管理 | `startAudioPlay()` 等 High-level 接口 | **不支持** | [使用语音、灯光和媒体帧](../how-to/use-media-and-device-io.zh-CN.md) |
+| 摄像头灯光 | `get/setCameraLightBrightness()` | **不支持** | [使用语音、灯光和媒体帧](../how-to/use-media-and-device-io.zh-CN.md) |
+| 摄像头视频 / 麦克风音频 | `createMediaBusClient()` | `createMediaBusClient()` | [使用语音、灯光和媒体帧](../how-to/use-media-and-device-io.zh-CN.md) |
+
+> 共享协议结构中存在某个字段，不代表所有客户端都提供相同支持契约。尤其是 Walk 里程计：High-level 明确支持，Low-level 不支持。
+
 ## 如何选择
 
 - 使用 Python 包、希望快速完成导入和业务验证：直接进入 Python API。

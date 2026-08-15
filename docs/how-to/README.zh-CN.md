@@ -23,6 +23,14 @@
 | 运行自己的控制策略，直接控制关节位置或扭矩 | [Low-level：自定义关节控制策略](low-level-control.zh-CN.md) | 已在快速开始中选择 Low-level |
 | 编写 ROS 2 业务节点 | [启动并验证 Motion bridge](ros2-motion-bridge.zh-CN.md) | 已选择 High-level + ROS 2 |
 
+## 应用数据与设备能力
+
+| 任务 | 导读 | 支持范围 |
+|---|---|---|
+| 读取 GPS、UWB、电机、IMU、电源和 Walk 里程计 | [读取传感器与运动观测](read-sensor-data.zh-CN.md) | GPS/UWB 支持 High-level 与 Low-level；Walk 里程计仅 High-level |
+| 查询设备、电池和网络状态 | [查询设备状态](query-device-status.zh-CN.md) | 完整状态仅 High-level；Low-level 只有轻量电源观测 |
+| 使用语音、摄像头灯光、视频和麦克风数据 | [使用语音、灯光和媒体帧](use-media-and-device-io.zh-CN.md) | 语音/灯光仅 High-level；MediaBus 可由两类客户端创建 |
+
 ## 训练与验证
 
 | 任务 | 导读 | 适用阶段 |

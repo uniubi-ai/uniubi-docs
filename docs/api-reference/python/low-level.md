@@ -55,12 +55,14 @@ finally:
 | `sendControl(action[, cmd])` | `send_control(action, cmd=None)`; `action` is `sdk.MotorCtrlAction()`, and the action-related control frame is transmitted to `sdk.LowLevelMotionCmd()` and filled in `action/ac_name` |
 | `sendMaxTorque(action)` | `send_max_torque(action)`; use `action.motors[i].torque` to represent the target maximum torque |
 | `getLatestObservation` | `get_latest_observation(timeout_ms=5)`; return `LowLevelMotionObserved` or `None` |
-| `getSensorObservation` | `get_sensor_observation(timeout_us=5000)`; return `SensorObserved` or `None` (GPS + UWB, timeout unit us, default 5000us=5ms) |
+| `getSensorObservation` | `get_sensor_observation(timeout_us=5000)`; return `SensorObserved` or `None` (GPS + UWB only; Walk odometry is not supported; timeout unit us, default 5000us=5ms) |
 | `getMotorLayout` | `get_motor_layout(timeout_ms=5000)`; return `MotorLayout` or `None` |
 | `restoreMotionControlMode` | `restore_motion_control_mode(timeout_ms=5000)`; return bool |
 | `setConnectCallback` | `set_connect_callback(cb)` or decorator `@client.on_connect`; signature `(state, error)` |
 
 The data structure `MotorCtrl / MotorCtrlAction / LowLevelMotionCmd / MotorObserved / MotorInfo / MotorLayout / IMUObserved / Vector3f / Quaternionf / PowerObserved / TRCStickFrame / LowLevelMotionObserved / SensorObserved / GPSFrame / GEOGPoint / UWBRawObserved` is all exposed as Python classes (fields are named underlined: `limb_no`, `joint_no`, `kp_gain`, `kd_gain`, `motor_num`, `charge_voltage`, `velocity_x`, etc.).
+
+> Low-level does not support Walk odometry. An `odom` member exposed by a shared protocol structure or a particular binding build is outside the public support contract and must not be used by applications.
 
 ## 3. Exit Deadlock Avoidance
 

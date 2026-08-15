@@ -612,7 +612,7 @@ For detailed control/renewal/release calling methods, see [§3.3.1](#331-session
 | `robotAppService` | `stopMotionAction` | Stop current action | Yes |
 | `robotAppService` | `setMotionActionParams` | Change subparameters during runtime | Yes |
 | `robotAppService` | `emergencyStopMotion` | Emergency brake | Yes |
-| `robotAppService` | `setMotionObservedEnable` | Switch motion observation measurement | No |
+| `robotAppService` | `setMotionObservedEnable` | Switch motion observation measurement | Yes |
 | `robotAppService` | `queryMotionState` | Query operation control status | Yes |
 | `robotAppService` | `getMotionCapabilities` | Query the set of actions supported by the device | No |
 | `robotAppService` | `getSystemStatus` | Pull system status snapshot | No |
@@ -654,7 +654,7 @@ Each method gives: **Request `params`** (message format + fields), **Response `p
 | `stopMotionAction` | Holding rights | — | [§3.3.2](#332-action-control) |
 | `setMotionActionParams` | Holding rights | `params` (according to current action schema) | [§3.3.2](#332-action-control) |
 | `emergencyStopMotion` | Holding rights | — | [§3.3.2](#332-action-control) |
-| `setMotionObservedEnable` | None | `motionEnable`(bool), `sensorEnable`(bool) | [§3.3.3](#333-data-reporting) |
+| `setMotionObservedEnable` | Holding rights | `motionEnable`(bool), `sensorEnable`(bool) | [§3.3.3](#333-data-reporting) |
 | `queryMotionState` | None | — | [§3.3.4](#334-status-query) |
 | `getMotionCapabilities` | None | — | [§3.3.4](#334-status-query) |
 | `getSystemStatus` | None | — | [§3.3.4](#334-status-query) |
@@ -899,7 +899,7 @@ Controls the external release switch of motion observations ([§3.5](#35-motion-
 **Usage Note**
 
 - It is closed by default and is not persisted to the configuration: the server returns to the closed state after restarting and needs to be turned on again.
-- Holding rights is not mandatory, but `payload.call.clientId` cannot be empty
+- `payload.call.clientId` must identify the current control owner; calls without control are rejected. The target MotionServer must already be the master. A slave endpoint does not own motor/IMU data, so `requireObserved()` returns `false`. Raw DDS `takeMotionControl` only acquires control and does not replace the master-role switch performed by High-level `startControl()`
 - For the calling sequence, see [§3.5](#35-motion-observation-subscription): **Subscribe to the reader first and then call this RPC to start pushing**; reverse order will lose the first few milliseconds of frames
 
 #### 3.3.4 Status Query
@@ -1430,15 +1430,17 @@ Motion observation subscription is based on the "device → client" direction of
 ```
 Enable:
   ① Subscribe the reader to rt/motion/observed
-  ② Call RPC setMotionObservedEnable ([§3.3.3](#333-data-reporting)), params: {"motionEnable": true}
-  ③ The device starts publishing at 50 Hz
+  ② Ensure that the target MotionServer is already the master, then call takeMotionControl
+  ③ Call RPC setMotionObservedEnable ([§3.3.3](#333-data-reporting)), params: {"motionEnable": true}
+  ④ The device starts publishing at 50 Hz
 
 Disable:
-  ④ Call RPC setMotionObservedEnable, params: {"motionEnable": false}
-  ⑤ Destroy the reader (optional; retain it while the session remains open)
+  ⑤ Call RPC setMotionObservedEnable, params: {"motionEnable": false}
+  ⑥ Release motion control
+  ⑦ Destroy the reader (optional; retain it while the session remains open)
 ```
 
-You must **subscribe first and then enable push**, otherwise frames in the first few milliseconds will be lost. `setMotionObservedEnable` does not require holding rights, but `payload.call.clientId` cannot be empty - it can also be called when no rights are held.
+You must **subscribe, ensure that the target endpoint is the master, acquire control, and then enable push**. Calls without control are rejected. `takeMotionControl` does not switch the master role; a slave endpoint cannot provide local motor/IMU observations even after control is acquired.
 
 #### Sensor observation (`rt/sensor/observed`)
 
@@ -1453,6 +1455,8 @@ Sensor observation (GPS / UWB / Walk odometer) goes through the independent topi
 QoS, start and stop conventions are consistent with motion observations (same as above: `BEST_EFFORT` / `KEEP_LAST` / `VOLATILE` / `ALLOW_TYPE_COERCION`; subscribe first and then enable push). The switch also reports the data of [§3.3.3](#333-data-reporting) for RPC control. Devices without corresponding sensor hardware do not write data.
 
 > `odom` does not rely on GPS / UWB hardware; open `sensorEnable` and publish it with this topic. When GPS/UWB is not present, its respective `valid` field remains invalid.
+
+> This section describes the DDS wire contract. `SensorObserved_` contains `odom` on the wire, but this does not mean that the Low-level SDK supports Walk odometry. The public Low-level `SensorObserved` contract contains GPS/UWB only.
 
 ### 3.6 Event reception and distribution
 

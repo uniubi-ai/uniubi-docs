@@ -802,7 +802,7 @@ media->stopRawAudioFrame(0);
 | 方法 | 状态 | 说明 |
 |---|---|---|
 | `bool querySystemStatus(std::string& out, uint32_t timeout = 5000)` | `kConnected` | 出参 JSON，含 `battery` + `network` 两个子对象，见 4.5.1 |
-| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kConnected` | 开/停观测量上报（运控观测 + GPS），出参 `ret` 回带实际生效开关，见 §4.7 |
+| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kControlled` | 开/停运控观测与完整传感器观测上报；要求先完成取控，出参 `ret` 回带实际生效开关，见 §4.7 |
 
 摄像头前灯亮度直接挂在主客户端上：
 
@@ -1042,14 +1042,16 @@ NVIDIA 平台的视频原始帧可能是多平面且内存不连续，保存 / �
 高级客户端可开启观测量上报，把运控观测（IMU + 电机 + 电源）和完整传感器观测（GPS + UWB + Walk 里程计）通过回调推给调用方。整体流程：
 
 1. 在 `connect` 前注册 `setMotionObservedCallback` / `setSensorObservedCallback`；
-2. 调 `setObservedEnable(json, ret)` 传 JSON 开关开启服务端推送；`ret` 回带当前实际生效的开关状态；
-3. 服务端按帧推送，运控观测经 `MotionObservedCallback` 上抛，传感器观测经 `SensorObservedCallback` 上抛；
-4. 调用方通过 `sensor.gps` / `sensor.uwb` / `sensor.odom` 读取对应数据，也可用 `getSensorObservation` 读取完整传感器缓存；
-5. 电源观测仍通过 `getPowerInfo` 读取最近一帧缓存。
+2. 调用 `connect()`；
+3. 调用 `startControl()`，等待目标端完成 master role 切换并进入 `kControlled`；
+4. 调用 `setObservedEnable(json, ret)` 开启服务端推送；`ret` 回带当前实际生效的开关状态；
+5. 服务端按帧推送，运控观测经 `MotionObservedCallback` 上抛，传感器观测经 `SensorObservedCallback` 上抛；
+6. 通过 `sensor.gps` / `sensor.uwb` / `sensor.odom` 或 `getSensorObservation` 缓存读取数据；电源观测通过 `getPowerInfo` 读取；
+7. 退出时先关闭观测量上报，再调用 `releaseControl()`。
 
 | 方法 | 状态 | 说明 |
 |---|---|---|
-| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kConnected` | 观测量上报开关，`json` 为开关字段（如 `{"motionEnable":true,"sensorEnable":true}`）；出参 `ret` 回带当前实际生效的开关 JSON。服务端 hook 不做鉴权 |
+| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kControlled` | 观测量上报开关。`startControl()` 会先将目标端切为 master 再取得控制权；slave 端的电机/IMU 不在本端，无法提供有效运控观测。仅处于 `kConnected` 时调用会被拒绝（`kActionRejected`） |
 | `void setMotionObservedCallback(MotionObservedCallback cb)` | 任意 | 注册运控观测量回调，签名 `void(const LowLevelMotionObserved&)`（含 power）|
 | `void setSensorObservedCallback(SensorObservedCallback cb)` | `kDisconnected` | 注册完整传感器观测回调，签名 `void(const SensorObserved&)`；数据包含 GPS、UWB 和里程计 |
 | `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout = 5000)` | `kConnected` | 读取完整传感器观测缓存，不发 RPC；`timeout` 是数据新鲜度窗口（ms）|
