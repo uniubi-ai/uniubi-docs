@@ -44,7 +44,7 @@ finally:
 | `setDiscoverCallback` | `sdk.service.set_discover_callback(cb)`；签名 `(sn: str, info_json: str) -> None` |
 | `isMultiDevice` | `sdk.service.is_multi_device() -> bool` |
 | `discoverDevices` | `sdk.service.discover_devices(timeout_ms=10000) -> bool`（非阻塞） |
-| `initialService` | `sdk.service.initial(file_or_none, server_name, timeout=30)` |
+| `initialService` | `sdk.service.initial(file_or_none, server_name, timeout_ms=30000)` |
 | `shutdown` | `sdk.service.shutdown()` |
 
 **HighLevel client（`sdk.MotionHighLevelClient` —— 对应 `IMotionHighLevelClient`）：**
@@ -61,7 +61,7 @@ finally:
 | `queryMotionState / getMotionCapabilities / querySystemStatus` | `query_motion_state()` / `get_motion_capabilities()` / `query_system_status()`；返回 Python dict（自动 json.loads） |
 | `getMotorLayout` | `get_motor_layout(timeout_ms=5000)`；返回 `sdk.MotorLayout`，失败 `None` |
 | `setObservedEnable` | `set_observed_enable(params=None, timeout_ms=5000)`；要求 `HighLevelState.kControlled`：先调用 `start_control()`，等待目标端完成 master role 切换并取得控制权。成功返回实际开关 dict，失败返回 `None`；仅处于 `kConnected` 时调用会失败并返回 `HighLevelError.kActionRejected` |
-| `getPowerInfo` | `get_power_info(timeout_us=5000)`；`timeout_us` 是新鲜度窗口（微秒），返回 `sdk.PowerObserved` 或 `None` |
+| `getPowerInfo` | `get_power_info(timeout_ms=5)`；`timeout_ms` 是新鲜度窗口（毫秒），返回 `sdk.PowerObserved` 或 `None` |
 | `getSensorObservation` | `get_sensor_observation(timeout_ms=5000)`；读取完整传感器缓存，返回 `sdk.SensorObserved` 或 `None` |
 | `setMotionObservedCallback` | `set_motion_observed_callback(cb)`；签名 `(obs: sdk.LowLevelMotionObserved)` |
 | `setSensorObservedCallback` | `set_sensor_observed_callback(cb)`；须在 `connect()` 前注册，签名 `(sensor: sdk.SensorObserved)` |

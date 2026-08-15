@@ -31,11 +31,11 @@ See the [High-level API](../api-reference/cpp/high-level.md#451-querysystemstatu
 
 ## High-level: lightweight power cache
 
-`get_power_info(timeout_us=...)` reads the latest power data carried in motion observations. Enable `motionEnable` while in `kControlled` first; without a fresh cache it returns `None`.
+`get_power_info(timeout_ms=...)` reads the latest power data carried in motion observations. Enable `motionEnable` while in `kControlled` first; without a fresh cache it returns `None`.
 
 ```python
 client.set_observed_enable({"motionEnable": True, "sensorEnable": False})
-power = client.get_power_info(timeout_us=1_000_000)
+power = client.get_power_info(timeout_ms=1000)
 if power is not None:
     print(power.power, power.charge_voltage, power.temper)
 ```

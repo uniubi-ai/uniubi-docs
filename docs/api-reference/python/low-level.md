@@ -39,7 +39,7 @@ finally:
 |---|---|
 | `version()` | `sdk.service.version()` —— Returns the SDK version string |
 | `setLogCallback` | `sdk.service.set_log_callback(cb)`; signature `(level: LogLevel, msg: str) -> None` |
-| `initialService` | `sdk.service.initial(file_or_none, server_name, timeout=30)` |
+| `initialService` | `sdk.service.initial(file_or_none, server_name, timeout_ms=30000)` |
 | `shutdown` | `sdk.service.shutdown()` |
 
 **LowLevel client (`sdk.MotionLowLevelClient` - corresponding to `IMotionLowLevelClient`): **
@@ -55,7 +55,7 @@ finally:
 | `sendControl(action[, cmd])` | `send_control(action, cmd=None)`; `action` is `sdk.MotorCtrlAction()`, and the action-related control frame is transmitted to `sdk.LowLevelMotionCmd()` and filled in `action/ac_name` |
 | `sendMaxTorque(action)` | `send_max_torque(action)`; use `action.motors[i].torque` to represent the target maximum torque |
 | `getLatestObservation` | `get_latest_observation(timeout_ms=5)`; return `LowLevelMotionObserved` or `None` |
-| `getSensorObservation` | `get_sensor_observation(timeout_us=5000)`; return `SensorObserved` or `None` (GPS + UWB only; Walk odometry is not supported; timeout unit us, default 5000us=5ms) |
+| `getSensorObservation` | `get_sensor_observation(timeout_ms=5)`; return `SensorObserved` or `None` (GPS + UWB only; Walk odometry is not supported; timeout unit ms, default 5ms) |
 | `getMotorLayout` | `get_motor_layout(timeout_ms=5000)`; return `MotorLayout` or `None` |
 | `restoreMotionControlMode` | `restore_motion_control_mode(timeout_ms=5000)`; return bool |
 | `setConnectCallback` | `set_connect_callback(cb)` or decorator `@client.on_connect`; signature `(state, error)` |

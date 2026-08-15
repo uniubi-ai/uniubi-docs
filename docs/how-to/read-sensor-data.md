@@ -52,10 +52,10 @@ sensor = client.get_sensor_observation(timeout_ms=1500)
 
 ## Low-level: GPS and UWB
 
-Low-level can read GPS/UWB in either `kConnected` or `kPrepared`; entering `kPrepared` is not required. Its timeout is in **microseconds**, unlike the High-level millisecond timeout.
+Low-level can read GPS/UWB in either `kConnected` or `kPrepared`; entering `kPrepared` is not required. Its timeout is in **milliseconds**, consistent with High-level.
 
 ```python
-sensor = client.get_sensor_observation(timeout_us=1_000_000)
+sensor = client.get_sensor_observation(timeout_ms=1000)
 if sensor is not None:
     if sensor.gps.valid:
         print("GPS", sensor.gps.point.lat, sensor.gps.point.lng)
@@ -67,7 +67,7 @@ Low-level has no supported Walk-odometry access path. Use High-level when Walk o
 
 ## Motors, IMU, remote controller, and power
 
-- High-level: enable `motionEnable` and read the motion callback; use `get_power_info(timeout_us=...)` for the latest power cache.
+- High-level: enable `motionEnable` and read the motion callback; use `get_power_info(timeout_ms=...)` for the latest power cache.
 - Low-level: in `kPrepared`, call `get_latest_observation(timeout_ms=...)` for motors, IMU, TRC, and lightweight power data.
 
 Entering Low-level `kPrepared` switches the robot to the joint-control path. Do not enter Low-level control on an unattended robot merely to read battery level. Prefer High-level for complete status; see [Query Device Status](query-device-status.md).

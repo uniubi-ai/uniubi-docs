@@ -299,14 +299,14 @@ SDK 的 RPC 控制面与事件订阅基于 [Eclipse Cyclone DDS](https://cyclone
 #### 4.1.1 全局初始化
 
 ```cpp
-bool IMotionSdkService::initialService(const char* file, const char* server, uint32_t timeout = 30);
+bool IMotionSdkService::initialService(const char* file, const char* server, uint32_t timeoutMs = 30000);
 ```
 
 | 参数 | 类型 | 说明 |
 |---|---|---|
 | `file` | `const char*` | 预留：JSON 配置文件路径。当前 SDK 默认 DDS 配置已内置，传 `nullptr` 即可 |
 | `server` | `const char*` | 应用标识，用于 RPC / 日志区分多实例（如 `"myAppHighLevel"`），调用方自定义 |
-| `timeout` | `uint32_t` | 等待系统环境就绪的超时（**秒**，默认 30）。板内模式下若 SDK 比系统环境先起，可能需要等待；超时未就绪返回 `false` |
+| `timeoutMs` | `uint32_t` | 等待系统环境就绪的超时（**毫秒**，默认 30000）。板内模式下若 SDK 比系统环境先起，可能需要等待；超时未就绪返回 `false` |
 
 进程级一次性初始化，必须在创建任何 client 之前调用。返回 `true` 表示初始化成功。
 
@@ -470,7 +470,7 @@ client->connect();
 |---|---|---|
 | `bool connect(int32_t leaseMs = 0)` | 任意 | 进入高级模式。`leaseMs<=0` 时 SDK 默认 60000ms；有效范围 5s ~ 5min，超出按边界值替代。**注意 `leaseMs` 是 int32** |
 | `void disconnect()` | 任意 | 关闭连接与事件订阅 |
-| `bool startControl(uint32_t timeout = 10000)` | 已 connect | 异步请求控制权；`timeout` 是整体截止时间（ms） |
+| `bool startControl(uint32_t timeoutMs = 10000)` | 已 connect | 异步请求控制权；`timeoutMs` 是整体截止时间（ms） |
 | `bool releaseControl()` | `kControlled` | 异步释放，完成后状态切回 `kConnected` |
 | `int32_t getState() const` | 任意 | 当前 `HighLevelState` |
 | `int32_t getLastError() const` | 任意 | 读后清零的最后失败原因 |
@@ -484,15 +484,15 @@ client->connect();
 
 | 方法 | 参数 |
 |---|---|
-| `bool emergencyStop(uint32_t timeout = 5000)` | 急停 |
-| `bool recoveryStand(uint32_t timeout = 5000)` | 跌倒后恢复站立（自我翻正 + 起立）|
-| `bool startAction(const std::string& action, const std::string& paramsJson = "", uint32_t timeout = 5000)` | `action`：动作名；`paramsJson` 字段以 `getMotionCapabilities()` 返回的 `params` 列表为准，一次性动作可传 `""` |
-| `bool stopAction(uint32_t timeout = 5000)` | 停止当前动作 |
-| `bool setActionParams(const std::string& paramsJson = "", uint32_t timeout = 5000)` | 运行期调当前动作参数（不切动作）；可调字段由当前动作的 `params` 列表决定（见 `getMotionCapabilities`），**全量重写语义**（未传字段归 0）|
-| `bool damp(uint32_t timeout = 5000)` | 进入阻尼/慢沉（软卸力），关节低刚度可控下沉 |
-| `bool lieDown(uint32_t timeout = 5000)` | 趴下/卧倒 |
-| `bool standUp(uint32_t timeout = 5000)` | 站立 |
-| `bool move(float vx, float vy, float vyaw, uint32_t timeout = 5000)` | 行走：`vx` 前后线速度（正前进）、`vy` 左右线速度、`vyaw` 转向角速度；持续生效直到 `stopAction` 或后续动作/参数覆盖 |
+| `bool emergencyStop(uint32_t timeoutMs = 5000)` | 急停 |
+| `bool recoveryStand(uint32_t timeoutMs = 5000)` | 跌倒后恢复站立（自我翻正 + 起立）|
+| `bool startAction(const std::string& action, const std::string& paramsJson = "", uint32_t timeoutMs = 5000)` | `action`：动作名；`paramsJson` 字段以 `getMotionCapabilities()` 返回的 `params` 列表为准，一次性动作可传 `""` |
+| `bool stopAction(uint32_t timeoutMs = 5000)` | 停止当前动作 |
+| `bool setActionParams(const std::string& paramsJson = "", uint32_t timeoutMs = 5000)` | 运行期调当前动作参数（不切动作）；可调字段由当前动作的 `params` 列表决定（见 `getMotionCapabilities`），**全量重写语义**（未传字段归 0）|
+| `bool damp(uint32_t timeoutMs = 5000)` | 进入阻尼/慢沉（软卸力），关节低刚度可控下沉 |
+| `bool lieDown(uint32_t timeoutMs = 5000)` | 趴下/卧倒 |
+| `bool standUp(uint32_t timeoutMs = 5000)` | 站立 |
+| `bool move(float vx, float vy, float vyaw, uint32_t timeoutMs = 5000)` | 行走：`vx` 前后线速度（正前进）、`vy` 左右线速度、`vyaw` 转向角速度；持续生效直到 `stopAction` 或后续动作/参数覆盖 |
 
 **动作安全分级**
 
@@ -551,9 +551,9 @@ client->stopAction();
 
 | 方法 | 出参 |
 |---|---|
-| `bool queryMotionState(std::string& out, uint32_t timeout = 5000)` | 当前运控实际生效的动作 + 控制速度 JSON，schema 见下 |
-| `bool getMotionCapabilities(std::string& out, uint32_t timeout = 5000)` | 支持的高级动作集合（含按键组合 + 可调参数）JSON，schema 见下 |
-| `bool getMotorLayout(MotorLayout& layout, uint32_t timeout = 5000)` | 电机硬件布局（电机数 + 每电机 `limbNo`/`jointNo`/`name`）；`kConnected` 后即可调，SDK 内部缓存 |
+| `bool queryMotionState(std::string& out, uint32_t timeoutMs = 5000)` | 当前运控实际生效的动作 + 控制速度 JSON，schema 见下 |
+| `bool getMotionCapabilities(std::string& out, uint32_t timeoutMs = 5000)` | 支持的高级动作集合（含按键组合 + 可调参数）JSON，schema 见下 |
+| `bool getMotorLayout(MotorLayout& layout, uint32_t timeoutMs = 5000)` | 电机硬件布局（电机数 + 每电机 `limbNo`/`jointNo`/`name`）；`kConnected` 后即可调，SDK 内部缓存 |
 
 ##### `queryMotionState` 出参示例
 
@@ -649,11 +649,11 @@ client->startAudioPlay(R"({"list":[{"id":"1"}],"volume":50,"repeat":1})");
 
 | 方法 | 参数 | 备注 |
 |---|---|---|
-| `bool startAudioPlay(const std::string& paramsJson, uint32_t timeout = 5000)` | 见下表 | 复用 RPC，按字段决定语义 |
-| `bool stopAudioPlay(uint32_t timeout = 5000)` | — | 空参即停止 |
-| `bool pauseAudioPlay(uint32_t timeout = 5000)` | 内部传 `{"pause":true}` | 恢复用 `startAudioPlay` 的 resume 形态 |
-| `bool addAudioFile(const std::string& paramsJson, uint32_t timeout = 30000)` | `{"id":"custom_1","name":"hello.mp3","file":"/data/hello.mp3"}` 或 URL 形态 | 新增自定义音频文件 |
-| `bool deleteAudioFile(const std::string& paramsJson, uint32_t timeout = 5000)` | `{"id":"1"}` | id 为待删音频 ID |
+| `bool startAudioPlay(const std::string& paramsJson, uint32_t timeoutMs = 5000)` | 见下表 | 复用 RPC，按字段决定语义 |
+| `bool stopAudioPlay(uint32_t timeoutMs = 5000)` | — | 空参即停止 |
+| `bool pauseAudioPlay(uint32_t timeoutMs = 5000)` | 内部传 `{"pause":true}` | 恢复用 `startAudioPlay` 的 resume 形态 |
+| `bool addAudioFile(const std::string& paramsJson, uint32_t timeoutMs = 30000)` | `{"id":"custom_1","name":"hello.mp3","file":"/data/hello.mp3"}` 或 URL 形态 | 新增自定义音频文件 |
+| `bool deleteAudioFile(const std::string& paramsJson, uint32_t timeoutMs = 5000)` | `{"id":"1"}` | id 为待删音频 ID |
 
 **`startAudioPlay.paramsJson` 形态**
 
@@ -668,8 +668,8 @@ client->startAudioPlay(R"({"list":[{"id":"1"}],"volume":50,"repeat":1})");
 
 | 方法 | 入参 paramsJson | 出参 out（UTF-8 JSON） |
 |---|---|---|
-| `bool queryAudioPlayDetail(std::string& out, uint32_t timeout = 5000)` | — | 见 4.4.2.1 |
-| `bool queryAudioPlayList(std::string& out, const std::string& paramsJson = "", uint32_t timeout = 5000)` | `{"type":"customVoice"}` | 见 4.4.2.2 |
+| `bool queryAudioPlayDetail(std::string& out, uint32_t timeoutMs = 5000)` | — | 见 4.4.2.1 |
+| `bool queryAudioPlayList(std::string& out, const std::string& paramsJson = "", uint32_t timeoutMs = 5000)` | `{"type":"customVoice"}` | 见 4.4.2.2 |
 
 ##### 4.4.2.1 `queryAudioPlayDetail` 出参字段
 
@@ -801,8 +801,8 @@ media->stopRawAudioFrame(0);
 
 | 方法 | 状态 | 说明 |
 |---|---|---|
-| `bool querySystemStatus(std::string& out, uint32_t timeout = 5000)` | `kConnected` | 出参 JSON，含 `battery` + `network` 两个子对象，见 4.5.1 |
-| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kControlled` | 开/停运控观测与完整传感器观测上报；要求先完成取控，出参 `ret` 回带实际生效开关，见 §4.7 |
+| `bool querySystemStatus(std::string& out, uint32_t timeoutMs = 5000)` | `kConnected` | 出参 JSON，含 `battery` + `network` 两个子对象，见 4.5.1 |
+| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeoutMs = 5000)` | `kControlled` | 开/停运控观测与完整传感器观测上报；要求先完成取控，出参 `ret` 回带实际生效开关，见 §4.7 |
 
 摄像头前灯亮度直接挂在主客户端上：
 
@@ -812,8 +812,8 @@ client->setCameraLightBrightness(50);
 
 | 方法 | 状态 | 说明 |
 |---|---|---|
-| `bool getCameraLightBrightness(std::string& out, uint32_t timeout = 5000)` | `kControlled` | 查询摄像头前灯亮度，出参 `out` 为 JSON 字符串 |
-| `bool setCameraLightBrightness(int32_t brightness, uint32_t timeout = 5000)` | `kControlled` | 控制摄像头前灯亮度，`brightness` 取值 0~100（**`brightness` 仍是 int32**）|
+| `bool getCameraLightBrightness(std::string& out, uint32_t timeoutMs = 5000)` | `kControlled` | 查询摄像头前灯亮度，出参 `out` 为 JSON 字符串 |
+| `bool setCameraLightBrightness(int32_t brightness, uint32_t timeoutMs = 5000)` | `kControlled` | 控制摄像头前灯亮度，`brightness` 取值 0~100（**`brightness` 仍是 int32**）|
 
 #### 4.5.1 `querySystemStatus` 出参字段
 
@@ -1051,11 +1051,11 @@ NVIDIA 平台的视频原始帧可能是多平面且内存不连续，保存 / �
 
 | 方法 | 状态 | 说明 |
 |---|---|---|
-| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kControlled` | 观测量上报开关。`startControl()` 会先将目标端切为 master 再取得控制权；slave 端的电机/IMU 不在本端，无法提供有效运控观测。仅处于 `kConnected` 时调用会被拒绝（`kActionRejected`） |
+| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeoutMs = 5000)` | `kControlled` | 观测量上报开关。`startControl()` 会先将目标端切为 master 再取得控制权；slave 端的电机/IMU 不在本端，无法提供有效运控观测。仅处于 `kConnected` 时调用会被拒绝（`kActionRejected`） |
 | `void setMotionObservedCallback(MotionObservedCallback cb)` | 任意 | 注册运控观测量回调，签名 `void(const LowLevelMotionObserved&)`（含 power）|
 | `void setSensorObservedCallback(SensorObservedCallback cb)` | `kDisconnected` | 注册完整传感器观测回调，签名 `void(const SensorObserved&)`；数据包含 GPS、UWB 和里程计 |
-| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout = 5000)` | `kConnected` | 读取完整传感器观测缓存，不发 RPC；`timeout` 是数据新鲜度窗口（ms）|
-| `bool getPowerInfo(PowerObserved* power, uint32_t timeout)` | `kConnected` | 取最近一帧电源观测；**需先 `setObservedEnable({"motionEnable":true})` 开启运控观测**（电源量随运控观测帧上报），否则窗口内无数据恒返 `false`。`timeout` 是**新鲜度窗口（微秒，us）**：仅当最近 `timeout` us 内有观测数据才返回 `true`，否则返回 `false`（`getLastError()` → `kDataNotUpdate`）|
+| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeoutMs = 5000)` | `kConnected` | 读取完整传感器观测缓存，不发 RPC；`timeoutMs` 是数据新鲜度窗口（ms）|
+| `bool getPowerInfo(PowerObserved* power, uint32_t timeoutMs)` | `kConnected` | 取最近一帧电源观测；**需先 `setObservedEnable({"motionEnable":true})` 开启运控观测**（电源量随运控观测帧上报），否则窗口内无数据恒返 `false`。`timeoutMs` 是**新鲜度窗口（毫秒，ms）**：仅当最近 `timeoutMs` ms 内有观测数据才返回 `true`，否则返回 `false`（`getLastError()` → `kDataNotUpdate`）|
 
 `setObservedEnable` 入参 JSON 开关字段：
 
@@ -1088,7 +1088,7 @@ client->setObservedEnable(R"({"motionEnable":true,"sensorEnable":true})", observ
 // observedState 回带当前实际生效的开关，如 {"motionEnable":true,"sensorEnable":true}
 
 PowerObserved power = {};
-if (client->getPowerInfo(&power, /*timeout_us=*/200000)) {
+if (client->getPowerInfo(&power, /*timeoutMs=*/200)) {
     printf("battery=%.1f%% voltage=%.2fV\n", power.power, power.chargeVoltage);
 }
 ```

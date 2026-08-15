@@ -52,10 +52,10 @@ sensor = client.get_sensor_observation(timeout_ms=1500)
 
 ## Low-level：GPS 和 UWB
 
-Low-level 不需要进入 `kPrepared` 即可读取 GPS/UWB；`kConnected` 或 `kPrepared` 均可调用。超时参数单位是 **微秒**，与 High-level 的毫秒不同。
+Low-level 不需要进入 `kPrepared` 即可读取 GPS/UWB；`kConnected` 或 `kPrepared` 均可调用。超时参数单位是 **毫秒**，与 High-level 一致。
 
 ```python
-sensor = client.get_sensor_observation(timeout_us=1_000_000)
+sensor = client.get_sensor_observation(timeout_ms=1000)
 if sensor is not None:
     if sensor.gps.valid:
         print("GPS", sensor.gps.point.lat, sensor.gps.point.lng)
@@ -67,7 +67,7 @@ Low-level 不提供受支持的 Walk 里程计读取入口。需要 Walk 里程�
 
 ## 电机、IMU、遥控器和电源
 
-- High-level：开启 `motionEnable` 后通过运控观测回调读取；电源也可通过 `get_power_info(timeout_us=...)` 读取最新缓存。
+- High-level：开启 `motionEnable` 后通过运控观测回调读取；电源也可通过 `get_power_info(timeout_ms=...)` 读取最新缓存。
 - Low-level：在 `kPrepared` 中调用 `get_latest_observation(timeout_ms=...)`，返回电机、IMU、TRC 和轻量电源观测。
 
 进入 Low-level `kPrepared` 会切换到关节级控制路径。不要仅为了读取电量而在无人值守的真机上进入 Low-level 控制模式；完整设备状态优先使用 High-level，见[查询设备状态](query-device-status.zh-CN.md)。

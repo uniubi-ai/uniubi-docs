@@ -31,11 +31,11 @@ print("interfaces", list(network.keys()))
 
 ## High-level：轻量电源缓存
 
-`get_power_info(timeout_us=...)` 读取运控观测中的最近一帧电源数据。必须先在 `kControlled` 下开启 `motionEnable`，否则没有新鲜缓存时返回 `None`。
+`get_power_info(timeout_ms=...)` 读取运控观测中的最近一帧电源数据。必须先在 `kControlled` 下开启 `motionEnable`，否则没有新鲜缓存时返回 `None`。
 
 ```python
 client.set_observed_enable({"motionEnable": True, "sensorEnable": False})
-power = client.get_power_info(timeout_us=1_000_000)
+power = client.get_power_info(timeout_ms=1000)
 if power is not None:
     print(power.power, power.charge_voltage, power.temper)
 ```

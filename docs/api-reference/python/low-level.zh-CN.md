@@ -39,7 +39,7 @@ finally:
 |---|---|
 | `version()` | `sdk.service.version()` —— 返回 SDK 版本字符串 |
 | `setLogCallback` | `sdk.service.set_log_callback(cb)`；签名 `(level: LogLevel, msg: str) -> None` |
-| `initialService` | `sdk.service.initial(file_or_none, server_name, timeout=30)` |
+| `initialService` | `sdk.service.initial(file_or_none, server_name, timeout_ms=30000)` |
 | `shutdown` | `sdk.service.shutdown()` |
 
 **LowLevel client（`sdk.MotionLowLevelClient` —— 对应 `IMotionLowLevelClient`）：**
@@ -55,7 +55,7 @@ finally:
 | `sendControl(action[, cmd])` | `send_control(action, cmd=None)`；`action` 是 `sdk.MotorCtrlAction()`，动作相关控制帧传 `sdk.LowLevelMotionCmd()` 并填写 `action/ac_name` |
 | `sendMaxTorque(action)` | `send_max_torque(action)`；使用 `action.motors[i].torque` 表示目标最大扭矩 |
 | `getLatestObservation` | `get_latest_observation(timeout_ms=5)`；返回 `LowLevelMotionObserved` 或 `None` |
-| `getSensorObservation` | `get_sensor_observation(timeout_us=5000)`；返回 `SensorObserved` 或 `None`（仅 GPS + UWB，不支持 Walk 里程计；timeout 单位 us，默认 5000us=5ms） |
+| `getSensorObservation` | `get_sensor_observation(timeout_ms=5)`；返回 `SensorObserved` 或 `None`（仅 GPS + UWB，不支持 Walk 里程计；timeout 单位 ms，默认 5ms） |
 | `getMotorLayout` | `get_motor_layout(timeout_ms=5000)`；返回 `MotorLayout` 或 `None` |
 | `restoreMotionControlMode` | `restore_motion_control_mode(timeout_ms=5000)`；返回 bool |
 | `setConnectCallback` | `set_connect_callback(cb)` 或装饰器 `@client.on_connect`；签名 `(state, error)` |

@@ -298,14 +298,14 @@ The SDK implements its RPC control plane and event subscriptions with [Eclipse C
 #### 4.1.1 Global initialization
 
 ```cpp
-bool IMotionSdkService::initialService(const char* file, const char* server, uint32_t timeout = 30);
+bool IMotionSdkService::initialService(const char* file, const char* server, uint32_t timeoutMs = 30000);
 ```
 
 | Parameters | Type | Description |
 |---|---|---|
 | `file` | `const char*` | Reserved JSON configuration path. The SDK includes its default DDS configuration; pass `nullptr` |
 | `server` | `const char*` | Application identifier, used for RPC/log to distinguish multiple instances (such as `"myAppHighLevel"`), customized by the caller |
-| `timeout` | `uint32_t` | Timeout while waiting for the system environment (**seconds**, default 30). Onboard startup may require this wait if the SDK starts before the system services; returns `false` if readiness is not reached in time |
+| `timeoutMs` | `uint32_t` | Timeout while waiting for the system environment (**milliseconds**, default 30000). Onboard startup may require this wait if the SDK starts before the system services; returns `false` if readiness is not reached in time |
 
 This process-wide initialization must run once before creating any client. A return value of `true` indicates success.
 
@@ -469,7 +469,7 @@ Subsequent `connect`, `startControl`, and action calls follow the normal flow. T
 |---|---|---|
 | `bool connect(int32_t leaseMs = 0)` | Any | Enter High-level mode. For `leaseMs<=0`, the SDK uses 60000 ms. Values outside the valid 5 s to 5 min range are clamped. **`leaseMs` is `int32_t`** |
 | `void disconnect()` | Any | Close connection and event subscription |
-| `bool startControl(uint32_t timeout = 10000)` | Connected | Request control asynchronously; `timeout` is the overall deadline in milliseconds |
+| `bool startControl(uint32_t timeoutMs = 10000)` | Connected | Request control asynchronously; `timeout` is the overall deadline in milliseconds |
 | `bool releaseControl()` | `kControlled` | Asynchronous release, the state switches back to `kConnected` after completion |
 | `int32_t getState() const` | Any | Current `HighLevelState` |
 | `int32_t getLastError() const` | Any | Return the latest failure reason and clear it after reading |
@@ -483,15 +483,15 @@ Subsequent `connect`, `startControl`, and action calls follow the normal flow. T
 
 | Method | Parameters |
 |---|---|
-| `bool emergencyStop(uint32_t timeout = 5000)` | Emergency stop |
-| `bool recoveryStand(uint32_t timeout = 5000)` | Return to standing after falling (self-righting + standing up) |
-| `bool startAction(const std::string& action, const std::string& paramsJson = "", uint32_t timeout = 5000)` | `action`: action name; the `paramsJson` field is based on the `params` list returned by `getMotionCapabilities()`. One-time actions can be transmitted `""` |
-| `bool stopAction(uint32_t timeout = 5000)` | Stop current action |
-| `bool setActionParams(const std::string& paramsJson = "", uint32_t timeout = 5000)` | Update current action parameters without switching actions. The action's `params` list from `getMotionCapabilities` defines adjustable fields. Uses **full rewrite semantics**: omitted fields return to 0 |
-| `bool damp(uint32_t timeout = 5000)` | Enter damping/slow sinking (soft unloading force), low stiffness of the joint and controllable sinking |
-| `bool lieDown(uint32_t timeout = 5000)` | Lie down |
-| `bool standUp(uint32_t timeout = 5000)` | Stand |
-| `bool move(float vx, float vy, float vyaw, uint32_t timeout = 5000)` | Walking command: `vx` longitudinal velocity (positive forward), `vy` lateral velocity, and `vyaw` yaw rate; remains active until `stopAction` or a subsequent action/parameter update |
+| `bool emergencyStop(uint32_t timeoutMs = 5000)` | Emergency stop |
+| `bool recoveryStand(uint32_t timeoutMs = 5000)` | Return to standing after falling (self-righting + standing up) |
+| `bool startAction(const std::string& action, const std::string& paramsJson = "", uint32_t timeoutMs = 5000)` | `action`: action name; the `paramsJson` field is based on the `params` list returned by `getMotionCapabilities()`. One-time actions can be transmitted `""` |
+| `bool stopAction(uint32_t timeoutMs = 5000)` | Stop current action |
+| `bool setActionParams(const std::string& paramsJson = "", uint32_t timeoutMs = 5000)` | Update current action parameters without switching actions. The action's `params` list from `getMotionCapabilities` defines adjustable fields. Uses **full rewrite semantics**: omitted fields return to 0 |
+| `bool damp(uint32_t timeoutMs = 5000)` | Enter damping/slow sinking (soft unloading force), low stiffness of the joint and controllable sinking |
+| `bool lieDown(uint32_t timeoutMs = 5000)` | Lie down |
+| `bool standUp(uint32_t timeoutMs = 5000)` | Stand |
+| `bool move(float vx, float vy, float vyaw, uint32_t timeoutMs = 5000)` | Walking command: `vx` longitudinal velocity (positive forward), `vy` lateral velocity, and `vyaw` yaw rate; remains active until `stopAction` or a subsequent action/parameter update |
 
 **Action safety classification**
 
@@ -550,9 +550,9 @@ client->stopAction();
 
 | Method | Extract parameters |
 |---|---|
-| `bool queryMotionState(std::string& out, uint32_t timeout = 5000)` | Current effective motion action and commanded velocity as JSON; see the schema below |
-| `bool getMotionCapabilities(std::string& out, uint32_t timeout = 5000)` | Supported advanced action collection (including key combinations + adjustable parameters) JSON, see the schema below |
-| `bool getMotorLayout(MotorLayout& layout, uint32_t timeout = 5000)` | Motor hardware layout (number of motors + `limbNo`/`jointNo`/`name` per motor); it can be adjusted after `kConnected`, SDK internal cache |
+| `bool queryMotionState(std::string& out, uint32_t timeoutMs = 5000)` | Current effective motion action and commanded velocity as JSON; see the schema below |
+| `bool getMotionCapabilities(std::string& out, uint32_t timeoutMs = 5000)` | Supported advanced action collection (including key combinations + adjustable parameters) JSON, see the schema below |
+| `bool getMotorLayout(MotorLayout& layout, uint32_t timeoutMs = 5000)` | Motor hardware layout (number of motors + `limbNo`/`jointNo`/`name` per motor); it can be adjusted after `kConnected`, SDK internal cache |
 
 ##### `queryMotionState` parameter output example
 
@@ -648,11 +648,11 @@ client->startAudioPlay(R"({"list":[{"id":"1"}],"volume":50,"repeat":1})");
 
 | Method | Parameters | Remarks |
 |---|---|---|
-| `bool startAudioPlay(const std::string& paramsJson, uint32_t timeout = 5000)` | See the table below | Reuse RPC and determine semantics by field |
-| `bool stopAudioPlay(uint32_t timeout = 5000)` | — | Stop if empty parameters are used |
-| `bool pauseAudioPlay(uint32_t timeout = 5000)` | Internal transmission `{"pause":true}` | Resume form of `startAudioPlay` |
-| `bool addAudioFile(const std::string& paramsJson, uint32_t timeout = 30000)` | `{"id":"custom_1","name":"hello.mp3","file":"/data/hello.mp3"}` or URL form | Add custom audio file |
-| `bool deleteAudioFile(const std::string& paramsJson, uint32_t timeout = 5000)` | `{"id":"1"}` | id is the audio ID to be deleted |
+| `bool startAudioPlay(const std::string& paramsJson, uint32_t timeoutMs = 5000)` | See the table below | Reuse RPC and determine semantics by field |
+| `bool stopAudioPlay(uint32_t timeoutMs = 5000)` | — | Stop if empty parameters are used |
+| `bool pauseAudioPlay(uint32_t timeoutMs = 5000)` | Internal transmission `{"pause":true}` | Resume form of `startAudioPlay` |
+| `bool addAudioFile(const std::string& paramsJson, uint32_t timeoutMs = 30000)` | `{"id":"custom_1","name":"hello.mp3","file":"/data/hello.mp3"}` or URL form | Add custom audio file |
+| `bool deleteAudioFile(const std::string& paramsJson, uint32_t timeoutMs = 5000)` | `{"id":"1"}` | id is the audio ID to be deleted |
 
 **`startAudioPlay.paramsJson` form**
 
@@ -667,8 +667,8 @@ client->startAudioPlay(R"({"list":[{"id":"1"}],"volume":50,"repeat":1})");
 
 | Method | Input parameter paramsJson | Output parameter out (UTF-8 JSON) |
 |---|---|---|
-| `bool queryAudioPlayDetail(std::string& out, uint32_t timeout = 5000)` | — | See 4.4.2.1 |
-| `bool queryAudioPlayList(std::string& out, const std::string& paramsJson = "", uint32_t timeout = 5000)` | `{"type":"customVoice"}` | See 4.4.2.2 |
+| `bool queryAudioPlayDetail(std::string& out, uint32_t timeoutMs = 5000)` | — | See 4.4.2.1 |
+| `bool queryAudioPlayList(std::string& out, const std::string& paramsJson = "", uint32_t timeoutMs = 5000)` | `{"type":"customVoice"}` | See 4.4.2.2 |
 
 ##### 4.4.2.1 `queryAudioPlayDetail` parameter field
 
@@ -800,8 +800,8 @@ media->stopRawAudioFrame(0);
 
 | Method | Status | Description |
 |---|---|---|
-| `bool querySystemStatus(std::string& out, uint32_t timeout = 5000)` | `kConnected` | Output parameter JSON, including two sub-objects `battery` + `network`, see 4.5.1 |
-| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kControlled` | Enable or disable motion and complete sensor observations; control must be acquired first. `ret` returns the switches actually in effect. See §4.7 |
+| `bool querySystemStatus(std::string& out, uint32_t timeoutMs = 5000)` | `kConnected` | Output parameter JSON, including two sub-objects `battery` + `network`, see 4.5.1 |
+| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeoutMs = 5000)` | `kControlled` | Enable or disable motion and complete sensor observations; control must be acquired first. `ret` returns the switches actually in effect. See §4.7 |
 
 The camera headlight brightness is directly hung on the main client:
 
@@ -811,8 +811,8 @@ client->setCameraLightBrightness(50);
 
 | Method | Status | Description |
 |---|---|---|
-| `bool getCameraLightBrightness(std::string& out, uint32_t timeout = 5000)` | `kControlled` | Query the camera headlight brightness, the parameter `out` is a JSON string |
-| `bool setCameraLightBrightness(int32_t brightness, uint32_t timeout = 5000)` | `kControlled` | Control the brightness of the camera headlight, `brightness` has a value of 0~100 (**`brightness` is still int32**) |
+| `bool getCameraLightBrightness(std::string& out, uint32_t timeoutMs = 5000)` | `kControlled` | Query the camera headlight brightness, the parameter `out` is a JSON string |
+| `bool setCameraLightBrightness(int32_t brightness, uint32_t timeoutMs = 5000)` | `kControlled` | Control the brightness of the camera headlight, `brightness` has a value of 0~100 (**`brightness` is still int32**) |
 
 #### 4.5.1 `querySystemStatus` fields
 
@@ -1050,11 +1050,11 @@ High-level clients can enable observation reporting and receive motion observati
 
 | Method | Status | Description |
 |---|---|---|
-| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeout = 5000)` | `kControlled` | Observation reporting switch. `startControl()` switches the target endpoint to the master role before acquiring control; a slave endpoint does not own motor/IMU data and cannot provide valid motion observations. Calling this method while only `kConnected` is rejected with `kActionRejected` |
+| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeoutMs = 5000)` | `kControlled` | Observation reporting switch. `startControl()` switches the target endpoint to the master role before acquiring control; a slave endpoint does not own motor/IMU data and cannot provide valid motion observations. Calling this method while only `kConnected` is rejected with `kActionRejected` |
 | `void setMotionObservedCallback(MotionObservedCallback cb)` | Any | Register the motion-observation callback with signature `void(const LowLevelMotionObserved&)`, including power |
 | `void setSensorObservedCallback(SensorObservedCallback cb)` | `kDisconnected` | Register full sensor observation callback, signature `void(const SensorObserved&)`; data includes GPS, UWB and odometry |
-| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout = 5000)` | `kConnected` | Read the complete sensor observation cache without sending RPC; `timeout` is the data freshness window (ms) |
-| `bool getPowerInfo(PowerObserved* power, uint32_t timeout)` | `kConnected` | Read the latest power observation. **First enable motion observations with `setObservedEnable({"motionEnable":true})`**, because power is carried in motion-observation frames. Without fresh data the method returns `false`. `timeout` is the **freshness window in microseconds (us)**; data newer than this window returns `true`, otherwise `false` with `getLastError()` → `kDataNotUpdate` |
+| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeoutMs = 5000)` | `kConnected` | Read the complete sensor observation cache without sending RPC; `timeoutMs` is the data freshness window (ms) |
+| `bool getPowerInfo(PowerObserved* power, uint32_t timeoutMs)` | `kConnected` | Read the latest power observation. **First enable motion observations with `setObservedEnable({"motionEnable":true})`**, because power is carried in motion-observation frames. Without fresh data the method returns `false`. `timeoutMs` is the **freshness window in milliseconds (ms)**; data newer than this window returns `true`, otherwise `false` with `getLastError()` → `kDataNotUpdate` |
 
 `setObservedEnable` input parameter JSON switch field:
 
@@ -1087,7 +1087,7 @@ client->setObservedEnable(R"({"motionEnable":true,"sensorEnable":true})", observ
 // observedState returns the switches currently in effect, e.g. {"motionEnable":true,"sensorEnable":true}
 
 PowerObserved power = {};
-if (client->getPowerInfo(&power, /*timeout_us=*/200000)) {
+if (client->getPowerInfo(&power, /*timeoutMs=*/200)) {
     printf("battery=%.1f%% voltage=%.2fV\n", power.power, power.chargeVoltage);
 }
 ```

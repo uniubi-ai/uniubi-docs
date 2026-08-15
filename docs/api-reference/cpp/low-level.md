@@ -251,14 +251,14 @@ The RPC control plane and event subscription of the SDK are implemented based on
 #### 4.1.1 Global initialization
 
 ```cpp
-bool IMotionSdkService::initialService(const char* file, const char* server, uint32_t timeout = 30);
+bool IMotionSdkService::initialService(const char* file, const char* server, uint32_t timeoutMs = 30000);
 ```
 
 | Parameters | Type | Description |
 |---|---|---|
 | `file` | `const char*` | Reserved: JSON configuration file path. The current SDK default DDS configuration has been built in, just pass `nullptr` |
 | `server` | `const char*` | Application identifier, used for RPC/log to distinguish multiple instances (such as `"myAppLowLevel"`), customized by the caller |
-| `timeout` | `uint32_t` | Timeout waiting for the system environment to be ready (** seconds **, default 30). In on-board mode, if the SDK starts earlier than the system environment, you may need to wait; if it times out and is not ready, it will return `false` |
+| `timeoutMs` | `uint32_t` | Timeout waiting for the system environment to be ready (**milliseconds**, default 30000). In on-board mode, if the SDK starts earlier than the system environment, you may need to wait; if it times out and is not ready, it will return `false` |
 
 Process-level one-time initialization, must be called before any client is created. Returning `true` indicates successful initialization.
 
@@ -302,12 +302,12 @@ auto client = IMotionLowLevelClient::create();
 | `bool connect(uint32_t observedHz = 500, uint32_t leaseMs = 0)` | Any | Non-blocking, the connection is automatically completed by the SDK. `observedHz`: expected observation frequency; `leaseMs`: control lease (ms), 0 = use the server default value (the server clamps/verifies the real value according to its own policy, and the SDK renews the contract according to the real value) |
 | `void disconnect()` | Any | Close the connection; idempotent |
 | `bool setMotionEnable(bool enable)` | `kConnected` / `kPrepared` | **Asynchronous**: Only record the intent, the SDK cuts `kConnected ↔ kPrepared` and callback after the RPC is completed |
-| `bool emergencyStop(uint32_t timeout = 5000)` | `kPrepared` | Emergency stop (synchronous RPC, timeout unit ms) |
+| `bool emergencyStop(uint32_t timeoutMs = 5000)` | `kPrepared` | Emergency stop (synchronous RPC, timeout unit ms) |
 | `int32_t getState() const` | Any | Current `LowLevelState` |
 | `int32_t getLastError() const` | Any | The last failure reason for clearing after reading |
 | `void setConnectCallback(ConnectCallback cb)` | Any | Registration status callback |
 | `IMediaBusClient::Ptr createMediaBusClient()` | Any | Create an audio and video frame subscription channel; only used for local media frame subscription on the `aarch64` board (see the MediaBus documentation for usage) |
-| `bool restoreMotionControlMode(uint32_t timeout = 5000)` | `kConnected` | Restore the motion-control mode to the factory default; synchronize RPC, timeout unit ms |
+| `bool restoreMotionControlMode(uint32_t timeoutMs = 5000)` | `kConnected` | Restore the motion-control mode to the factory default; synchronize RPC, timeout unit ms |
 
 #### `connect`’s timeout and retry strategy (important)
 
@@ -322,9 +322,9 @@ auto client = IMotionLowLevelClient::create();
 |---|---|---|
 | `bool sendControl(const MotorCtrlAction& action, const LowLevelMotionCmd* cmd = nullptr)` | `kPrepared` | Send a frame of control; action-related control frames are recommended to be transmitted to `cmd`, and fill in `action` and `acName` at the same time; `motorNum` must ∈ `[1, kLowLevelMaxMotorNum]`, otherwise `kInvalidArgument` will be returned |
 | `bool sendMaxTorque(const MotorCtrlAction& action)` | `kPrepared` | Set the maximum torque of the motor; use each element of `header` to position the motor and `torque` to carry the target upper limit; `motorNum` must ∈ `[1, kLowLevelMaxMotorNum]`, otherwise `kInvalidArgument` |
-| `bool getLatestObservation(LowLevelMotionObserved* obs, uint32_t timeout)` | `kPrepared` | Obtain one frame of motion observation (motor/IMU/TRC/power supply) within the specified `timeout` (**ms**); return false if not obtained |
-| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeout)` | `kConnected` / `kPrepared` | Read GPS + UWB sensor observations; Walk odometry is not provided. The call is independent of prepare; `timeout` is in **us**; without sensor hardware it waits until timeout and returns false |
-| `bool getMotorLayout(MotorLayout& layout, uint32_t timeout = 5000)` | `kConnected` | Hardware motor layout (unchanged after startup, SDK internal cache; first time RPC, timeout unit ms) |
+| `bool getLatestObservation(LowLevelMotionObserved* obs, uint32_t timeoutMs)` | `kPrepared` | Obtain one frame of motion observation (motor/IMU/TRC/power supply) within the specified `timeout` (**ms**); return false if not obtained |
+| `bool getSensorObservation(SensorObserved* sensor, uint32_t timeoutMs)` | `kConnected` / `kPrepared` | Read GPS + UWB sensor observations; Walk odometry is not provided. The call is independent of prepare; `timeoutMs` is in **ms**; without sensor hardware it waits until timeout and returns false |
+| `bool getMotorLayout(MotorLayout& layout, uint32_t timeoutMs = 5000)` | `kConnected` | Hardware motor layout (unchanged after startup, SDK internal cache; first time RPC, timeout unit ms) |
 
 #### 4.3.1 `sendMaxTorque` ——Set the maximum torque of the motor
 
@@ -542,7 +542,7 @@ The external button names Stand / Motion correspond to `buttonBack` / `buttonSta
 
 #### 4.4.6 `SensorObserved` - Sensor Observation (GPS + UWB)
 
-Returned by `getSensorObservation(SensorObserved*, uint32_t timeout)` (`timeout` unit us, has nothing to do with prepare, any one of `kConnected` / `kPrepared` can be read).
+Returned by `getSensorObservation(SensorObserved*, uint32_t timeoutMs)` (`timeoutMs` unit ms, has nothing to do with prepare, any one of `kConnected` / `kPrepared` can be read).
 
 > The supported Low-level contract contains GPS and UWB only; Walk odometry is not supported. Even if a shared protocol structure contains `odom`, Low-level applications must not read or depend on it.
 
