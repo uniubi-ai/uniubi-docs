@@ -7,7 +7,7 @@
 Python 模块：`robot_motion_sdk`
 主要客户端：`sdk.MotionHighLevelClient`
 
-本页说明板载 High-level Python API。当前文档不据此声称 Python 已完成外部主机真机验证；外部主机已确认的路径以 C++ 文档为准。
+本页说明板载与外部主机 High-level Python API。外部主机路径已完成真机验证，使用时必须在初始化前选择实际连接机器人网络的网卡，并用目标设备 ID（SN）创建客户端。
 
 ## 一、最小初始化与退出
 
@@ -92,6 +92,97 @@ finally:
 | `sdk.VideoFramePlaneView` | 视频平面只读视图 | `rows`、`row_bytes`、`row_view(row)`，用于按行读取非连续 / 带 stride 的原始视频 |
 
 Python API 不暴露 MediaBus Python 包，帧格式由 Motion SDK 自身封装；编码帧使用 `EncodedVideoFrame`，没有 `VideoPacket` Python 公共类型。`sdk.CMediaFrame` 保留为底层兼容别名。
+
+### 2.1 `query_system_status()` 返回结构
+
+`query_system_status(timeout_ms=5000)` 在 `HighLevelState.kConnected` 即可调用，不需要取得运动控制权。调用成功时返回包含 `battery` 和 `network` 的 Python dict；失败时返回 `None`，错误原因通过 `get_last_error()` 获取。
+
+```python
+status = client.query_system_status()
+if status is None:
+    raise RuntimeError(client.get_last_error())
+
+battery = status.get("battery") or {}
+network = status.get("network") or {}
+```
+
+典型返回结构：
+
+```json
+{
+  "battery": {
+    "abnormalStatus": 0,
+    "statusCode": 0,
+    "cycleCount": 186,
+    "remainChargeTime": 52,
+    "remainDischargeTime": 198,
+    "power": 76.5,
+    "health": 93.2,
+    "temperature": 31.4,
+    "fullCharge": 5180.0,
+    "remaining": 3962.7,
+    "current": 1.84,
+    "voltage": 15.28
+  },
+  "network": {
+    "ether":   { "enable": true,  "ipv4Addr": "...", "ipv4Gateway": "...", "ipv4Mask": "...", "mac": "...", "status": 0 },
+    "hotspot": { "enable": false, "ipv4Addr": "...", "ipv4Gateway": "...", "ipv4Mask": "...", "mac": "...", "status": 1 },
+    "mobile":  { "enable": true,  "ipv4Addr": "...", "ipv4Gateway": "...", "ipv4Mask": "...", "mac": "...", "signalLevel": 0, "simCardSta": true, "status": 0 },
+    "wlan":    { "enable": true,  "ipv4Addr": "...", "ipv4Gateway": "...", "ipv4Mask": "...", "mac": "...", "status": 0 }
+  }
+}
+```
+
+`battery` 字段：
+
+| 字段 | Python 类型 | 单位 | 含义 |
+|---|---|---|---|
+| `abnormalStatus` | `int` | — | 功率电路异常标志；非 0 表示异常 |
+| `statusCode` | `int` | — | BMS 状态位掩码，定义见下表 |
+| `cycleCount` | `int` | 次 | 累计充放电循环次数 |
+| `remainChargeTime` | `int` | 分钟 | 剩余充电时间，仅充电时有效 |
+| `remainDischargeTime` | `int` | 分钟 | 按当前负载估算的剩余放电时间 |
+| `power` | `float` | % | 当前电量，范围 0–100 |
+| `health` | `float` | % | 电池健康度，范围 0–100 |
+| `temperature` | `float` | °C | 电池温度 |
+| `fullCharge` | `float` | mAh | 满充容量 |
+| `remaining` | `float` | mAh | 剩余容量 |
+| `current` | `float` | A | 充放电电流；正值表示充电，负值表示放电 |
+| `voltage` | `float` | V | 电池总电压 |
+
+`battery.statusCode` 位掩码（`statusCode & bit != 0` 表示对应保护位有效）：
+
+| 位 | 值 | 含义 |
+|---|---|---|
+| bit0 | `0x0001` | pack 欠压保护 |
+| bit1 | `0x0002` | cell 欠压保护 |
+| bit2 | `0x0004` | pack 过压保护 |
+| bit3 | `0x0008` | cell 过压保护 |
+| bit4 | `0x0010` | 充电结束 |
+| bit5 | `0x0020` | 放电过流保护 |
+| bit6 | `0x0040` | 充电过流保护 |
+| bit7 | `0x0080` | 短路保护 |
+| bit8 | `0x0100` | 放电低温保护 |
+| bit9 | `0x0200` | 充电低温保护 |
+| bit10 | `0x0400` | 放电高温保护 |
+| bit11 | `0x0800` | 充电高温保护 |
+| bit12 | `0x1000` | MOS 高温保护 |
+| bit13 | `0x2000` | Cell 采集断线保护 |
+| bit14 | `0x4000` | Cell 电压失衡保护 |
+| bit15 | `0x8000` | Cell 电压失效保护 |
+
+`network` 包含 `ether`、`hotspot`、`mobile` 和 `wlan` 子 dict。设备型号或软件版本未提供的接口或字段可能缺省，业务代码应使用 `.get()` 读取。
+
+| 字段 | Python 类型 | 含义 |
+|---|---|---|
+| `enable` | `bool` | 接口是否启用 |
+| `ipv4Addr` | `str` | IPv4 地址 |
+| `ipv4Gateway` | `str` | IPv4 网关 |
+| `ipv4Mask` | `str` | IPv4 子网掩码 |
+| `mac` | `str` | MAC 地址 |
+| `status` | `int` | `0` 已连接、`1` 未连接、`2` 连接中 |
+| `signalLevel` | `int` | 仅 `mobile`：`0` 好（>22 dB）、`2` 中等（>15 dB）、`3` 差（≤15 dB） |
+| `simCardSta` | `bool` | 仅 `mobile`：SIM 卡是否已就绪 |
 
 ## 三、退出死锁规避（必读）
 
@@ -251,7 +342,7 @@ finally:
 - 回调中不要执行阻塞 IO、长时间计算或 SDK 重入调用；耗时处理转交业务线程。
 - `robot_motion_sdk`、native binding 和 `librobotMotionSdk.so` 必须来自同一 SDK 版本与目标架构。
 - 所有退出路径都要显式 `disconnect()`，最后调用 `sdk.service.shutdown()`。
-- 大脑侧 High-level 必须在初始化前指定 `eth0.100`；外部主机 Python 尚未在本文中声明完成真机验证。
+- 大脑侧 High-level 必须在初始化前指定 `eth0.100`；外部主机必须指定实际连接机器人网络的网卡，并用目标设备 ID（SN）创建客户端。
 
 ## 六、常见问题
 

@@ -38,7 +38,7 @@ High-level real-robot applications support two deployment modes. The built-in mo
 
 This boundary is specific to High-level control. For Low-level control on real hardware, the joint-control application still runs onboard.
 
-The external-host C++ SDK path is documented as supported. API coverage or examples for Python and ROS 2 do not, by themselves, establish external-host real-robot validation.
+The remainder of this page focuses on the C++ SDK. See the corresponding API and How-to pages for the external-host Python SDK and ROS 2 paths.
 
 ---
 
@@ -116,7 +116,7 @@ client->disconnect();
 svc->shutdown();
 ```
 
-The external-host C++ path is documented as supported. This example does not claim external-host real-robot validation for Python or ROS 2.
+The following example demonstrates the complete external-host C++ SDK connection flow. Use the corresponding entry points on the Python SDK and ROS 2 pages for those implementations.
 
 ---
 
@@ -469,7 +469,7 @@ Subsequent `connect`, `startControl`, and action calls follow the normal flow. T
 |---|---|---|
 | `bool connect(int32_t leaseMs = 0)` | Any | Enter High-level mode. For `leaseMs<=0`, the SDK uses 60000 ms. Values outside the valid 5 s to 5 min range are clamped. **`leaseMs` is `int32_t`** |
 | `void disconnect()` | Any | Close connection and event subscription |
-| `bool startControl(uint32_t timeoutMs = 10000)` | Connected | Request control asynchronously; `timeout` is the overall deadline in milliseconds |
+| `bool startControl(uint32_t timeoutMs = 10000)` | Connected | Request control asynchronously; `timeoutMs` is the overall deadline in milliseconds |
 | `bool releaseControl()` | `kControlled` | Asynchronous release, the state switches back to `kConnected` after completion |
 | `int32_t getState() const` | Any | Current `HighLevelState` |
 | `int32_t getLastError() const` | Any | Return the latest failure reason and clear it after reading |
@@ -479,16 +479,16 @@ Subsequent `connect`, `startControl`, and action calls follow the normal flow. T
 
 ### 4.3 Motion-control actions
 
-#### 4.3.1 Control class (requires `kControlled`)
+#### 4.3.1 Control methods (require `kControlled`)
 
-| Method | Parameters |
+| Method | Purpose |
 |---|---|
 | `bool emergencyStop(uint32_t timeoutMs = 5000)` | Emergency stop |
 | `bool recoveryStand(uint32_t timeoutMs = 5000)` | Return to standing after falling (self-righting + standing up) |
-| `bool startAction(const std::string& action, const std::string& paramsJson = "", uint32_t timeoutMs = 5000)` | `action`: action name; the `paramsJson` field is based on the `params` list returned by `getMotionCapabilities()`. One-time actions can be transmitted `""` |
+| `bool startAction(const std::string& action, const std::string& paramsJson = "", uint32_t timeoutMs = 5000)` | Start an action. Fields in `paramsJson` must match the action's `params` list from `getMotionCapabilities()`; pass `""` for one-shot actions without parameters |
 | `bool stopAction(uint32_t timeoutMs = 5000)` | Stop current action |
 | `bool setActionParams(const std::string& paramsJson = "", uint32_t timeoutMs = 5000)` | Update current action parameters without switching actions. The action's `params` list from `getMotionCapabilities` defines adjustable fields. Uses **full rewrite semantics**: omitted fields return to 0 |
-| `bool damp(uint32_t timeoutMs = 5000)` | Enter damping/slow sinking (soft unloading force), low stiffness of the joint and controllable sinking |
+| `bool damp(uint32_t timeoutMs = 5000)` | Enter low-stiffness damping mode so the robot can settle under controlled resistance |
 | `bool lieDown(uint32_t timeoutMs = 5000)` | Lie down |
 | `bool standUp(uint32_t timeoutMs = 5000)` | Stand |
 | `bool move(float vx, float vy, float vyaw, uint32_t timeoutMs = 5000)` | Walking command: `vx` longitudinal velocity (positive forward), `vy` lateral velocity, and `vyaw` yaw rate; remains active until `stopAction` or a subsequent action/parameter update |
@@ -504,17 +504,17 @@ Subsequent `connect`, `startControl`, and action calls follow the normal flow. T
 
 #### 4.3.1.1 `walking` action parameters (`startAction` / `setActionParams`)
 
-The adjustable parameters of the action are dynamically issued by the server - the caller should query the `params` list of each action through `getMotionCapabilities()` (field name / `min` / `max` / `unit`) and should not be hard-coded. One-time actions (such as `jumpBackflip`) usually have no adjustable parameters.
+The server reports each action's adjustable parameters dynamically. Query `getMotionCapabilities()` and use the returned `params` entries (`name`, `min`, `max`, and `unit`) instead of hard-coding them. One-shot actions such as `jumpBackflip` usually have no adjustable parameters.
 
-The general configuration of `walking` is as follows (the actual value is subject to the return of `getMotionCapabilities`):
+`walking` commonly exposes the following fields; always use the current values returned by `getMotionCapabilities()`:
 
 | paramsJson field | type | meaning | unit |
 |---|---|---|---|
-| `velocity` | float | **Yaw rate** (yaw rate), positive left turn and negative right turn | rad/s |
+| `velocity` | float | **Yaw rate**; positive turns left, negative turns right | rad/s |
 | `lineVelocityX` | float | Longitudinal velocity, positive forward and negative backward | m/s |
 | `lineVelocityY` | float | Lateral velocity, positive right and negative left | m/s |
 
-The field name is consistent with the `params[].name` returned by `getMotionCapabilities`, and also consistent with the field returned by `queryMotionState` - **The same set of keys runs through three places**, and the caller only needs to learn it once.
+The JSON keys match both `getMotionCapabilities().actions[].params[].name` and the fields returned by `queryMotionState()`. The same names are therefore used for capability discovery, commands, and state queries.
 
 **Example**:
 
@@ -529,12 +529,12 @@ The field name is consistent with the `params[].name` returned by `getMotionCapa
 {"lineVelocityX": 0.8, "lineVelocityY": 0.0, "velocity": 0.0}
 ```
 
-**Several semantic conventions**:
+**Parameter semantics:**
 
-- **Full rewrite**: `setActionParams` has the same **full semantics** as `startAction` - the entire set of runtime parameters will be covered with this params when called once, and **unpassed fields will be returned to 0**. To retain the X speed and only change yaw, all three fields must be passed
-- **The range is limited by the server**: When it exceeds the `min`/`max` returned by `getMotionCapabilities`, it will be clamped to the boundary by the server; no error will be reported
-- **Zero speed does not mean stop**: To stop, use `stopAction()`, do not rely on `{lineVelocityX:0, lineVelocityY:0, velocity:0}`
-- **Three fields are independent**: Complete movement requires a combination of three axes (such as walking and turning: `{lineVelocityX: 0.5, velocity: 0.3}`)
+- **Full rewrite:** `setActionParams()` and `startAction()` replace the complete parameter set; omitted fields become 0. To change yaw while preserving X velocity, resend all three fields.
+- **Server-side clamping:** values outside the `min`/`max` range reported by `getMotionCapabilities()` are clamped to the nearest boundary without an error.
+- **Zero velocity is not an action stop:** use `stopAction()` to stop the current action; sending all-zero velocity fields only clears its velocity parameters.
+- **Independent axes:** combine the three fields as needed, for example `{lineVelocityX: 0.5, velocity: 0.3}` to move forward while turning.
 
 **C++ calling example**:
 
@@ -549,15 +549,15 @@ client->setActionParams(R"({"lineVelocityX":0.8,"lineVelocityY":0.0,"velocity":0
 client->stopAction();
 ```
 
-#### 4.3.2 Query class (requires `kConnected`)
+#### 4.3.2 Query methods (require `kConnected`)
 
-| Method | Extract parameters |
+| Method | Result |
 |---|---|
 | `bool queryMotionState(std::string& out, uint32_t timeoutMs = 5000)` | Current effective motion action and commanded velocity as JSON; see the schema below |
-| `bool getMotionCapabilities(std::string& out, uint32_t timeoutMs = 5000)` | Supported advanced action collection (including key combinations + adjustable parameters) JSON, see the schema below |
-| `bool getMotorLayout(MotorLayout& layout, uint32_t timeoutMs = 5000)` | Motor hardware layout (number of motors + `limbNo`/`jointNo`/`name` per motor); it can be adjusted after `kConnected`, SDK internal cache |
+| `bool getMotionCapabilities(std::string& out, uint32_t timeoutMs = 5000)` | Supported actions, controller mappings, and adjustable parameters as JSON; see the schema below |
+| `bool getMotorLayout(MotorLayout& layout, uint32_t timeoutMs = 5000)` | Motor count and each motor's `limbNo`, `jointNo`, and `name`; available after `kConnected` and cached by the SDK |
 
-##### `queryMotionState` parameter output example
+##### `queryMotionState` response example
 
 ```json
 // Active action
@@ -576,12 +576,12 @@ client->stopAction();
 |---|---|---|
 | `action` | string | Currently effective action name from the latest motion-control cycle |
 | `velocity` | float | Current angular velocity (rad/s) |
-| `lineVelocityX` | float | Current front and rear linear speed (m/s) |
-| `lineVelocityY` | float | Current traversing linear speed (m/s) |
+| `lineVelocityX` | float | Current longitudinal velocity (m/s) |
+| `lineVelocityY` | float | Current lateral velocity (m/s) |
 
-> The return value and `out` are two independent layers of semantics:
-> - `return false` → **RPC layer failure** (not connected/RPC timeout/channel unavailable), get the error code through `getLastError()`
-> - `return true` → RPC successful; if **no active action**, `out` is an empty object `{}` (the caller determines "there is currently no query action" based on this, and do not assume that the field must exist)
+> The return value reports RPC success, while `out` reports motion state:
+> - `false`: the RPC failed because the client was not connected, the call timed out, or the channel was unavailable. Call `getLastError()` for the error code.
+> - `true`: the RPC succeeded. If there is no active action, `out` is `{}`; callers must not assume that action fields are present.
 
 ##### `getMotionCapabilities` parameter output example
 
@@ -628,52 +628,52 @@ client->stopAction();
 
 | Field | Type | Description |
 |---|---|---|
-| `actions[].name` | string | Action name, `action` parameter passed to `startAction` |
-| `actions[].mapping.require` | array<string\> | The `ButtonDefine` name that must be pressed to trigger this action |
-| `actions[].mapping.axisRequire` | array<object\> | Additional axis value conditions; each item contains `axis`, `min`, `max`, `axis` is the name of `AxesDefine` |
-| `actions[].mapping.priority` | integer | The priority when multiple actions hit in the same frame. The larger the value, the higher the priority |
-| `actions[].mapping.exact` | bool | `true` means that no other buttons except `require` can be pressed at the same time |
-| `actions[].mapping.minHoldTime` | number | Minimum hold time, currently mapped to `0` |
-| `actions[].params` | array<object\> | The adjustable runtime parameters of this action (one-time actions do not have this field) |
-| `params[].name` | string | Parameter field name, used as the key of `params` JSON in `startAction` / `setActionParams` |
-| `params[].min/max` | float | Value range; if exceeded, the server will clamp |
-| `params[].unit` | string | Unit (such as `"m/s"` / `"rad/s"`); it will not be output when the server does not configure this field |
+| `actions[].name` | string | Action name passed to `startAction()` |
+| `actions[].mapping.require` | array<string\> | `ButtonDefine` names that must be pressed to trigger the action |
+| `actions[].mapping.axisRequire` | array<object\> | Additional axis conditions; each entry contains an `AxesDefine` name plus `min` and `max` |
+| `actions[].mapping.priority` | integer | Priority when multiple mappings match in one frame; larger values take precedence |
+| `actions[].mapping.exact` | bool | If `true`, no buttons other than those in `require` may be pressed |
+| `actions[].mapping.minHoldTime` | number | Minimum hold time; currently reported as `0` |
+| `actions[].params` | array<object\> | Adjustable runtime parameters; omitted for one-shot actions |
+| `params[].name` | string | JSON key used by `startAction()` and `setActionParams()` |
+| `params[].min/max` | float | Supported value range; the server clamps out-of-range values |
+| `params[].unit` | string | Unit such as `"m/s"` or `"rad/s"`; omitted when not configured |
 
 ### 4.4 Audio Player
 
-The audio playback interface is directly hung on the main client:
+Audio playback is controlled directly through the High-level client:
 
 ```cpp
 client->startAudioPlay(R"({"list":[{"id":"1"}],"volume":50,"repeat":1})");
 ```
 
-#### 4.4.1 Control class (requires `kControlled`)
+#### 4.4.1 Control methods (require `kControlled`)
 
-| Method | Parameters | Remarks |
+| Method | Parameters | Purpose |
 |---|---|---|
-| `bool startAudioPlay(const std::string& paramsJson, uint32_t timeoutMs = 5000)` | See the table below | Reuse RPC and determine semantics by field |
-| `bool stopAudioPlay(uint32_t timeoutMs = 5000)` | — | Stop if empty parameters are used |
-| `bool pauseAudioPlay(uint32_t timeoutMs = 5000)` | Internal transmission `{"pause":true}` | Resume form of `startAudioPlay` |
+| `bool startAudioPlay(const std::string& paramsJson, uint32_t timeoutMs = 5000)` | See the table below | Start, resume, or update playback according to the supplied fields |
+| `bool stopAudioPlay(uint32_t timeoutMs = 5000)` | — | Stop playback |
+| `bool pauseAudioPlay(uint32_t timeoutMs = 5000)` | Sends `{"pause":true}` internally | Pause playback; resume with `startAudioPlay()` and `{"resume":true}` |
 | `bool addAudioFile(const std::string& paramsJson, uint32_t timeoutMs = 30000)` | `{"id":"custom_1","name":"hello.mp3","file":"/data/hello.mp3"}` or URL form | Add custom audio file |
-| `bool deleteAudioFile(const std::string& paramsJson, uint32_t timeoutMs = 5000)` | `{"id":"1"}` | id is the audio ID to be deleted |
+| `bool deleteAudioFile(const std::string& paramsJson, uint32_t timeoutMs = 5000)` | `{"id":"1"}` | Delete the specified audio ID |
 
 **`startAudioPlay.paramsJson` form**
 
-| scene | paramsJson |
+| Operation | `paramsJson` |
 |---|---|
 | Start playlist | `{"list":[{"id":"1"},{"id":"2"}],"volume":50,"repeat":1}` |
 | Adjust volume | `{"volume":50}` |
 | Resume playback | `{"resume":true}` |
-| Modify the number of repetitions | `{"repeat":-1}` (`-1`=infinite loop; `>0`=number of times; `0` is meaningless) |
+| Change repeat count | `{"repeat":-1}` (`-1` repeats indefinitely; positive values specify a count; `0` has no effect) |
 
-#### 4.4.2 Query class (requires `kConnected`)
+#### 4.4.2 Query methods (require `kConnected`)
 
-| Method | Input parameter paramsJson | Output parameter out (UTF-8 JSON) |
+| Method | `paramsJson` input | `out` result (UTF-8 JSON) |
 |---|---|---|
 | `bool queryAudioPlayDetail(std::string& out, uint32_t timeoutMs = 5000)` | — | See 4.4.2.1 |
 | `bool queryAudioPlayList(std::string& out, const std::string& paramsJson = "", uint32_t timeoutMs = 5000)` | `{"type":"customVoice"}` | See 4.4.2.2 |
 
-##### 4.4.2.1 `queryAudioPlayDetail` parameter field
+##### 4.4.2.1 `queryAudioPlayDetail` response fields
 
 ```json
 {
@@ -806,7 +806,7 @@ media->stopRawAudioFrame(0);
 | `bool querySystemStatus(std::string& out, uint32_t timeoutMs = 5000)` | `kConnected` | Output parameter JSON, including two sub-objects `battery` + `network`, see 4.5.1 |
 | `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeoutMs = 5000)` | `kControlled` | Enable or disable motion and complete sensor observations; control must be acquired first. `ret` returns the switches actually in effect. See §4.7 |
 
-The camera headlight brightness is directly hung on the main client:
+Camera-light brightness is controlled directly through the High-level client:
 
 ```cpp
 client->setCameraLightBrightness(50);
@@ -814,8 +814,8 @@ client->setCameraLightBrightness(50);
 
 | Method | Status | Description |
 |---|---|---|
-| `bool getCameraLightBrightness(std::string& out, uint32_t timeoutMs = 5000)` | `kControlled` | Query the camera headlight brightness, the parameter `out` is a JSON string |
-| `bool setCameraLightBrightness(int32_t brightness, uint32_t timeoutMs = 5000)` | `kControlled` | Control the brightness of the camera headlight, `brightness` has a value of 0~100 (**`brightness` is still int32**) |
+| `bool getCameraLightBrightness(std::string& out, uint32_t timeoutMs = 5000)` | `kControlled` | Return camera-light brightness as JSON in `out` |
+| `bool setCameraLightBrightness(int32_t brightness, uint32_t timeoutMs = 5000)` | `kControlled` | Set camera-light brightness to an integer from 0 to 100 |
 
 #### 4.5.1 `querySystemStatus` fields
 
@@ -848,18 +848,18 @@ client->setCameraLightBrightness(50);
 
 | Field | Type | Unit | Meaning |
 |---|---|---|---|
-| `abnormalStatus` | uint8 | — | Whether the power circuit is abnormal, non-0 means abnormal |
-| `statusCode` | uint16 | — | BMS status code, bit mask combination (see table below) |
-| `cycleCount` | uint16 | times | The cumulative number of battery charge and discharge cycles |
-| `remainChargeTime` | uint16 | Minutes | Remaining charging time (valid during charging) |
-| `remainDischargeTime` | uint16 | Minutes | Remaining discharge time (estimated based on current load) |
-| `power` | float | % | Current battery power percentage, range 0~100 |
-| `health` | float | % | Battery health percentage, range 0~100 |
-| `temperature` | float | °C | Battery temperature, signed float |
+| `abnormalStatus` | uint8 | — | Power-circuit fault flag; nonzero indicates a fault |
+| `statusCode` | uint16 | — | BMS status bitmask (see the table below) |
+| `cycleCount` | uint16 | cycles | Accumulated charge/discharge cycles |
+| `remainChargeTime` | uint16 | min | Estimated time to full charge; valid while charging |
+| `remainDischargeTime` | uint16 | min | Estimated remaining runtime at the current load |
+| `power` | float | % | State of charge, range 0–100 |
+| `health` | float | % | Battery state of health, range 0–100 |
+| `temperature` | float | °C | Battery temperature |
 | `fullCharge` | float | mAh | Full charge capacity |
-| `remaining` | float | mAh | remaining capacity |
-| `current` | float | A | Current charge and discharge current (positive charge, negative discharge) |
-| `voltage` | float | V | Current total voltage |
+| `remaining` | float | mAh | Remaining capacity |
+| `current` | float | A | Battery current; positive while charging, negative while discharging |
+| `voltage` | float | V | Total battery voltage |
 
 **`battery.statusCode` bit mask** (`statusCode & bit != 0` indicates that the corresponding protection bit is valid):
 
@@ -882,21 +882,21 @@ client->setCameraLightBrightness(50);
 | bit14 | 0x4000 | Cell voltage imbalance protection |
 | bit15 | 0x8000 | Cell voltage failure protection |
 
-**`network.<iface>.status` enumeration value**:
+**`network.<iface>.status` values:**
 
 | Value | Meaning |
 |---|---|
-| `0` | Connected (connected) |
-| `1` | Not connected (disconnected) |
-| `2` | Connecting (connecting) |
+| `0` | Connected |
+| `1` | Disconnected |
+| `2` | Connecting |
 
-**`network.mobile.signalLevel` enumeration value** (only `mobile` sub-object has this field):
+**`network.mobile.signalLevel` values** (present only in the `mobile` object):
 
 | Value | Meaning |
 |---|---|
 | `0` | Good signal (> 22dB) |
 | `2` | Moderate signal (> 15dB) |
-| `3` | Signal difference (≤ 15dB) |
+| `3` | Poor signal (≤ 15 dB) |
 
 `network.mobile.simCardSta`: `true` means the SIM card is ready, `false` means not inserted/not recognized.
 
@@ -1294,11 +1294,11 @@ int main(int argc, char** argv) {
 
 ## 6. Important considerations
 
-1. **Callback registration timing**: `setConnectCallback` / `setEventCallback` must be registered before `connect()`. Callbacks registered after the connection will not take effect.
-2. **Callback thread**: `ConnectCallback` and `EventCallback` are both triggered in the SDK internal thread; the SDK interface in the callback must be reentrant.
-3. **Status Query**: `getState()` / `getLastError()` is thread safe; `getLastError()` is cleared after reading.
-4. **lease default value**: `connect(0)` → Use the default 60s; the server limits the value to 5s ~ 5min, and the final effective value is determined by the server.
-5. **Permission Judgment**: The action interface (`emergencyStop` / `startAction` / `stopAction` / audio control / camera light) must be adjusted down in the `kControlled` state, otherwise it will return to `false` + `kNotControlled`.
+1. **Callback registration:** register `setConnectCallback` and `setEventCallback` before `connect()`; callbacks registered after connection do not take effect.
+2. **Callback thread:** `ConnectCallback` and `EventCallback` run on an internal SDK thread. Do not block that thread or call non-reentrant SDK operations from a callback.
+3. **State queries:** `getState()` and `getLastError()` are thread-safe; reading `getLastError()` clears the stored error.
+4. **Default lease:** `connect(0)` requests the 60-second default. The server clamps the effective lease to the supported range of 5 seconds to 5 minutes.
+5. **Control ownership:** action methods (`emergencyStop`, `startAction`, `stopAction`, audio control, and camera-light control) require `kControlled`; otherwise they return `false` and set `kNotControlled`.
 6. **Interface not yet public:** The current High-level SDK does not expose motion-control master-role query or switching. This capability will be added after the High-level service contract is finalized.
 
 ---

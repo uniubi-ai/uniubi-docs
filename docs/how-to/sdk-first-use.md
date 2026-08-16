@@ -26,7 +26,7 @@ Joint-level Low-level control uses `MotionLowLevelClient`. ROS 2 Motion Bridge d
 
 For High-level discovery from an external host, configure in this order: register the discovery callback and set the network interface, then initialize the service. Discovery is asynchronous: a `true` return means only that the request was issued. Wait up to 5 seconds for callbacks, retry if none arrive, deduplicate by SN, and require explicit target selection instead of automatically choosing the first response. When the robot IP is known, match it against `network.*.ipv4Addr` in callback `info` to identify the corresponding SN; the client still receives the SN, not the IP.
 
-The external-host C++ SDK path is documented as a supported deployment mode. Do not interpret this page as evidence that Python or ROS 2 has been validated on a real robot from an external host.
+The external-host High-level C++ SDK, Python SDK, and ROS 2 paths have all been validated on a real robot. Each path must select the network interface that actually reaches the robot and address the target by its Device ID (SN).
 
 ## Prerequisites
 

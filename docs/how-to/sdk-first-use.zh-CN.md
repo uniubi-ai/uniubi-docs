@@ -26,7 +26,7 @@ Low-level 关节控制使用 SDK 的 `MotionLowLevelClient`。ROS 2 Motion Bridg
 
 外部主机做 High-level discovery 时，顺序是：先注册发现回调并设置网卡，再初始化 service。发现是异步的：返回 `true` 只表示请求已发出。最多等待 5 秒接收回调；没有回调时重试；按 SN 去重，并要求明确选择目标设备，不自动取第一台。已知机器人 IP 时，可与回调 `info` 的 `network.*.ipv4Addr` 比对，筛出对应 SN；最终客户端仍传 SN，而不是 IP。
 
-外部主机 C++ SDK 在本文中作为受支持部署模式说明；不要据此声称 Python 或 ROS 2 已完成外部主机真机验证。
+外部主机 High-level C++ SDK、Python SDK 和 ROS 2 路径均已完成真机验证。三种路径都必须选择实际连接机器人网络的网卡，并使用目标设备 ID（SN）寻址机器人。
 
 ## 前置条件
 

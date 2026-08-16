@@ -7,7 +7,7 @@
 Python module: `robot_motion_sdk`
 Primary client: `sdk.MotionHighLevelClient`
 
-This page documents the onboard High-level Python API. It does not claim external-host real-robot validation for Python; use the C++ page for the currently documented external-host path.
+This page documents the High-level Python API for both onboard and external-host deployments. The external-host path has been validated on a real robot; select the network interface that actually reaches the robot before initialization and create the client with the target Device ID (SN).
 
 ## 1. Minimal Initialization and Shutdown
 
@@ -92,6 +92,97 @@ finally:
 | `sdk.VideoFramePlaneView` | Video plane read-only view | `rows`, `row_bytes`, `row_view(row)`, used to read non-contiguous/original video with stride by row |
 
 The Python API does not expose a separate MediaBus package; the Motion SDK provides the frame wrappers directly. Encoded frames use `EncodedVideoFrame`, with no public Python `VideoPacket` type. `sdk.CMediaFrame` remains as a Low-level compatibility alias.
+
+### 2.1 `query_system_status()` return schema
+
+`query_system_status(timeout_ms=5000)` is available in `HighLevelState.kConnected`; it does not require motion-control ownership. On success it returns a Python dict containing `battery` and `network`. On failure it returns `None`; call `get_last_error()` for the reason.
+
+```python
+status = client.query_system_status()
+if status is None:
+    raise RuntimeError(client.get_last_error())
+
+battery = status.get("battery") or {}
+network = status.get("network") or {}
+```
+
+Typical return value:
+
+```json
+{
+  "battery": {
+    "abnormalStatus": 0,
+    "statusCode": 0,
+    "cycleCount": 186,
+    "remainChargeTime": 52,
+    "remainDischargeTime": 198,
+    "power": 76.5,
+    "health": 93.2,
+    "temperature": 31.4,
+    "fullCharge": 5180.0,
+    "remaining": 3962.7,
+    "current": 1.84,
+    "voltage": 15.28
+  },
+  "network": {
+    "ether":   { "enable": true,  "ipv4Addr": "...", "ipv4Gateway": "...", "ipv4Mask": "...", "mac": "...", "status": 0 },
+    "hotspot": { "enable": false, "ipv4Addr": "...", "ipv4Gateway": "...", "ipv4Mask": "...", "mac": "...", "status": 1 },
+    "mobile":  { "enable": true,  "ipv4Addr": "...", "ipv4Gateway": "...", "ipv4Mask": "...", "mac": "...", "signalLevel": 0, "simCardSta": true, "status": 0 },
+    "wlan":    { "enable": true,  "ipv4Addr": "...", "ipv4Gateway": "...", "ipv4Mask": "...", "mac": "...", "status": 0 }
+  }
+}
+```
+
+`battery` fields:
+
+| Field | Python type | Unit | Meaning |
+|---|---|---|---|
+| `abnormalStatus` | `int` | — | Power-circuit fault flag; nonzero indicates a fault |
+| `statusCode` | `int` | — | BMS status bitmask; see the table below |
+| `cycleCount` | `int` | cycles | Accumulated charge/discharge cycles |
+| `remainChargeTime` | `int` | min | Estimated time to full charge; valid while charging |
+| `remainDischargeTime` | `int` | min | Estimated remaining runtime at the current load |
+| `power` | `float` | % | State of charge, range 0–100 |
+| `health` | `float` | % | Battery state of health, range 0–100 |
+| `temperature` | `float` | °C | Battery temperature |
+| `fullCharge` | `float` | mAh | Full-charge capacity |
+| `remaining` | `float` | mAh | Remaining capacity |
+| `current` | `float` | A | Battery current; positive while charging, negative while discharging |
+| `voltage` | `float` | V | Total battery voltage |
+
+`battery.statusCode` bitmask (`statusCode & bit != 0` means the protection bit is active):
+
+| Bit | Value | Meaning |
+|---|---|---|
+| bit0 | `0x0001` | Pack undervoltage protection |
+| bit1 | `0x0002` | Cell undervoltage protection |
+| bit2 | `0x0004` | Pack overvoltage protection |
+| bit3 | `0x0008` | Cell overvoltage protection |
+| bit4 | `0x0010` | Charging complete |
+| bit5 | `0x0020` | Discharge overcurrent protection |
+| bit6 | `0x0040` | Charge overcurrent protection |
+| bit7 | `0x0080` | Short-circuit protection |
+| bit8 | `0x0100` | Low-temperature discharge protection |
+| bit9 | `0x0200` | Low-temperature charge protection |
+| bit10 | `0x0400` | High-temperature discharge protection |
+| bit11 | `0x0800` | High-temperature charge protection |
+| bit12 | `0x1000` | MOS overtemperature protection |
+| bit13 | `0x2000` | Cell-sampling disconnect protection |
+| bit14 | `0x4000` | Cell-voltage imbalance protection |
+| bit15 | `0x8000` | Cell-voltage measurement failure |
+
+`network` may contain `ether`, `hotspot`, `mobile`, and `wlan` dictionaries. Interfaces or fields unavailable on a device model or software version may be omitted, so application code should read them with `.get()`.
+
+| Field | Python type | Meaning |
+|---|---|---|
+| `enable` | `bool` | Whether the interface is enabled |
+| `ipv4Addr` | `str` | IPv4 address |
+| `ipv4Gateway` | `str` | IPv4 gateway |
+| `ipv4Mask` | `str` | IPv4 subnet mask |
+| `mac` | `str` | MAC address |
+| `status` | `int` | `0` connected, `1` disconnected, `2` connecting |
+| `signalLevel` | `int` | `mobile` only: `0` good (>22 dB), `2` moderate (>15 dB), `3` poor (≤15 dB) |
+| `simCardSta` | `bool` | `mobile` only: whether the SIM card is ready |
 
 ## 3. Exit Deadlock Avoidance
 
@@ -248,7 +339,7 @@ finally:
 - Do not perform blocking I/O, long computations, or SDK re-entry in callbacks. Hand expensive work to an application thread.
 - `robot_motion_sdk`, its native binding, and `librobotMotionSdk.so` must come from the same SDK version and target architecture.
 - Every exit path must call `disconnect()` explicitly, followed by `sdk.service.shutdown()`.
-- Onboard High-level must select `eth0.100` before initialization. This page does not claim completed external-host real-robot validation for Python.
+- Onboard High-level must select `eth0.100` before initialization. An external host must select the interface that actually reaches the robot and create the client with the target Device ID (SN).
 
 ## 6. Troubleshooting
 

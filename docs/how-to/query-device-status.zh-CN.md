@@ -27,7 +27,7 @@ print("battery", battery)
 print("interfaces", list(network.keys()))
 ```
 
-具体字段以 [High-level API](../api-reference/cpp/high-level.zh-CN.md#451-querysystemstatus-出参字段) 为准。业务应容忍设备型号或软件版本没有提供某个可选字段。
+完整 dict schema 和字段语义见 [Python High-level API：`query_system_status()` 返回结构](../api-reference/python/high-level.zh-CN.md#21-query_system_status-返回结构)。业务应容忍设备型号或软件版本没有提供某个可选字段。
 
 ## High-level：轻量电源缓存
 

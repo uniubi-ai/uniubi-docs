@@ -64,4 +64,4 @@ For SDK development, first complete [SDK First Use](sdk-first-use.md). For ROS 2
 
 See the High-level [Python API](../api-reference/python/high-level.md), [C++ API](../api-reference/cpp/high-level.md), and [ROS 2 Motion Bridge guide](ros2-motion-bridge.md) for lifecycle and safety details.
 
-The external-host C++ SDK path is documented here as a supported deployment mode. This page does not claim external-host real-robot validation for Python or ROS 2.
+The external-host High-level C++ SDK, Python SDK, and ROS 2 paths have all been validated on a real robot. Each path must select the network interface that actually reaches the robot and pass the target Device ID (SN).

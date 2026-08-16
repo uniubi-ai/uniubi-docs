@@ -38,7 +38,7 @@ High-level 真机应用支持两种部署模式。无论哪种模式，内置运
 
 该边界仅针对 High-level 控制。Low-level 真机关节控制应用仍运行在板内。
 
-外部主机 C++ SDK 在本文中作为受支持路径说明；Python 与 ROS 2 的 API 覆盖或示例本身不代表已完成外部主机真机验证。
+本页以下内容聚焦 C++ SDK；Python SDK 和 ROS 2 的外部主机路径见各自 API 与操作指南。
 
 ---
 
@@ -117,7 +117,7 @@ client->disconnect();
 svc->shutdown();
 ```
 
-外部主机 C++ 路径在本文中作为受支持模式说明；本示例不声称 Python 或 ROS 2 已完成外部主机真机验证。
+以下示例只演示外部主机 C++ SDK 的完整连接流程；Python SDK 和 ROS 2 请使用各自页面中的对应入口。
 
 ---
 

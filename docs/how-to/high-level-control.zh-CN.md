@@ -64,4 +64,4 @@ Low-level 真机的部署边界不同：关节控制应用仍运行在板内。�
 
 High-level 控制流程和安全边界见 [Python API](../api-reference/python/high-level.zh-CN.md)、[C++ API](../api-reference/cpp/high-level.zh-CN.md) 及 [ROS 2 Motion bridge 导读](ros2-motion-bridge.zh-CN.md)。
 
-本文将外部主机 C++ SDK 作为受支持部署模式说明，但不据此声称 Python 或 ROS 2 已完成外部主机真机验证。
+外部主机 High-level C++ SDK、Python SDK 和 ROS 2 路径均已完成真机验证；使用时都必须选择实际连接机器人网络的网卡，并传入目标设备 ID（SN）。

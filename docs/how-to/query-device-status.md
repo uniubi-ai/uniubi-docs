@@ -27,7 +27,7 @@ print("battery", battery)
 print("interfaces", list(network.keys()))
 ```
 
-See the [High-level API](../api-reference/cpp/high-level.md#451-querysystemstatus-fields) for exact fields. Applications should tolerate optional fields that are unavailable on a device model or software build.
+See the [Python High-level API: `query_system_status()` return schema](../api-reference/python/high-level.md#21-query_system_status-return-schema) for the complete dict schema and field semantics. Applications should tolerate optional fields that are unavailable on a device model or software build.
 
 ## High-level: lightweight power cache
 

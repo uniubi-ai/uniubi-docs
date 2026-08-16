@@ -326,7 +326,7 @@ module uniubi {
 | `header.requestId` | uint64 | Device internal event sequence number |
 | `magic` | uint32 | Protocol check constant, fixed = `0x53425645` (ASCII `"EVBS"`); **If the check fails, the entire frame must be discarded** |
 | `timestamp` | uint64 | Debug timestamp |
-| `topic` | string | Business topic string (not DDS wire-level topic); the specific value is agreed by the business (see [§4](#4-message-format-and-fields)]); when the client encounters an unknown value, it is **tolerant and transparently transmitted** to the business layer |
+| `topic` | string | Application-level topic name, not a DDS wire topic. See [§4](#4-message-format-and-fields) for defined values. Clients must pass unknown values through to the application layer without rejecting them |
 | `payload` | string | JSON string, schema varies with the value of `topic` (see [§4](#4-message-format-and-fields) for details) |
 
 **QoS**
@@ -1098,13 +1098,13 @@ Pull a complete device system state snapshot **once**. Event subscription is inc
 | `1` | Not connected |
 | `2` | Connecting |
 
-**`network.mobile.signalLevel` enumeration value** (`mobile` sub-object only)
+**`network.mobile.signalLevel` values** (`mobile` object only)
 
 | Value | Meaning |
 |---|---|
 | `0` | Good signal (> 22 dB) |
-| `2` | Moderate signal (>15 dB) |
-| `3` | Signal difference (≤ 15 dB) |
+| `2` | Moderate signal (> 15 dB) |
+| `3` | Poor signal (≤ 15 dB) |
 
 `network.mobile.simCardSta`: `true` = SIM card ready, `false` = not inserted or not recognized.
 
@@ -1609,7 +1609,7 @@ module uniubi {
 | IDL fields | Physical mapping | Range |
 |---|---|---|
 | `stickLX` | Left joystick horizontal axis | [-1.0, 1.0] |
-| `stickLY` | Left joystick vertical axis (typically used for front and rear) | [-1.0, 1.0] |
+| `stickLY` | Left joystick vertical axis (typically forward/backward) | [-1.0, 1.0] |
 | `stickRX` | Right joystick horizontal axis | [-1.0, 1.0] |
 | `stickRY` | Right joystick vertical axis | [-1.0, 1.0] |
 | `triggerL` | Left trigger | [0.0, 1.0] |
