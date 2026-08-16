@@ -818,7 +818,7 @@ Trigger the device to perform preset actions. The device has started moving when
 
 ##### `stopMotionAction`
 
-Stop current action. The device goes through the closing process (not stopped immediately). **Retain control** after stopping.
+Stop current action. The device goes through the closing process (not stopped immediately), then returns the effective action to `walking` with all three walking velocities set to zero. **Retain control** after stopping. Starting `walking` with full zero parameters is the equivalent explicit action transition.
 
 **Request `params`**: `{}` - Response `params` is empty.
 
@@ -858,7 +858,7 @@ Take `walking` as an example (the field name/range is subject to the one returne
 
 - **Full rewrite**: `setMotionActionParams` has the same **full semantics** as `startMotionAction` - `params` called this time covers the entire set of runtime parameters, and **untransmitted fields return to 0**. To change only yaw but retain X speed, all three fields must be passed
 - **The range is cut by the server**: No error will be reported when exceeding the range, and it will be replaced by the boundary value; the actual upper limit of the capacity can be queried through `getMotionCapabilities`
-- **Zero speed does not mean stop**: To stop, use `stopMotionAction`, do not rely on `{lineVelocityX:0, lineVelocityY:0, velocity:0}`
+- **Zero speed parameters do not mean stop**: `setMotionActionParams({lineVelocityX:0, lineVelocityY:0, velocity:0})` only makes the current action zero-speed. To stop it, use `stopMotionAction`, or call `startMotionAction` for `walking` with all three fields explicitly zero. Both transitions are asynchronous.
 - **Three fields are independent**: Complete movement requires a combination of three axes (such as walking and turning: `{"lineVelocityX":0.5,"velocity":0.3}`)
 
 ##### `emergencyStopMotion`
@@ -936,8 +936,16 @@ Query the actual effective action + control speed of the latest beat of the curr
   }
 }
 
-// No active action (for example, after stopMotionAction)
-{ "result": true, "params": {} }
+// After stopMotionAction, the effective action is zero-speed walking
+{
+  "result": true,
+  "params": {
+    "action":        "walking",
+    "velocity":      0.0,
+    "lineVelocityX": 0.0,
+    "lineVelocityY": 0.0
+  }
+}
 ```
 
 **Usage Note**

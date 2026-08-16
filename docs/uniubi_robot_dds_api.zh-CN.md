@@ -817,7 +817,8 @@ business_ok = (response.code == 0) AND (payload.result == true)
 
 ##### `stopMotionAction`
 
-停止当前动作。设备走收尾流程（非立即停）。停止后**保留控制权**。
+停止当前动作。设备走收尾流程（非立即停），然后将实际动作切回 `walking` 并把 walking 三轴速度
+清零。停止后**保留控制权**。显式启动全零参数的 `walking` 也可以完成同样的动作切换。
 
 **请求 `params`**：`{}` —— 响应 `params` 为空。
 
@@ -857,7 +858,9 @@ business_ok = (response.code == 0) AND (payload.result == true)
 
 - **全量重写**：`setMotionActionParams` 跟 `startMotionAction` 一样是**全量语义**——本次调用的 `params` 覆盖整套运行期参数，**未传字段归 0**。要只改 yaw 但保留 X 速度，必须三个字段都传齐
 - **范围由服务端裁剪**：超出范围不报错，按边界值代替；实际能力上限通过 `getMotionCapabilities` 查询
-- **零速度不等于停止**：要停下来用 `stopMotionAction`，不要靠下发 `{lineVelocityX:0, lineVelocityY:0, velocity:0}`
+- **零速度参数不等于停止动作**：`setMotionActionParams({lineVelocityX:0, lineVelocityY:0, velocity:0})`
+  只会让当前动作零速运行。要停止当前动作，应调用 `stopMotionAction`，或调用
+  `startMotionAction` 显式切换到三个字段均为 0 的 `walking`。两种切换都是异步的。
 - **三个字段独立**：完整运动须三轴组合（如边走边转：`{"lineVelocityX":0.5,"velocity":0.3}`）
 
 ##### `emergencyStopMotion`
@@ -935,8 +938,16 @@ business_ok = (response.code == 0) AND (payload.result == true)
   }
 }
 
-// 无活动动作（例如已 stopMotionAction）
-{ "result": true, "params": {} }
+// stopMotionAction 后的实际动作是零速 walking
+{
+  "result": true,
+  "params": {
+    "action":        "walking",
+    "velocity":      0.0,
+    "lineVelocityX": 0.0,
+    "lineVelocityY": 0.0
+  }
+}
 ```
 
 **使用注意**

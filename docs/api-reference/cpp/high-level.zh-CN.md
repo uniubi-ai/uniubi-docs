@@ -494,10 +494,16 @@ client->connect();
 | `bool standUp(uint32_t timeoutMs = 5000)` | 站立 |
 | `bool move(float vx, float vy, float vyaw, uint32_t timeoutMs = 5000)` | 行走：`vx` 前后线速度（正前进）、`vy` 左右线速度、`vyaw` 转向角速度；持续生效直到 `stopAction` 或后续动作/参数覆盖 |
 
+`stopAction()` 会通过服务端异步收尾停止当前动作，然后将实际动作切回 `walking`，把 walking 三轴
+速度清零并继续保留控制权。显式启动三个参数均为 0 的 `walking`，也可以作为结束当前动作的切换方式。
+`setActionParams()` 或 `/cmd_vel` 会修改当前动作所支持的参数（包括 `bipedStand`、`handstand` 等
+动作的速度参数），但不会切换动作。
+
 **动作安全分级**
 
-- 推荐新手首次联调使用 `standUp()` / `lieDown()`，或 `startAction("standing")` / `startAction("laying")`。
-- `walking` / `move` / `bipedStand` / `handstand` / `waveBody` / `peakLoadStand` / `jumpFrontflip` / `jumpSideflip` / `jumpBackflip` / `jumpDoubleBackflip` / `jumpDoubleSideflip` / `damp` 属于高风险运动动作，应在空旷场地、机器人姿态稳定、具备人工接管条件时执行。
+- 推荐新手首次联调先完成只读检查，再调用 `startAction("walking", R"({"lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0})")` 验证取权、动作启动和状态反馈。
+- `standUp()` / `lieDown()` 和对应的 `standing` / `laying` action 受当前姿态及服务端状态机约束，不能作为通用的往返测试；例如 `standing` 不能从 `laying` 直接触发。
+- 带非零速度的 `walking` / `move`，以及 `bipedStand` / `handstand` / `waveBody` / `peakLoadStand` / `jumpFrontflip` / `jumpSideflip` / `jumpBackflip` / `jumpDoubleBackflip` / `jumpDoubleSideflip` / `damp` 属于高风险运动动作，应在空旷场地、机器人姿态稳定、具备人工接管条件时执行。
 - `emergencyStop`、音频播放/暂停/停止、音频文件增删、摄像头补光灯亮度设置不属于高风险运动动作，但仍要求调用方持有控制权或满足对应接口前置条件。
 
 #### 4.3.1.1 `walking` 动作参数（`startAction` / `setActionParams`）

@@ -493,10 +493,13 @@ Subsequent `connect`, `startControl`, and action calls follow the normal flow. T
 | `bool standUp(uint32_t timeoutMs = 5000)` | Stand |
 | `bool move(float vx, float vy, float vyaw, uint32_t timeoutMs = 5000)` | Walking command: `vx` longitudinal velocity (positive forward), `vy` lateral velocity, and `vyaw` yaw rate; remains active until `stopAction` or a subsequent action/parameter update |
 
+`stopAction()` stops the current action through the server's asynchronous finalization path, then returns the effective action to `walking` with all three walking velocities set to zero while retaining control. Starting `walking` with full zero parameters is the equivalent explicit way to end the current action. `/cmd_vel` or `setActionParams()` updates the current action's supported parameters (including speed parameters for actions such as `bipedStand` and `handstand`); it does not switch actions.
+
 **Action safety classification**
 
-- For initial hardware integration, begin with `standUp()` / `lieDown()` or `startAction("standing")` / `startAction("laying")`.
-- `walking` / `move` / `bipedStand` / `handstand` / `waveBody` / `peakLoadStand` / `jumpFrontflip` / `jumpSideflip` / `jumpBackflip` / `jumpDoubleBackflip` / `jumpDoubleSideflip` / `damp` are high-risk motion actions. Run them only in an open area with stable robot posture and manual takeover available.
+- For initial hardware integration, complete read-only checks first, then call `startAction("walking", R"({"lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0})")` to validate ownership, action startup, and status feedback.
+- `standUp()` / `lieDown()` and the corresponding `standing` / `laying` actions depend on the current posture and server state machine, so they are not a universal round-trip test; for example, `standing` cannot be triggered directly from `laying`.
+- `walking` / `move` with nonzero velocity, plus `bipedStand` / `handstand` / `waveBody` / `peakLoadStand` / `jumpFrontflip` / `jumpSideflip` / `jumpBackflip` / `jumpDoubleBackflip` / `jumpDoubleSideflip` / `damp`, are high-risk motion actions. Run them only in an open area with stable robot posture and manual takeover available.
 - `emergencyStop`, audio playback/pause/stop, audio-file management, and camera-light brightness are not high-risk motion actions, but their control-ownership and interface prerequisites still apply.
 
 #### 4.3.1.1 `walking` action parameters (`startAction` / `setActionParams`)

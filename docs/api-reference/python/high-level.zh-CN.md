@@ -163,7 +163,7 @@ highlevel> odom 5
 
 ```text
 highlevel> take
-highlevel> start walking
+highlevel> start walking {"lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0}
 highlevel> send 3 {"lineVelocityX":0.3,"lineVelocityY":0,"velocity":0}
 highlevel> stop
 highlevel> release
@@ -171,6 +171,11 @@ highlevel> quit
 ```
 
 `send` 到时后会清零 walking 三轴速度，但不会停止当前动作；只有 `stop` 调用 `stop_action()`。`quit`、EOF、SIGINT 和 SIGTERM 都会进入统一清理流程：关闭观测、清零 walking 速度、释放控制权、显式 `disconnect()`，最后 `service.shutdown()`，不依赖 Python GC。
+
+`stop_action()` 会通过异步收尾流程停止当前动作，然后将实际动作切回零速 `walking` 并继续保留控制权。
+显式调用 `start_action("walking", {"lineVelocityX": 0.0, "lineVelocityY": 0.0, "velocity": 0.0})`
+也可以完成同样的动作切换。`set_action_params()` 或 `/cmd_vel` 会修改当前动作支持的参数，包括
+`bipedStand`、`handstand` 等动作的速度参数，但不会停止或切换动作。
 
 完整命令以程序内 `help` 为准，完整源码见 [`uniubi_robot_sdk_py/examples/example_highlevel.py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_highlevel.py)。底层 API 的最小生命周期如下：
 
@@ -186,7 +191,9 @@ try:
     client.start_control(timeout_ms=10000)
     while client.get_state() != sdk.HighLevelState.kControlled:
         time.sleep(0.05)
-    client.start_action("walking")
+    client.start_action("walking", {"lineVelocityX": 0.0,
+                                    "lineVelocityY": 0.0,
+                                    "velocity": 0.0})
     client.set_action_params({"lineVelocityX": 0.3})
     time.sleep(3)
     client.set_action_params({"lineVelocityX": 0.0,
