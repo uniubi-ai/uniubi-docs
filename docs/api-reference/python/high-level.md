@@ -255,6 +255,7 @@ Acquire control explicitly before issuing actions:
 ```text
 highlevel> take
 highlevel> start walking {"lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0}
+highlevel> set {"controlProfile":"fast","lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0}
 highlevel> send 3 {"lineVelocityX":0.3,"lineVelocityY":0,"velocity":0}
 highlevel> stop
 highlevel> release
@@ -264,6 +265,14 @@ highlevel> quit
 When `send` expires it clears all three walking velocities but does not stop the current action; only `stop` calls `stop_action()`. `quit`, EOF, SIGINT, and SIGTERM all use one cleanup path: disable observations, clear walking velocity, release control, call `disconnect()` explicitly, and finally call `service.shutdown()` without relying on Python garbage collection.
 
 `stop_action()` stops the current action through the asynchronous finalization path, then returns the effective action to zero-speed `walking` while retaining control. Calling `start_action("walking", {"lineVelocityX": 0.0, "lineVelocityY": 0.0, "velocity": 0.0})` is the equivalent explicit transition. `set_action_params()` or `/cmd_vel` updates the current action's supported parameters, including speed parameters for actions such as `bipedStand` and `handstand`; it does not stop or switch the action.
+
+The `walking` `controlProfile` value must be the string `"slow"` (the default slow profile) or
+`"fast"` (the fast profile). Numeric IDs in the capability configuration are internal values;
+do not send `0` or `1`, because the server rejects numeric values as a parameter type error.
+Switch profiles with all three axes at zero, wait for a successful response and stable posture, and
+then increase velocity gradually. Some server versions do not return the profile name in motion-state JSON.
+Later `set_action_params()` calls that omit `controlProfile` keep the current profile, while omitted
+velocity axes are still treated as zero.
 
 Before triggering any action other than `laying`, call the zero-velocity `walking` transition above and poll `query_motion_state()` until the effective action is `walking`; only then trigger the target action. `laying` does not require this preliminary transition.
 
@@ -284,7 +293,14 @@ try:
     client.start_action("walking", {"lineVelocityX": 0.0,
                                     "lineVelocityY": 0.0,
                                     "velocity": 0.0})
-    client.set_action_params({"lineVelocityX": 0.3})
+    client.set_action_params({"controlProfile": "fast",
+                              "lineVelocityX": 0.0,
+                              "lineVelocityY": 0.0,
+                              "velocity": 0.0})
+    client.set_action_params({"controlProfile": "fast",
+                              "lineVelocityX": 0.3,
+                              "lineVelocityY": 0.0,
+                              "velocity": 0.0})
     time.sleep(3)
     client.set_action_params({"lineVelocityX": 0.0,
                               "lineVelocityY": 0.0,

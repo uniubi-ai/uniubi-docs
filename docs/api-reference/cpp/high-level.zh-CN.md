@@ -515,11 +515,14 @@ client->connect();
 
 | paramsJson 字段 | 类型 | 含义 | 单位 |
 |---|---|---|---|
+| `controlProfile` | string | walking 控制档位；当前为 `"slow"`（默认）或 `"fast"` | — |
 | `velocity`      | float | **偏航角速度**（yaw rate），正左转负右转 | rad/s |
 | `lineVelocityX` | float | 前后线速度，正前进负后退               | m/s   |
 | `lineVelocityY` | float | 侧向线速度，正右负左                   | m/s   |
 
-字段名与 `getMotionCapabilities` 返回的 `params[].name` 一致，也与 `queryMotionState` 返回的字段一致 —— **同一套 key 贯穿三处**，调用方学一次即可。
+三个速度字段与 `getMotionCapabilities` 返回的 `params[].name` 一致，也与
+`queryMotionState` 返回的速度字段一致。`controlProfile` 单独使用 profile 名称字符串；
+能力配置中的数字 `id` 是内部值，不是 RPC 入参。
 
 **示例**：
 
@@ -532,14 +535,18 @@ client->connect();
 
 // setActionParams 是全量重写：要保留侧移/旋转的当前值，必须三个字段都重新传
 {"lineVelocityX": 0.8, "lineVelocityY": 0.0, "velocity": 0.0}
+
+// 零速切换到快速档；controlProfile 必须传字符串，不能传内部数字 ID 1
+{"controlProfile": "fast", "lineVelocityX": 0.0, "lineVelocityY": 0.0, "velocity": 0.0}
 ```
 
 **几条语义约定**：
 
-- **全量重写**：`setActionParams` 跟 `startAction` 一样是**全量语义**——调用一次就用这次的 params 覆盖整套运行期参数，**未传字段归 0**。要保留 X 速度只改 yaw，必须三个字段都传齐
+- **速度参数全量重写**：`setActionParams` 跟 `startAction` 一样会重建数值动作参数，未传的速度轴归 0。要保留 X 速度只改 yaw，必须三个速度字段都传齐；`controlProfile` 仅在显式传入合法字符串时切换
 - **范围由服务端限制**：超出 `getMotionCapabilities` 返回的 `min`/`max` 时被服务端 clamp 到边界；不会报错
 - **零速度不等于停止**：要停下来用 `stopAction()`，不要靠下发 `{lineVelocityX:0, lineVelocityY:0, velocity:0}`
 - **三个字段独立**：完整运动需三轴组合（如边走边转：`{lineVelocityX: 0.5, velocity: 0.3}`）
+- **档位参数是字符串**：`controlProfile` 使用 `"slow"` / `"fast"`；传入数字 `0` / `1` 会被服务端按参数类型错误拒绝。建议先以三轴全零切档，确认请求成功且机器人稳定后再逐步加速；部分服务端版本的状态查询不回传档位名称
 
 **C++ 调用示例**：
 
@@ -549,6 +556,9 @@ client->startAction("walking", R"({"lineVelocityX":0.5,"lineVelocityY":0.0,"velo
 
 // 运行期调速（全量重写，必须把要保留的字段都带上）
 client->setActionParams(R"({"lineVelocityX":0.8,"lineVelocityY":0.0,"velocity":0.0})");
+
+// 零速切换到快速档
+client->setActionParams(R"({"controlProfile":"fast","lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0})");
 
 // 停止
 client->stopAction();

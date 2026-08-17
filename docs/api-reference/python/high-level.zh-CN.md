@@ -255,6 +255,7 @@ highlevel> odom 5
 ```text
 highlevel> take
 highlevel> start walking {"lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0}
+highlevel> set {"controlProfile":"fast","lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0}
 highlevel> send 3 {"lineVelocityX":0.3,"lineVelocityY":0,"velocity":0}
 highlevel> stop
 highlevel> release
@@ -267,6 +268,12 @@ highlevel> quit
 显式调用 `start_action("walking", {"lineVelocityX": 0.0, "lineVelocityY": 0.0, "velocity": 0.0})`
 也可以完成同样的动作切换。`set_action_params()` 或 `/cmd_vel` 会修改当前动作支持的参数，包括
 `bipedStand`、`handstand` 等动作的速度参数，但不会停止或切换动作。
+
+`walking` 的 `controlProfile` 必须使用字符串 `"slow"`（默认慢速档）或 `"fast"`
+（快速档）。能力配置中的数字 `id` 是内部值，不能传 `0` / `1`；数字值会被服务端以参数
+类型错误拒绝。建议先用三轴全零的完整参数切档，确认请求成功且机器人稳定后再逐步设置速度；
+部分服务端版本的状态查询不回传档位名称。
+后续未传 `controlProfile` 的 `set_action_params()` 保持当前档位，但未传的速度轴仍按 0 处理。
 
 触发 `laying` 以外的动作前，应先调用上述全零参数的 `walking`，并轮询 `query_motion_state()`
 确认实际动作已进入 `walking`，再触发目标动作。`laying` 不要求这一步前置切换。
@@ -288,7 +295,14 @@ try:
     client.start_action("walking", {"lineVelocityX": 0.0,
                                     "lineVelocityY": 0.0,
                                     "velocity": 0.0})
-    client.set_action_params({"lineVelocityX": 0.3})
+    client.set_action_params({"controlProfile": "fast",
+                              "lineVelocityX": 0.0,
+                              "lineVelocityY": 0.0,
+                              "velocity": 0.0})
+    client.set_action_params({"controlProfile": "fast",
+                              "lineVelocityX": 0.3,
+                              "lineVelocityY": 0.0,
+                              "velocity": 0.0})
     time.sleep(3)
     client.set_action_params({"lineVelocityX": 0.0,
                               "lineVelocityY": 0.0,

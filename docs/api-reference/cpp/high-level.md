@@ -511,11 +511,14 @@ The server reports each action's adjustable parameters dynamically. Query `getMo
 
 | paramsJson field | type | meaning | unit |
 |---|---|---|---|
+| `controlProfile` | string | Walking control profile: currently `"slow"` (default) or `"fast"` | — |
 | `velocity` | float | **Yaw rate**; positive turns left, negative turns right | rad/s |
 | `lineVelocityX` | float | Longitudinal velocity, positive forward and negative backward | m/s |
 | `lineVelocityY` | float | Lateral velocity, positive right and negative left | m/s |
 
-The JSON keys match both `getMotionCapabilities().actions[].params[].name` and the fields returned by `queryMotionState()`. The same names are therefore used for capability discovery, commands, and state queries.
+The three velocity keys match both `getMotionCapabilities().actions[].params[].name` and the
+velocity fields returned by `queryMotionState()`. `controlProfile` separately takes the profile
+name string; numeric IDs in the capability configuration are internal values, not RPC inputs.
 
 **Example**:
 
@@ -528,14 +531,18 @@ The JSON keys match both `getMotionCapabilities().actions[].params[].name` and t
 
 // setActionParams fully rewrites the parameters; resend all three fields to preserve existing values
 {"lineVelocityX": 0.8, "lineVelocityY": 0.0, "velocity": 0.0}
+
+// Switch to the fast profile at zero velocity; use a string, not internal numeric ID 1
+{"controlProfile": "fast", "lineVelocityX": 0.0, "lineVelocityY": 0.0, "velocity": 0.0}
 ```
 
 **Parameter semantics:**
 
-- **Full rewrite:** `setActionParams()` and `startAction()` replace the complete parameter set; omitted fields become 0. To change yaw while preserving X velocity, resend all three fields.
+- **Full velocity rewrite:** `setActionParams()` and `startAction()` rebuild the numeric action parameters, so omitted velocity axes become 0. To change yaw while preserving X velocity, resend all three velocity fields. `controlProfile` changes only when a valid profile-name string is supplied explicitly.
 - **Server-side clamping:** values outside the `min`/`max` range reported by `getMotionCapabilities()` are clamped to the nearest boundary without an error.
 - **Zero velocity is not an action stop:** use `stopAction()` to stop the current action; sending all-zero velocity fields only clears its velocity parameters.
 - **Independent axes:** combine the three fields as needed, for example `{lineVelocityX: 0.5, velocity: 0.3}` to move forward while turning.
+- **Profile names are strings:** use `"slow"` or `"fast"` for `controlProfile`. Sending numeric `0` or `1` is rejected as a parameter type error. Switch profiles with all three axes at zero, wait for a successful response and stable posture, and then increase velocity gradually. Some server versions do not return the profile name in motion-state JSON.
 
 **C++ calling example**:
 
@@ -545,6 +552,9 @@ client->startAction("walking", R"({"lineVelocityX":0.5,"lineVelocityY":0.0,"velo
 
 // Adjust velocity at runtime (full rewrite; include every field that must be preserved)
 client->setActionParams(R"({"lineVelocityX":0.8,"lineVelocityY":0.0,"velocity":0.0})");
+
+// Switch to the fast profile at zero velocity
+client->setActionParams(R"({"controlProfile":"fast","lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0})");
 
 // Stop
 client->stopAction();

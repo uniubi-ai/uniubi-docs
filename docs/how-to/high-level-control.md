@@ -50,6 +50,28 @@ means `velocity` (rad/s). “None” means that no speed command should be passe
 | Jump | Double left-side flip | `jumpDoubleLeftSideflip` | None | Perform one double left-side flip. |
 | Safety | Emergency stop | `emergencyStop` | None | Request that the robot enter the emergency-stop sequence immediately. |
 
+### Selecting the `walking` control profile
+
+`walking` accepts the optional string parameter `controlProfile`. The currently supported
+profiles are:
+
+- `"slow"`: slow profile and the default.
+- `"fast"`: fast profile.
+
+Numeric configuration IDs such as `0` and `1` are internal robot profile IDs. Do not send them
+as the High-level RPC `controlProfile` value; the server rejects numeric values as a parameter
+type error. Clear all three velocity axes before switching profiles and send the axes together:
+
+```text
+highlevel> start walking {"controlProfile":"slow","lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0}
+highlevel> set {"controlProfile":"fast","lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0}
+highlevel> state
+```
+
+Set the target velocity gradually only after the request succeeds and the robot remains stable at
+zero velocity. `set` changes the current action parameters; it does not switch actions. Some server
+versions do not return the profile name in motion-state JSON, so state output alone may not verify it.
+
 ## Choose Where the Application Runs
 
 High-level real-robot applications support two deployment modes. In both modes, the built-in motion service continues to run on the robot; only the application and SDK client location changes.
