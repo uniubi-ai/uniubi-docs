@@ -79,6 +79,8 @@ Use the Advanced section only when you need direct DDS/RPC access, QoS details, 
 
 Before requesting High-level control on a real robot, disconnect the remote controller: either power it off, or press and hold its `M` button until the robot announces “遥控器连接已断开” (remote controller disconnected). While the remote controller remains connected, the High-level client cannot obtain control ownership. Read-only checks do not require this step.
 
+In an emergency during High-level control, press `M` again and wait until the robot announces “遥控器已连接” (remote controller connected) before using the remote controller to take over. For a Low-level application to access remote-controller input, the remote controller must also be in this connected state; this is an input prerequisite and does not mean leaving Low-level mode.
+
 For the first High Level real-robot integration, begin with read-only checks, then validate ownership, action startup, and status feedback by starting `walking` with all three velocity fields explicitly set to zero. `standing` and `laying` depend on the current posture and the server state machine, so they are not a universal round-trip test. Validate walking with nonzero velocity and other locomotion only on clear, level, obstacle-free ground with the emergency stop within reach and an operator attending the robot.
 
 Before triggering any action other than `laying`, enter zero-velocity `walking` and use the state query to confirm that the effective action is `walking`; only then trigger the target action. `laying` does not require this preliminary transition.

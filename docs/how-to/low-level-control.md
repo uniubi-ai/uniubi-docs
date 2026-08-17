@@ -58,6 +58,12 @@ Reference implementations:
 
 Both examples accept ONNX input and rebuild the TensorRT engine at every process startup without PyTorch. The C++ example disables TF32 and uses strict FP32. Its `--validate-only` mode validates ONNX parsing, engine construction, and one zero-input inference without connecting to the robot. Never reuse an unverified joint reorder or observation contract when replacing the model.
 
+## Remote-controller Input Prerequisite
+
+For a Low-level application to access remote-controller input, the remote controller must be connected. If it is disconnected, press `M` until the robot announces “遥控器已连接” (remote controller connected).
+
+This connected state is the prerequisite for receiving remote-controller input in Low-level mode; it does not mean that the application is leaving Low-level control.
+
 ## Staged Real-robot Validation
 
 For the first hardware test, secure the robot on a reliable safety rig with all four feet fully clear. Validate only `stand` and `lay`. After confirming posture, joint direction, and emergency-stop behavior, place the robot on clear, level, obstacle-free ground and validate `stand` → `walk` → `stop` → `lay`.

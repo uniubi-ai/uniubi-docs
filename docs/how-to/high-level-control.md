@@ -60,6 +60,8 @@ For SDK development, first complete [SDK First Use](sdk-first-use.md). For ROS 2
 
 Before requesting High-level control, either power off the remote controller, or press and hold its `M` button until the robot announces “遥控器连接已断开” (remote controller disconnected). High-level cannot obtain ownership while the remote controller remains connected. Read-only checks do not require this step.
 
+In an emergency during High-level control, press `M` again and wait until the robot announces “遥控器已连接” (remote controller connected). Only then use the remote controller to take over.
+
 ![Remote controller button layout; the M button is at the lower center](images/remote-controller-buttons.png)
 
 _This figure is only for locating the controller buttons. Follow the disconnect prerequisite above for High-level ownership._
