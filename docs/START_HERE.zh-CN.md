@@ -4,6 +4,8 @@
 
 仓库根目录的 [README.md](../README.zh-CN.md) 是统一入口。
 
+> 二次开发权限和具身智能开发平台资料请统一从[具身智能开发者平台](https://www.uniubi.com/developer/embodied)获取；如尚未开通权限，请按页面指引登录或提交申请。
+
 推荐阅读顺序：
 
 1. [快速开始](../README.zh-CN.md#快速开始)：先选择 High-level 或 Low-level。

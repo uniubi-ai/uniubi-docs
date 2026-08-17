@@ -4,6 +4,8 @@
 
 The repository [README](../README.md) is the main documentation entry point.
 
+> Obtain secondary-development access and embodied-intelligence platform materials from the [Embodied Intelligence Developer Portal](https://www.uniubi.com/developer/embodied); if access is not enabled yet, follow the page instructions to sign in or apply.
+
 Recommended reading order:
 
 1. [Quick Start](../README.md#quick-start): choose High-level or Low-level control.
