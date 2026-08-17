@@ -14,6 +14,42 @@ Typical goals include:
 - using built-in walking, steering, and speed control; and
 - writing a ROS 2 application node that invokes robot motion capabilities.
 
+## Common High-level Actions
+
+Available actions can vary by product model and software version. The table below uses the current
+`motionCapacity` as a reference for common actions. Always treat the runtime capability query as authoritative
+for supported actions, parameter fields, ranges, and units: call `getMotionCapabilities()` in C++,
+`get_motion_capabilities()` in Python, or `/motion/query_capabilities` in ROS 2.
+
+Send `startAction()` / `start_action()` once; do not periodically resend the request. Use a state query to
+confirm whether the action has started or completed. A successful RPC return alone does not confirm either.
+
+In the speed ranges below, `vx` means `lineVelocityX` (m/s), `vy` means `lineVelocityY` (m/s), and `wz`
+means `velocity` (rad/s). “None” means that no speed command should be passed when invoking the action.
+
+| Action category | Name | Action key | Speed command range | Description |
+|---|---|---|---|---|
+| Basic posture | Lie down | `laying` | None | Move the robot into a stable lying posture. |
+| Basic posture | Stand | `standing` | None | Move the robot into a stable standing posture. |
+| Locomotion | Walk | `walking` | Slow: `vx [-1.5, 1.5]`, `vy [-1, 1]`, `wz [-3, 3]`; fast: `vx [-2.5, 3]`, `vy [-1, 1]`, `wz [-3, 3]` | Control forward, lateral, and turning motion; the slow profile is the default. |
+| Locomotion | Step in place | `tweak` | `vx/vy [-0.2, 0.2]`, `wz [-0.5, 0.5]` | Step in place or perform a low-speed adjustment. |
+| Special posture | Biped stand | `bipedStand` | `vx/vy [-0.3, 0.3]`, `wz [-1.5, 1.5]` | Balance on the rear legs in a biped posture. |
+| Special posture | Handstand | `handstand` | `vx/vy [-0.3, 0.3]`, `wz [-1.5, 1.5]` | Balance on the front legs in a handstand posture. |
+| Special posture | Left-side stand | `leftSideStand` | `vx/vy [-0.3, 0.3]`, `wz [-1.5, 1.5]` | Enter a side-standing posture supported on the left side. |
+| Special posture | Right-side stand | `rightSideStand` | `vx/vy [-0.3, 0.3]`, `wz [-1.5, 1.5]` | Enter a side-standing posture supported on the right side. |
+| Interactive motion | Body wave | `waveBody` | `vx [-0.06, 0.05]`, `vy [-0.23, 0.23]`, `wz [-0.35, 0.35]` | Perform a body-waving demonstration motion. |
+| Interactive motion | Wave | `waveHand` | None | Raise a leg and perform a waving demonstration motion. |
+| Interactive motion | Heart gesture | `heartSit` | None | Sit and perform a heart-shaped gesture. |
+| Jump | Forward jump | `jumpForward` | None | Perform one forward jump. |
+| Jump | Front flip | `jumpFrontflip` | None | Perform one front flip. |
+| Jump | Side flip | `jumpSideflip` | None | Perform one side flip. |
+| Jump | Left-side flip | `jumpLeftSideflip` | None | Perform one left-side flip. |
+| Jump | Backflip | `jumpBackflip` | None | Perform one backflip. |
+| Jump | Double backflip | `jumpDoubleBackflip` | None | Perform one double backflip. |
+| Jump | Double side flip | `jumpDoubleSideflip` | None | Perform one double side flip. |
+| Jump | Double left-side flip | `jumpDoubleLeftSideflip` | None | Perform one double left-side flip. |
+| Safety | Emergency stop | `emergencyStop` | None | Request that the robot enter the emergency-stop sequence immediately. |
+
 ## Choose Where the Application Runs
 
 High-level real-robot applications support two deployment modes. In both modes, the built-in motion service continues to run on the robot; only the application and SDK client location changes.
