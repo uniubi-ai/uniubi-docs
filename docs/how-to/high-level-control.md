@@ -56,6 +56,14 @@ For SDK development, first complete [SDK First Use](sdk-first-use.md). For ROS 2
 
 `uniubi_robot_msgs` is the authoritative source for ROS 2 interfaces and build dependencies. It is not the normal place for application-specific changes.
 
+## Before Real-robot Control: Disconnect the Remote Controller
+
+Before requesting High-level control, either power off the remote controller, or press and hold its `M` button until the robot announces “遥控器连接已断开” (remote controller disconnected). High-level cannot obtain ownership while the remote controller remains connected. Read-only checks do not require this step.
+
+![Remote controller button layout; the M button is at the lower center](images/remote-controller-buttons.png)
+
+_This figure is only for locating the controller buttons. Follow the disconnect prerequisite above for High-level ownership._
+
 ## Minimum Success Criteria
 
 1. Build or import the SDK, or build the ROS 2 bridge.
