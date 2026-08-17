@@ -265,6 +265,8 @@ When `send` expires it clears all three walking velocities but does not stop the
 
 `stop_action()` stops the current action through the asynchronous finalization path, then returns the effective action to zero-speed `walking` while retaining control. Calling `start_action("walking", {"lineVelocityX": 0.0, "lineVelocityY": 0.0, "velocity": 0.0})` is the equivalent explicit transition. `set_action_params()` or `/cmd_vel` updates the current action's supported parameters, including speed parameters for actions such as `bipedStand` and `handstand`; it does not stop or switch the action.
 
+Before triggering any action other than `laying`, call the zero-velocity `walking` transition above and poll `query_motion_state()` until the effective action is `walking`; only then trigger the target action. `laying` does not require this preliminary transition.
+
 Use the program's `help` command for the complete command set. The full source is [`uniubi_robot_sdk_py/examples/example_highlevel.py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_highlevel.py). The minimal underlying API lifecycle is:
 
 ```python

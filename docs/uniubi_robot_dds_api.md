@@ -807,6 +807,7 @@ Trigger the device to perform preset actions. The device has started moving when
 **Usage Note**
 
 - The actual supported actions vary with the device model and firmware version, and must be dynamically queried through `getMotionCapabilities`, **should not be hard-coded on the client**
+- Before triggering any action other than `laying`, use `startMotionAction` to start `walking` with all three velocities set to zero, poll `queryMotionState` until `params.action` is `walking`, and only then trigger the target action. `laying` does not require this preliminary transition
 - RPC return success only means that the request was accepted by the device, and the physical movement may last for several seconds; there are three ways to determine that the action is truly completed:
 - Poll `queryMotionState` to see changes in the `params.action` field (suitable for simple actions such as standing/sitting down)
 - Subscribe to the motion observation volume ([§3.5](#35-motion-observation-subscription)), monitor `motor[i].velocity` to be close to 0 and last for several frames

@@ -498,6 +498,7 @@ Subsequent `connect`, `startControl`, and action calls follow the normal flow. T
 **Action safety classification**
 
 - For initial hardware integration, complete read-only checks first, then call `startAction("walking", R"({"lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0})")` to validate ownership, action startup, and status feedback.
+- Before triggering any action other than `laying`, call the zero-velocity `walking` transition above and poll `queryMotionState()` until the effective action is `walking`; only then call the target action. `laying` does not require this preliminary transition.
 - `standUp()` / `lieDown()` and the corresponding `standing` / `laying` actions depend on the current posture and server state machine, so they are not a universal round-trip test; for example, `standing` cannot be triggered directly from `laying`.
 - `walking` / `move` with nonzero velocity, plus `bipedStand` / `handstand` / `waveBody` / `peakLoadStand` / `jumpFrontflip` / `jumpSideflip` / `jumpBackflip` / `jumpDoubleBackflip` / `jumpDoubleSideflip` / `damp`, are high-risk motion actions. Run them only in an open area with stable robot posture and manual takeover available.
 - `emergencyStop`, audio playback/pause/stop, audio-file management, and camera-light brightness are not high-risk motion actions, but their control-ownership and interface prerequisites still apply.

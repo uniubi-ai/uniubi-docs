@@ -268,6 +268,9 @@ highlevel> quit
 也可以完成同样的动作切换。`set_action_params()` 或 `/cmd_vel` 会修改当前动作支持的参数，包括
 `bipedStand`、`handstand` 等动作的速度参数，但不会停止或切换动作。
 
+触发 `laying` 以外的动作前，应先调用上述全零参数的 `walking`，并轮询 `query_motion_state()`
+确认实际动作已进入 `walking`，再触发目标动作。`laying` 不要求这一步前置切换。
+
 完整命令以程序内 `help` 为准，完整源码见 [`uniubi_robot_sdk_py/examples/example_highlevel.py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_highlevel.py)。底层 API 的最小生命周期如下：
 
 ```python

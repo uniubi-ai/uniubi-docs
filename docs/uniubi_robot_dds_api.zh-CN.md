@@ -806,6 +806,9 @@ business_ok = (response.code == 0) AND (payload.result == true)
 **使用注意**
 
 - 实际支持的动作随设备型号与固件版本而异，须通过 `getMotionCapabilities` 动态查询，**不应在客户端硬编码**
+- 触发 `laying` 以外的动作前，应先通过 `startMotionAction` 启动三轴速度均为 0 的 `walking`，
+  轮询 `queryMotionState` 确认 `params.action` 已进入 `walking` 后，再触发目标动作。`laying` 不要求
+  这一步前置切换
 - RPC 返回成功只表示**请求被设备接受**，物理运动可能持续数秒；判定动作真正完成有三种方式：
   - 轮询 `queryMotionState`，看 `params.action` 字段变化（适合站立/坐下等简单动作）
   - 订阅运控观测量（[§3.5](#35-运控观测量订阅)），监测 `motor[i].velocity` 接近 0 且持续若干帧

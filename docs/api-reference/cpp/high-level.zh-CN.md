@@ -502,6 +502,7 @@ client->connect();
 **动作安全分级**
 
 - 推荐新手首次联调先完成只读检查，再调用 `startAction("walking", R"({"lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0})")` 验证取权、动作启动和状态反馈。
+- 触发 `laying` 以外的动作前，应先调用上述全零参数的 `walking`，并轮询 `queryMotionState()` 确认实际动作已进入 `walking`，再调用目标动作。`laying` 不要求这一步前置切换。
 - `standUp()` / `lieDown()` 和对应的 `standing` / `laying` action 受当前姿态及服务端状态机约束，不能作为通用的往返测试；例如 `standing` 不能从 `laying` 直接触发。
 - 带非零速度的 `walking` / `move`，以及 `bipedStand` / `handstand` / `waveBody` / `peakLoadStand` / `jumpFrontflip` / `jumpSideflip` / `jumpBackflip` / `jumpDoubleBackflip` / `jumpDoubleSideflip` / `damp` 属于高风险运动动作，应在空旷场地、机器人姿态稳定、具备人工接管条件时执行。
 - `emergencyStop`、音频播放/暂停/停止、音频文件增删、摄像头补光灯亮度设置不属于高风险运动动作，但仍要求调用方持有控制权或满足对应接口前置条件。

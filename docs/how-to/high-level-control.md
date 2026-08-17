@@ -60,7 +60,8 @@ For SDK development, first complete [SDK First Use](sdk-first-use.md). For ROS 2
 
 1. Build or import the SDK, or build the ROS 2 bridge.
 2. Complete read-only observation checks before requesting control.
-3. With the emergency stop reachable and an operator ready to intervene, validate low-risk actions such as standing and lying down before low-speed locomotion.
+3. Before triggering any action other than `laying`, start `walking` with all three velocities set to zero and use the state query to confirm that the effective action is `walking`; only then trigger the target action. `laying` does not require this preliminary transition.
+4. With the emergency stop reachable and an operator ready to intervene, validate low-risk actions such as standing and lying down before low-speed locomotion.
 
 See the High-level [Python API](../api-reference/python/high-level.md), [C++ API](../api-reference/cpp/high-level.md), and [ROS 2 Motion Bridge guide](ros2-motion-bridge.md) for lifecycle and safety details.
 

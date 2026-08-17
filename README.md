@@ -77,6 +77,8 @@ Use the Advanced section only when you need direct DDS/RPC access, QoS details, 
 
 For the first High Level real-robot integration, begin with read-only checks, then validate ownership, action startup, and status feedback by starting `walking` with all three velocity fields explicitly set to zero. `standing` and `laying` depend on the current posture and the server state machine, so they are not a universal round-trip test. Validate walking with nonzero velocity and other locomotion only on clear, level, obstacle-free ground with the emergency stop within reach and an operator attending the robot.
 
+Before triggering any action other than `laying`, enter zero-velocity `walking` and use the state query to confirm that the effective action is `walking`; only then trigger the target action. `laying` does not require this preliminary transition.
+
 For a Low-level walking policy, secure the robot on a safety rig with all four feet clear and validate only `stand` and `lay`. After posture, joint direction, and emergency-stop behavior are confirmed, move the robot to the ground and validate `stand` → `walk` → `stop` → `lay`. Never execute `walk` while the robot is suspended.
 
 Jumping, bipedal standing, handstands, damping, and joint-torque control require an appropriate test area, a reachable emergency stop, and a clear manual-takeover plan.

@@ -60,7 +60,9 @@ Low-level 真机的部署边界不同：关节控制应用仍运行在板内。�
 
 1. 完成 SDK 构建/导入，或完成 ROS 2 bridge 构建。
 2. 先完成只读观测验证。
-3. 在具备急停和人工接管条件后，再执行站立、趴下或低速运动等低风险动作。
+3. 触发 `laying` 以外的动作前，先启动三轴速度均为 0 的 `walking`，并通过状态查询确认
+   实际动作已经进入 `walking`，再触发目标动作。`laying` 不要求这一步前置切换。
+4. 在具备急停和人工接管条件后，再执行站立、趴下或低速运动等低风险动作。
 
 High-level 控制流程和安全边界见 [Python API](../api-reference/python/high-level.zh-CN.md)、[C++ API](../api-reference/cpp/high-level.zh-CN.md) 及 [ROS 2 Motion bridge 导读](ros2-motion-bridge.zh-CN.md)。
 
