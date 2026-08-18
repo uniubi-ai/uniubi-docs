@@ -17,14 +17,15 @@ This guide shows how applications read GPS, UWB, motors, IMU, remote-controller 
 
 ## High-level: GPS, UWB, and Walk odometry
 
-Enabling High-level sensor reporting requires control ownership. Use this order:
+Enabling High-level sensor reporting requires an established connection, not control ownership.
+If the application also needs motion control, or needs the target endpoint to be master for local
+motor/IMU observations, acquire control separately. Use this order:
 
 1. Register the sensor callback before `connect()`;
 2. call `connect()`;
-3. call `start_control()` and wait for `HighLevelState.kControlled`;
-4. call `set_observed_enable({"sensorEnable": True})`;
-5. read from the callback or the `get_sensor_observation()` cache;
-6. disable reporting before `release_control()`.
+3. call `set_observed_enable({"sensorEnable": True})`;
+4. read from the callback or the `get_sensor_observation()` cache;
+5. disable reporting before `disconnect()`; if control was acquired separately, do this before `release_control()`.
 
 ```python
 def on_sensor(sensor):
@@ -37,10 +38,6 @@ def on_sensor(sensor):
 
 client.set_sensor_observed_callback(on_sensor)  # Register before connect
 client.connect()
-client.start_control()
-while client.get_state() != sdk.HighLevelState.kControlled:
-    time.sleep(0.05)
-
 state = client.set_observed_enable({"motionEnable": False, "sensorEnable": True})
 if state is None:
     raise RuntimeError(client.get_last_error())
@@ -48,7 +45,7 @@ if state is None:
 sensor = client.get_sensor_observation(timeout_ms=1500)
 ```
 
-`get_sensor_observation()` reads the latest cache. Without first enabling `sensorEnable`, fresh data is not guaranteed. Disable `sensorEnable` while control is still held during cleanup.
+`get_sensor_observation()` reads the latest cache. Without first enabling `sensorEnable`, fresh data is not guaranteed. Disable `sensorEnable` before disconnecting; if the application acquired control for another purpose, disable it before releasing control.
 
 ## Low-level: GPS and UWB
 

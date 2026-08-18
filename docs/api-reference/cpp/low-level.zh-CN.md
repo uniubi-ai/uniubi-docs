@@ -631,7 +631,7 @@ lowlevel> quit
 - `lie` / `lie-down`：按需调用 `setMotionEnable(true)`，从实时关节位置平滑移动到趴下目标并持续保持。
 - `damping`：按需使能 Low-level，位置刚度设为 0，保留速度阻尼。
 - `release`：先发送短时阻尼，再停止控制线程并调用 `setMotionEnable(false)`。
-- `quit` / `Ctrl+C`：执行释放流程，并在断开前调用 `restoreMotionControlMode()` 恢复内置运控。
+- `quit` / `Ctrl+C`：执行释放流程、关闭 Low-level 控制、释放会话并断开连接。这个通用示例**不会**调用 `restoreMotionControlMode()`。如果需要恢复内置运控，应等待进程完全退出后，再运行 Python SDK examples 中独立的 `release_control_to_dv500.sh`。
 
 姿态控制周期为 50 Hz，默认轨迹时间为 2 秒，单周期位置变化不超过 0.25 rad。程序按 `(limbNo, jointNo)` 匹配观测与控制，不依赖数组顺序；当实际跟踪误差超过 0.25 rad 时暂停轨迹推进。姿态命令只支持标准 DV500 12 关节布局，其他布局会被拒绝。
 

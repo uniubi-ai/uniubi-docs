@@ -60,7 +60,7 @@ finally:
 | `startAction / stopAction / setActionParams` | `start_action(action, params=None, ...)` / `stop_action()` / `set_action_params(params=None)`; `params` connects to Python dict, binding internally converts to JSON |
 | `queryMotionState / getMotionCapabilities / querySystemStatus` | `query_motion_state()` / `get_motion_capabilities()` / `query_system_status()`; return Python dict (automatic json.loads) |
 | `getMotorLayout` | `get_motor_layout(timeout_ms=5000)`; return `sdk.MotorLayout`, failure `None` |
-| `setObservedEnable` | `set_observed_enable(params=None, timeout_ms=5000)`; requires `HighLevelState.kControlled`: call `start_control()` and wait for the master-role switch and control acquisition. It returns the effective switch dict on success or `None` on failure; calling it while only `kConnected` fails with `HighLevelError.kActionRejected` |
+| `setObservedEnable` | `set_observed_enable(params=None, timeout_ms=5000)`; requires only `kConnected` and does not perform a control-ownership check. It returns the effective switch dict on success or `None` on failure. Use `start_control()` separately when the application also needs motion control or must switch the target endpoint to master. |
 | `getPowerInfo` | `get_power_info(timeout_ms=5)`; `timeout_ms` is the freshness window (milliseconds), return `sdk.PowerObserved` or `None` |
 | `getSensorObservation` | `get_sensor_observation(timeout_ms=5000)`; Read the complete sensor buffer and return `sdk.SensorObserved` or `None` |
 | `setMotionObservedCallback` | `set_motion_observed_callback(cb)`; signature `(obs: sdk.LowLevelMotionObserved)` |

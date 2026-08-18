@@ -612,8 +612,8 @@ For detailed control/renewal/release calling methods, see [§3.3.1](#331-session
 | `robotAppService` | `stopMotionAction` | Stop current action | Yes |
 | `robotAppService` | `setMotionActionParams` | Change subparameters during runtime | Yes |
 | `robotAppService` | `emergencyStopMotion` | Emergency brake | Yes |
-| `robotAppService` | `setMotionObservedEnable` | Switch motion observation measurement | Yes |
-| `robotAppService` | `queryMotionState` | Query operation control status | Yes |
+| `robotAppService` | `setMotionObservedEnable` | Switch motion observation measurement | No |
+| `robotAppService` | `queryMotionState` | Query operation control status | No |
 | `robotAppService` | `getMotionCapabilities` | Query the set of actions supported by the device | No |
 | `robotAppService` | `getSystemStatus` | Pull system status snapshot | No |
 | `robotAppService` | `startPlayList` | Start/resume audio playback | Yes |
@@ -654,7 +654,7 @@ Each method gives: **Request `params`** (message format + fields), **Response `p
 | `stopMotionAction` | Holding rights | — | [§3.3.2](#332-action-control) |
 | `setMotionActionParams` | Holding rights | `params` (according to current action schema) | [§3.3.2](#332-action-control) |
 | `emergencyStopMotion` | Holding rights | — | [§3.3.2](#332-action-control) |
-| `setMotionObservedEnable` | Holding rights | `motionEnable`(bool), `sensorEnable`(bool) | [§3.3.3](#333-data-reporting) |
+| `setMotionObservedEnable` | Connected | `motionEnable`(bool), `sensorEnable`(bool) | [§3.3.3](#333-data-reporting) |
 | `queryMotionState` | None | — | [§3.3.4](#334-status-query) |
 | `getMotionCapabilities` | None | — | [§3.3.4](#334-status-query) |
 | `getSystemStatus` | None | — | [§3.3.4](#334-status-query) |
@@ -900,7 +900,7 @@ Controls the external release switch of motion observations ([§3.5](#35-motion-
 **Usage Note**
 
 - It is closed by default and is not persisted to the configuration: the server returns to the closed state after restarting and needs to be turned on again.
-- `payload.call.clientId` must identify the current control owner; calls without control are rejected. The target MotionServer must already be the master. A slave endpoint does not own motor/IMU data, so `requireObserved()` returns `false`. Raw DDS `takeMotionControl` only acquires control and does not replace the master-role switch performed by High-level `startControl()`
+- `payload.call.clientId` identifies the RPC session. The current SDK and server do not perform a control-ownership check for this switch. The target MotionServer should already be the master when the caller needs local motor/IMU observations; raw DDS `takeMotionControl` only acquires control and does not replace the master-role switch performed by High-level `startControl()`
 - For the calling sequence, see [§3.5](#35-motion-observation-subscription): **Subscribe to the reader first and then call this RPC to start pushing**; reverse order will lose the first few milliseconds of frames
 
 #### 3.3.4 Status Query
@@ -1439,17 +1439,17 @@ Motion observation subscription is based on the "device → client" direction of
 ```
 Enable:
   ① Subscribe the reader to rt/motion/observed
-  ② Ensure that the target MotionServer is already the master, then call takeMotionControl
+  ② Ensure that the target MotionServer is already the master when local motor/IMU observations are needed
   ③ Call RPC setMotionObservedEnable ([§3.3.3](#333-data-reporting)), params: {"motionEnable": true}
   ④ The device starts publishing at 50 Hz
 
 Disable:
   ⑤ Call RPC setMotionObservedEnable, params: {"motionEnable": false}
-  ⑥ Release motion control
+  ⑥ Release motion control only if the client acquired it for another operation
   ⑦ Destroy the reader (optional; retain it while the session remains open)
 ```
 
-You must **subscribe, ensure that the target endpoint is the master, acquire control, and then enable push**. Calls without control are rejected. `takeMotionControl` does not switch the master role; a slave endpoint cannot provide local motor/IMU observations even after control is acquired.
+The protocol order is **subscribe first, ensure that the target endpoint is the master when local motor/IMU observations are needed, and then enable push**. This switch itself does not require control ownership. `takeMotionControl` does not switch the master role; a slave endpoint may not provide local motor/IMU observations. The current ROS 2 `MotionHighLevelClient` implementation enables the server push before creating its raw subscriptions, so its first observation frames may be lost; this is an implementation limitation, not the protocol order.
 
 #### Sensor observation (`rt/sensor/observed`)
 

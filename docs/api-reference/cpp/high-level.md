@@ -477,6 +477,13 @@ Subsequent `connect`, `startControl`, and action calls follow the normal flow. T
 | `void setEventCallback(EventCallback cb)` | `kDisconnected` | Must register before connect |
 | `IMediaBusClient::Ptr createMediaBusClient()` | Any | Create audio and video channel client (see §4.6 for details) |
 
+`releaseControl()` releases the High-level control session; it does not implicitly call
+`stopAction()`. If an action is active, the caller must stop it explicitly and wait for the
+asynchronous transition before releasing control. Sending all-zero walking parameters only
+clears the current action's velocity parameters and is not a substitute for `stopAction()`.
+The interactive C++ example currently clears walking parameters during cleanup and then
+releases control; that cleanup path does not terminate a non-walking action automatically.
+
 ### 4.3 Motion-control actions
 
 #### 4.3.1 Control methods (require `kControlled`)
@@ -499,6 +506,7 @@ Subsequent `connect`, `startControl`, and action calls follow the normal flow. T
 
 - For initial hardware integration, complete read-only checks first, then call `startAction("walking", R"({"lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0})")` to validate ownership, action startup, and status feedback.
 - Before triggering any action other than `laying`, call the zero-velocity `walking` transition above and poll `queryMotionState()` until the effective action is `walking`; only then call the target action. `laying` does not require this preliminary transition.
+- This preliminary transition is caller-side guidance. The SDK does not insert the zero-velocity `walking` request or poll the effective action on behalf of the caller.
 - `standUp()` / `lieDown()` and the corresponding `standing` / `laying` actions depend on the current posture and server state machine, so they are not a universal round-trip test; for example, `standing` cannot be triggered directly from `laying`.
 - `walking` / `move` with nonzero velocity, plus `bipedStand` / `handstand` / `waveBody` / `peakLoadStand` / `jumpFrontflip` / `jumpSideflip` / `jumpBackflip` / `jumpDoubleBackflip` / `jumpDoubleSideflip` / `damp`, are high-risk motion actions. Run them only in an open area with stable robot posture and manual takeover available.
 - `emergencyStop`, audio playback/pause/stop, audio-file management, and camera-light brightness are not high-risk motion actions, but their control-ownership and interface prerequisites still apply.
@@ -546,6 +554,10 @@ name string; numeric IDs in the capability configuration are internal values, no
 
 **C++ calling example**:
 
+This compact example demonstrates direct action calls after control acquisition. It does not
+implement the recommended zero-velocity `walking` transition or state polling; use the safety
+sequence above for hardware.
+
 ```cpp
 // Start walking and set velocity immediately
 client->startAction("walking", R"({"lineVelocityX":0.5,"lineVelocityY":0.0,"velocity":0.0})");
@@ -579,7 +591,7 @@ client->stopAction();
   "lineVelocityY":  0.0
 }
 
-// No active action (after stopAction or before startAction)
+// No active action (for example, before startAction)
 {}
 ```
 
@@ -592,7 +604,7 @@ client->stopAction();
 
 > The return value reports RPC success, while `out` reports motion state:
 > - `false`: the RPC failed because the client was not connected, the call timed out, or the channel was unavailable. Call `getLastError()` for the error code.
-> - `true`: the RPC succeeded. If there is no active action, `out` is `{}`; callers must not assume that action fields are present.
+> - `true`: the RPC succeeded. If there is no active action, `out` is `{}`; callers must not assume that action fields are present. `stopAction()` is asynchronous, so use a subsequent state query to confirm its zero-speed `walking` result.
 
 ##### `getMotionCapabilities` parameter output example
 
@@ -815,7 +827,7 @@ media->stopRawAudioFrame(0);
 | Method | Status | Description |
 |---|---|---|
 | `bool querySystemStatus(std::string& out, uint32_t timeoutMs = 5000)` | `kConnected` | Output parameter JSON, including two sub-objects `battery` + `network`, see 4.5.1 |
-| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeoutMs = 5000)` | `kControlled` | Enable or disable motion and complete sensor observations; control must be acquired first. `ret` returns the switches actually in effect. See §4.7 |
+| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeoutMs = 5000)` | `kConnected` | Enable or disable motion and complete sensor observations; the call itself does not require control ownership. `ret` returns the switches actually in effect. If local motor/IMU observations require the endpoint to be master, switch the endpoint separately before enabling. See §4.7 |
 
 Camera-light brightness is controlled directly through the High-level client:
 
@@ -1056,15 +1068,15 @@ High-level clients can enable observation reporting and receive motion observati
 
 1. Register `setMotionObservedCallback` / `setSensorObservedCallback` before `connect`;
 2. call `connect()`;
-3. call `startControl()` and wait for the target endpoint to complete the master-role switch and enter `kControlled`;
-4. call `setObservedEnable(json, ret)` with the JSON switches; `ret` returns the switches currently in effect;
+3. call `setObservedEnable(json, ret)`; this method only requires `kConnected`. If the application also needs control or valid local observations from the master endpoint, use the normal `startControl()` flow separately;
+4. `ret` returns the switches currently in effect;
 5. the server publishes frames through `MotionObservedCallback` and `SensorObservedCallback`;
 6. read through `sensor.gps` / `sensor.uwb` / `sensor.odom` or the `getSensorObservation` cache; use `getPowerInfo` for power;
 7. disable observation reporting before calling `releaseControl()`.
 
 | Method | Status | Description |
 |---|---|---|
-| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeoutMs = 5000)` | `kControlled` | Observation reporting switch. `startControl()` switches the target endpoint to the master role before acquiring control; a slave endpoint does not own motor/IMU data and cannot provide valid motion observations. Calling this method while only `kConnected` is rejected with `kActionRejected` |
+| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeoutMs = 5000)` | `kConnected` | Observation reporting switch. The current SDK and server do not require control ownership for this call. `startControl()` separately switches the target endpoint to the master role; a slave endpoint may not provide valid local motor/IMU observations. |
 | `void setMotionObservedCallback(MotionObservedCallback cb)` | Any | Register the motion-observation callback with signature `void(const LowLevelMotionObserved&)`, including power |
 | `void setSensorObservedCallback(SensorObservedCallback cb)` | `kDisconnected` | Register full sensor observation callback, signature `void(const SensorObserved&)`; data includes GPS, UWB and odometry |
 | `bool getSensorObservation(SensorObserved* sensor, uint32_t timeoutMs = 5000)` | `kConnected` | Read the complete sensor observation cache without sending RPC; `timeoutMs` is the data freshness window (ms) |

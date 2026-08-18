@@ -626,7 +626,7 @@ lowlevel> quit
 - `lie` / `lie-down`: Call `setMotionEnable(true)` on demand to smoothly move from real-time joint positions to the prone target and maintain it.
 - `damping`: Enable Low-level on demand, set position stiffness to 0, and retain speed damping.
 - `release`: Send short-term damping first, then stop the control thread and call `setMotionEnable(false)`.
-- `quit` / `Ctrl+C`: Run the release sequence, call `restoreMotionControlMode()` to return control to the built-in motion controller, and then disconnect.
+- `quit` / `Ctrl+C`: Run the release sequence, disable Low-level control, release the session, and disconnect. This generic example does **not** call `restoreMotionControlMode()`. After the process has completely exited, run the dedicated `release_control_to_dv500.sh` helper from the Python SDK examples if the built-in motion controller must be restored.
 
 The attitude control period is 50 Hz, the default trajectory time is 2 seconds, and the position change in a single cycle does not exceed 0.25 rad. The program matches observation and control according to `(limbNo, jointNo)` and does not rely on the array order; when the actual tracking error exceeds 0.25 rad, trajectory advancement is suspended. The attitude command only supports the standard DV500 12-joint layout, other layouts will be rejected.
 

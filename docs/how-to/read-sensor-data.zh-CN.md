@@ -17,14 +17,15 @@
 
 ## High-level：GPS、UWB 和 Walk 里程计
 
-High-level 开启传感器上报需要控制权。推荐顺序：
+High-level 开启传感器上报只要求已建立连接，不要求控制权。
+如果业务还需要运动控制，或需要目标端为 master 才能提供本地电机/IMU 观测，再单独取控。
+推荐顺序：
 
 1. 在 `connect()` 前注册传感器回调；
 2. `connect()`；
-3. `start_control()`，等待 `HighLevelState.kControlled`；
-4. 调用 `set_observed_enable({"sensorEnable": True})`；
-5. 从回调或 `get_sensor_observation()` 缓存读取；
-6. 先关闭上报，再 `release_control()`。
+3. 调用 `set_observed_enable({"sensorEnable": True})`；
+4. 从回调或 `get_sensor_observation()` 缓存读取；
+5. 先关闭上报，再 `disconnect()`；如果业务另行取控，应在 `release_control()` 前关闭。
 
 ```python
 def on_sensor(sensor):
@@ -37,10 +38,6 @@ def on_sensor(sensor):
 
 client.set_sensor_observed_callback(on_sensor)  # 必须在 connect 前注册
 client.connect()
-client.start_control()
-while client.get_state() != sdk.HighLevelState.kControlled:
-    time.sleep(0.05)
-
 state = client.set_observed_enable({"motionEnable": False, "sensorEnable": True})
 if state is None:
     raise RuntimeError(client.get_last_error())
@@ -48,7 +45,7 @@ if state is None:
 sensor = client.get_sensor_observation(timeout_ms=1500)
 ```
 
-`get_sensor_observation()` 读取的是最近一帧缓存；没有先开启 `sensorEnable` 时，不保证存在新鲜数据。退出时应在仍持有控制权时关闭 `sensorEnable`。
+`get_sensor_observation()` 读取的是最近一帧缓存；没有先开启 `sensorEnable` 时，不保证存在新鲜数据。退出时应在断开前关闭 `sensorEnable`；如果业务因其他原因取了控制权，应在释放前关闭。
 
 ## Low-level：GPS 和 UWB
 

@@ -478,6 +478,11 @@ client->connect();
 | `void setEventCallback(EventCallback cb)` | `kDisconnected` | 必须 connect 前注册 |
 | `IMediaBusClient::Ptr createMediaBusClient()` | 任意 | 创建音视频通道客户端（详见 §4.6） |
 
+`releaseControl()` 只负责释放 High-level 控制会话，不会隐式调用 `stopAction()`。
+如果当前仍有动作，调用方必须先显式停止，并等待异步动作切换完成后再释放控制权。
+下发三个全零 walking 参数只会清零当前动作的速度参数，不能代替 `stopAction()`。
+当前 C++ 交互示例的清理路径会清零 walking 参数后直接释放控制权，不会自动结束非 walking 动作。
+
 ### 4.3 运控动作
 
 #### 4.3.1 控制类（需 `kControlled`）
@@ -503,6 +508,7 @@ client->connect();
 
 - 推荐新手首次联调先完成只读检查，再调用 `startAction("walking", R"({"lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0})")` 验证取权、动作启动和状态反馈。
 - 触发 `laying` 以外的动作前，应先调用上述全零参数的 `walking`，并轮询 `queryMotionState()` 确认实际动作已进入 `walking`，再调用目标动作。`laying` 不要求这一步前置切换。
+- 这一步是调用方的安全流程建议；SDK 不会代替调用方插入全零 `walking` 或轮询实际动作状态。
 - `standUp()` / `lieDown()` 和对应的 `standing` / `laying` action 受当前姿态及服务端状态机约束，不能作为通用的往返测试；例如 `standing` 不能从 `laying` 直接触发。
 - 带非零速度的 `walking` / `move`，以及 `bipedStand` / `handstand` / `waveBody` / `peakLoadStand` / `jumpFrontflip` / `jumpSideflip` / `jumpBackflip` / `jumpDoubleBackflip` / `jumpDoubleSideflip` / `damp` 属于高风险运动动作，应在空旷场地、机器人姿态稳定、具备人工接管条件时执行。
 - `emergencyStop`、音频播放/暂停/停止、音频文件增删、摄像头补光灯亮度设置不属于高风险运动动作，但仍要求调用方持有控制权或满足对应接口前置条件。
@@ -550,6 +556,9 @@ client->connect();
 
 **C++ 调用示例**：
 
+下面示例只展示取控后的直接动作调用，没有实现推荐的全零 `walking` 前置切换和状态轮询；
+真机使用时应按上面的安全流程执行。
+
 ```cpp
 // 启动 walking 并立即设速度
 client->startAction("walking", R"({"lineVelocityX":0.5,"lineVelocityY":0.0,"velocity":0.0})");
@@ -583,7 +592,7 @@ client->stopAction();
   "lineVelocityY":  0.0
 }
 
-// 无活动动作（已 stopAction / 还没 startAction）
+// 无活动动作（例如还没 startAction）
 {}
 ```
 
@@ -596,7 +605,7 @@ client->stopAction();
 
 > 返回值与 `out` 是两层独立语义：
 > - `return false` → **RPC 层失败**（未 connect / RPC 超时 / 通道不可用），通过 `getLastError()` 取错误码
-> - `return true` → RPC 成功；若**无活动动作**，`out` 是空对象 `{}`（调用方据此判断"当前无可查询动作"，不要假设字段一定存在）
+> - `return true` → RPC 成功；若**无活动动作**，`out` 是空对象 `{}`（调用方据此判断"当前无可查询动作"，不要假设字段一定存在）。`stopAction()` 是异步操作，应通过后续状态查询确认已切到零速 `walking`。
 
 ##### `getMotionCapabilities` 出参示例
 
@@ -819,7 +828,7 @@ media->stopRawAudioFrame(0);
 | 方法 | 状态 | 说明 |
 |---|---|---|
 | `bool querySystemStatus(std::string& out, uint32_t timeoutMs = 5000)` | `kConnected` | 出参 JSON，含 `battery` + `network` 两个子对象，见 4.5.1 |
-| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeoutMs = 5000)` | `kControlled` | 开/停运控观测与完整传感器观测上报；要求先完成取控，出参 `ret` 回带实际生效开关，见 §4.7 |
+| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeoutMs = 5000)` | `kConnected` | 开/停运控观测与完整传感器观测上报；调用本身不要求持有控制权，出参 `ret` 回带实际生效开关。若本地电机/IMU 观测要求目标端为 master，应另行完成主从切换，见 §4.7 |
 
 摄像头前灯亮度直接挂在主客户端上：
 
@@ -1060,15 +1069,15 @@ NVIDIA 平台的视频原始帧可能是多平面且内存不连续，保存 / �
 
 1. 在 `connect` 前注册 `setMotionObservedCallback` / `setSensorObservedCallback`；
 2. 调用 `connect()`；
-3. 调用 `startControl()`，等待目标端完成 master role 切换并进入 `kControlled`；
-4. 调用 `setObservedEnable(json, ret)` 开启服务端推送；`ret` 回带当前实际生效的开关状态；
+3. 调用 `setObservedEnable(json, ret)`；该方法只要求 `kConnected`。如果业务还需要控制权，或需要 master 端提供本地观测，再单独执行正常的 `startControl()` 流程；
+4. `ret` 回带当前实际生效的开关状态；
 5. 服务端按帧推送，运控观测经 `MotionObservedCallback` 上抛，传感器观测经 `SensorObservedCallback` 上抛；
 6. 通过 `sensor.gps` / `sensor.uwb` / `sensor.odom` 或 `getSensorObservation` 缓存读取数据；电源观测通过 `getPowerInfo` 读取；
 7. 退出时先关闭观测量上报，再调用 `releaseControl()`。
 
 | 方法 | 状态 | 说明 |
 |---|---|---|
-| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeoutMs = 5000)` | `kControlled` | 观测量上报开关。`startControl()` 会先将目标端切为 master 再取得控制权；slave 端的电机/IMU 不在本端，无法提供有效运控观测。仅处于 `kConnected` 时调用会被拒绝（`kActionRejected`） |
+| `bool setObservedEnable(const std::string& json, std::string& ret, uint32_t timeoutMs = 5000)` | `kConnected` | 观测量上报开关。当前 SDK 和服务端不要求该调用持有控制权；`startControl()` 另行负责将目标端切为 master，slave 端可能无法提供有效的本地电机/IMU 观测。 |
 | `void setMotionObservedCallback(MotionObservedCallback cb)` | 任意 | 注册运控观测量回调，签名 `void(const LowLevelMotionObserved&)`（含 power）|
 | `void setSensorObservedCallback(SensorObservedCallback cb)` | `kDisconnected` | 注册完整传感器观测回调，签名 `void(const SensorObserved&)`；数据包含 GPS、UWB 和里程计 |
 | `bool getSensorObservation(SensorObserved* sensor, uint32_t timeoutMs = 5000)` | `kConnected` | 读取完整传感器观测缓存，不发 RPC；`timeoutMs` 是数据新鲜度窗口（ms）|
