@@ -1,8 +1,8 @@
 # Uniubi Robot High-level C++ API Reference
 
-**English** | [简体中文](high-level.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.zh-CN.md)
 
-[API Reference](../README.md) · [Python API](../python/high-level.md)
+[API Reference](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.md) · [Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.md)
 
 > SDK entry class: `uniubi::RobotSdk::IMotionHighLevelClient`
 > C++ header file: `include/uniubi/robot_sdk/MotionHighLevelClient.h`
@@ -124,7 +124,7 @@ The following example demonstrates the complete external-host C++ SDK connection
 
 This minimal project template can be copied as a starting point for an application.
 
-> For complete build instructions (including cross-compilation/wheel packaging/Troubleshooting), see [`BUILD.md`](../../BUILD.md).
+> For complete build instructions (including cross-compilation/wheel packaging/Troubleshooting), see [`BUILD.md`](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.md).
 
 ### Dependencies
 

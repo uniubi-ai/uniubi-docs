@@ -1,6 +1,6 @@
 # Use Voice, Lights, and Media Frames
 
-**English** | [简体中文](use-media-and-device-io.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/use-media-and-device-io.zh-CN.md)
 
 Voice playback, microphone audio, camera video, and camera lights are separate capabilities. Distinguish control-plane operations from media data first.
 

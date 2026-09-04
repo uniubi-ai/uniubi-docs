@@ -1,8 +1,8 @@
 # Uniubi Robot MediaBus C++ API Reference
 
-**English** | [简体中文](media.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/media.zh-CN.md)
 
-[API Reference](../README.md) · [Python API](../python/media.md)
+[API Reference](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.md) · [Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.md)
 
 The media bus (`IMediaBusClient`) provides **frame-level subscriptions** to the robot's cameras and microphones through three stream types:
 
@@ -15,9 +15,9 @@ Media subscriptions are independent of motion control ownership. A connected Hig
 > ⚠️ **Supported only for local deployment on an `aarch64` robot compute board:** media frame subscriptions require the SDK and robot runtime to run on the same machine. **Multi-device and remote modes do not provide frame subscriptions.** Do not call `createMediaBusClient()` / `setup()` / `start*Frame()` on `x86_64` or `i386`. MEDIA_ENABLED == False` by default, and `create_media_bus_client()` raises `RuntimeError("MediaBus is not available in this SDK build")`.
 
 Related documents:
-- **High-level API reference:** [High-level C++ API](high-level.md)
-- **Low-level API reference:** [Low-level C++ API](low-level.md)
-- **Build instructions:** [Build guide](../../BUILD.md)
+- **High-level API reference:** [High-level C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.md)
+- **Low-level API reference:** [Low-level C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/low-level.md)
+- **Build instructions:** [Build guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.md)
 
 ---
 

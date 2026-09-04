@@ -1,8 +1,8 @@
 # SDK 通用准备
 
-[English](sdk-first-use.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/sdk-first-use.md) | **简体中文**
 
-> 本文不是控制模式选择页。请先从 [How-to 入口](README.zh-CN.md) 选择 High-level 或 Low-level，再回到本文准备 SDK。
+> 本文不是控制模式选择页。请先从 [How-to 入口](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/README.zh-CN.md) 选择 High-level 或 Low-level，再回到本文准备 SDK。
 
 ## 目标
 
@@ -31,10 +31,10 @@ Low-level 关节控制使用 SDK 的 `MotionLowLevelClient`。ROS 2 Motion Bridg
 ## 前置条件
 
 - Linux 环境，以及目标架构对应的 SDK 运行库。
-- 已按 [机器人网络接入](../core-concepts/device-network.zh-CN.md) 从 App 获取当前设备 IP，并确认登录地址、对外服务端口和通信网卡。外部 High-level 模式必须选择实际连接机器人网络的网卡；大脑侧 High-level 模式必须指定 `eth0.100`。
+- 已按 [机器人网络接入](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/device-network.zh-CN.md) 从 App 获取当前设备 IP，并确认登录地址、对外服务端口和通信网卡。外部 High-level 模式必须选择实际连接机器人网络的网卡；大脑侧 High-level 模式必须指定 `eth0.100`。
 - 外部 Linux High-level 应用不统一要求 root；板载、Low-level 与 Media 运行时按目标设备要求配置权限。C++ 构建不要求 `sudo`；Python SDK 在大脑上直接安装到系统 `python3`，板载示例按对应 README 使用 `sudo env` 保留动态库环境。
 - C++ SDK 与 Python binding 使用同一套 ABI、架构和版本。
-- 先阅读 [构建、安装和交叉编译](../BUILD.zh-CN.md)。
+- 先阅读 [构建、安装和交叉编译](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.zh-CN.md)。
 
 ## 1. 选择入口
 
@@ -62,7 +62,7 @@ UNIUBI_SDK_ROOT="$UNIUBI_SDK_ROOT" python3 -m pip install .
 python3 -c "import robot_motion_sdk as sdk; print(sdk.MotionHighLevelClient)"
 ```
 
-如果 Linux 动态库、架构或媒体库不匹配，回到 [构建指南](../BUILD.zh-CN.md) 检查，不要先修改 Python binding。
+如果 Linux 动态库、架构或媒体库不匹配，回到 [构建指南](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.zh-CN.md) 检查，不要先修改 Python binding。
 
 ## 3. 只读验证
 
@@ -77,7 +77,7 @@ python3 -c "import robot_motion_sdk as sdk; print(sdk.MotionHighLevelClient)"
 
 ## 下一步
 
-- High-level：[使用机器人内置动作](high-level-control.zh-CN.md)、[Python API](../api-reference/python/high-level.zh-CN.md) 或 [C++ API](../api-reference/cpp/high-level.zh-CN.md)
-- Low-level：[自定义关节控制策略](low-level-control.zh-CN.md)、[Python API](../api-reference/python/low-level.zh-CN.md) 或 [C++ API](../api-reference/cpp/low-level.zh-CN.md)
-- 媒体帧：[Python API](../api-reference/python/media.zh-CN.md) 或 [C++ API](../api-reference/cpp/media.zh-CN.md)
+- High-level：[使用机器人内置动作](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/high-level-control.zh-CN.md)、[Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.zh-CN.md) 或 [C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.zh-CN.md)
+- Low-level：[自定义关节控制策略](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/low-level-control.zh-CN.md)、[Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.zh-CN.md) 或 [C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/low-level.zh-CN.md)
+- 媒体帧：[Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.zh-CN.md) 或 [C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/media.zh-CN.md)
 - 项目级构建细节：[`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) 和 [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py) 的 README

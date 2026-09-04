@@ -1,6 +1,6 @@
 # Low-level：自定义关节控制策略
 
-[English](low-level-control.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/low-level-control.md) | **简体中文**
 
 ## 目标
 
@@ -14,7 +14,7 @@
 
 ## 这条路径不解决什么问题
 
-如果只是调用机器人内置的站立、行走、转向或其他动作能力，不需要自己控制每个关节，请转到 [High-level：使用机器人内置动作](high-level-control.zh-CN.md)。
+如果只是调用机器人内置的站立、行走、转向或其他动作能力，不需要自己控制每个关节，请转到 [High-level：使用机器人内置动作](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/high-level-control.zh-CN.md)。
 
 ## 统一使用 SDK
 
@@ -29,9 +29,9 @@ ROS 2 Motion Bridge 不提供等价的关节级控制入口。直接使用 DDS/R
 
 ## 推荐开发路径
 
-1. **训练或准备策略**：进入 [训练、导出和回放策略](train-export-replay.zh-CN.md)；确认 checkpoint 能在仿真中回放。
-2. **准备 SDK**：阅读 [SDK 通用准备](sdk-first-use.zh-CN.md)，确认 C++/Python binding、头文件、运行库、架构和 ABI 匹配。
-3. **验证 SDK 链路**：没有真机时，使用 [Mock / Sim2Sim](mock-sim2sim.zh-CN.md) 验证策略、仿真 bridge 和 SDK client 的闭环。
+1. **训练或准备策略**：进入 [训练、导出和回放策略](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/train-export-replay.zh-CN.md)；确认 checkpoint 能在仿真中回放。
+2. **准备 SDK**：阅读 [SDK 通用准备](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/sdk-first-use.zh-CN.md)，确认 C++/Python binding、头文件、运行库、架构和 ABI 匹配。
+3. **验证 SDK 链路**：没有真机时，使用 [Mock / Sim2Sim](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/mock-sim2sim.zh-CN.md) 验证策略、仿真 bridge 和 SDK client 的闭环。
 4. **进入真实机器人**：先只读，再进行低风险控制；确认控制周期、关节顺序、板端推理格式、急停和人工接管条件。
 
 ## SDK 与模型关节顺序
@@ -85,8 +85,8 @@ Low-level 程序要接入遥控器输入时，遥控器必须处于已连接状�
 
 ## 详细接口
 
-- [Python Low-level API](../api-reference/python/low-level.zh-CN.md)
-- [C++ Low-level API](../api-reference/cpp/low-level.zh-CN.md)
+- [Python Low-level API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.zh-CN.md)
+- [C++ Low-level API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/low-level.zh-CN.md)
 - [`uniubi_robot_sdk` Low-level 示例](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel.cpp)
 - [`uniubi_robot_sdk_py` Low-level 示例](https://github.com/uniubi-ai/uniubi_robot_sdk_py/tree/main/examples)
 

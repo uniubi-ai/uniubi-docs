@@ -1,6 +1,6 @@
 # 宇泛机器狗 DDS / ROS 2 直连接入 API
 
-[English](uniubi_robot_dds_api.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/uniubi_robot_dds_api.md) | **简体中文**
 
 > 适用对象：不借助本厂商 SDK，直接用 OMG DDS（推荐 Cyclone DDS 0.10.5）或 ROS 2 对接设备的开发者。
 > 与高级控制 SDK（`docs/motion_highlevel_sdk.md`）能力对齐，是其底层协议契约的对外描述。
@@ -65,7 +65,7 @@
 | 接入方式 | 适用场景 |
 |---|---|
 | **OMG DDS 原生**（C/C++/Java/Python/Go） | 任何 OMG DDS 实现（Cyclone DDS 0.10.5 / RTI Connext / Fast DDS / OpenDDS）按本协议描述的 IDL + QoS 直接对接 |
-| **ROS2** | ROS 2 节点直接按 IDL 建立 DDS Topic，无需 ROS Message 转换；rmw 推荐 Cyclone DDS。ROS 2 `.msg` / `.srv` 与本协议 IDL 的命名 / 类型 / QoS 映射规范见 [`ros2_dds_interop_overview.md`](ros2_dds_interop_overview.zh-CN.md) |
+| **ROS2** | ROS 2 节点直接按 IDL 建立 DDS Topic，无需 ROS Message 转换；rmw 推荐 Cyclone DDS。ROS 2 `.msg` / `.srv` 与本协议 IDL 的命名 / 类型 / QoS 映射规范见 [`ros2_dds_interop_overview.md`](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/ros2_dds_interop_overview.zh-CN.md) |
 
 两种方式底层等价 —— 在同一 DDS Domain 上 publish/subscribe 同一组 IDL 类型，差异仅在客户端框架。
 

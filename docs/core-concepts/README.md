@@ -1,6 +1,6 @@
 # Core Concepts
 
-**English** | [简体中文](README.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/README.zh-CN.md)
 
 This section explains the compute architecture, control abstractions, and system boundaries used in Uniubi robot development: how responsibilities are divided between the brain and cerebellum, what an application controls, where the feedback loop runs, and what responsibilities belong to the SDK, ROS 2 components, and robot services.
 
@@ -18,7 +18,7 @@ The two modules complement each other: the cerebellum executes the standard func
 
 High-level is a control abstraction, not a fixed runtime location. A developer application can run on an external Linux PC / industrial PC or on the robot brain. In both cases, the robot's built-in motion service retains the real-time motion loop and safety boundary.
 
-![High-level dual-deployment architecture](images/high-level-dual-deployment.en.png)
+![High-level dual-deployment architecture](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/core-concepts/images/high-level-dual-deployment.en.png)
 
 | Dimension | External Linux host | Robot brain |
 |---|---|---|
@@ -69,17 +69,17 @@ flowchart LR
 Before connecting to a real robot, obtain its 4G, Wi-Fi, and wired IP information from the app. A development host can use the Wi-Fi IP or wired IP to log in to the device; externally accessible user services use the designated port range.
 Inside the robot, the brain and cerebellum communicate through `eth0.100`. A High-level application can run on an external computer or the robot's brain. A real-robot Low-level SDK application must run on the brain.
 
-[Read Robot Network Access](device-network.md)
+[Read Robot Network Access](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/device-network.md)
 
 ## 3. Body Coordinate System and Default Stance
 
 CYVET uses a right-handed coordinate system: +X points forward, +Y points left, and +Z points upward. Positive roll, pitch, and yaw follow the right-hand rule.
 
-![CYVET body coordinate system](images/cyvet-coordinate-system.en.png)
+![CYVET body coordinate system](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/core-concepts/images/cyvet-coordinate-system.en.png)
 
 The dimensions below are based on the current robot asset and default joint pose `[0, 0.8, -1.5]`. The `0.392 m` value is the torso upper-surface height measured vertically through the base origin, not the robot's or mesh's global highest point.
 
-![CYVET default standing dimensions](images/cyvet-default-standing-dimensions.en.png)
+![CYVET default standing dimensions](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/core-concepts/images/cyvet-default-standing-dimensions.en.png)
 
 ## 4. Two Control Abstractions
 
@@ -166,7 +166,7 @@ The continuous-control step differs by mode:
 - High-level sends actions or motion intent; the built-in motion system closes the loop.
 - Low-level runs the application controller at the agreed rate and sends joint position or torque targets. The application must validate timing, the feedback loop, and shutdown behavior.
 
-See the [API Reference](../api-reference/README.md) for client state machines and lifecycle details.
+See the [API Reference](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.md) for client state machines and lifecycle details.
 
 ## 6. Component Responsibilities
 
@@ -210,7 +210,7 @@ Passing simulation or Mock validation does not prove safe real-robot operation.
 
 ## Continue Reading
 
-- [Quick Start](../../README.md#quick-start)
-- [How-to Guides](../how-to/README.md)
-- [API Reference](../api-reference/README.md)
-- [Advanced](../advanced/README.md)
+- [Quick Start](https://github.com/uniubi-ai/uniubi-docs/blob/main/README.md#quick-start)
+- [How-to Guides](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/README.md)
+- [API Reference](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.md)
+- [Advanced](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/advanced/README.md)

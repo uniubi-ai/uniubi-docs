@@ -1,12 +1,12 @@
 # Start and Validate ROS 2 Motion Bridge
 
-**English** | [简体中文](ros2-motion-bridge.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/ros2-motion-bridge.zh-CN.md)
 
 ## Goal
 
 Start `uniubi_motion_bridge` for a ROS 2 application, complete read-only observation checks, and only then decide whether to enter the control workflow.
 
-This guide does not cover raw DDS/RPC development. For protocol-level integration, see the [DDS / ROS 2 API](../uniubi_robot_dds_api.md).
+This guide does not cover raw DDS/RPC development. For protocol-level integration, see the [DDS / ROS 2 API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/uniubi_robot_dds_api.md).
 
 ## Prerequisites
 

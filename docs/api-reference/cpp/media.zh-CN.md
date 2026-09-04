@@ -1,8 +1,8 @@
 # 宇泛机器人 MediaBus C++ API 参考
 
-[English](media.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/media.md) | **简体中文**
 
-[返回 API 参考](../README.zh-CN.md) · [查看 Python API](../python/media.zh-CN.md)
+[返回 API 参考](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.zh-CN.md) · [查看 Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.zh-CN.md)
 
 媒体总线（`IMediaBusClient`）提供机器人摄像头 / 麦克风的**帧级订阅**，统一三类流：
 
@@ -15,9 +15,9 @@
 > ⚠️ **仅 `aarch64` 板内本地部署支持**：媒体帧订阅只在 SDK 与机器人同机（板内）且目标平台为 `aarch64` 时可用；**多设备 / 远端模式不提供帧订阅**。`x86_64` / `i386` 平台不要调用 `createMediaBusClient()` / `setup()` / `start*Frame()`。
 
 相关文档：
-- **高级接口手册**：[High-level C++ API](high-level.zh-CN.md)
-- **低级接口手册**：[Low-level C++ API](low-level.zh-CN.md)
-- **构建说明**：[构建说明](../../BUILD.zh-CN.md)
+- **高级接口手册**：[High-level C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.zh-CN.md)
+- **低级接口手册**：[Low-level C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/low-level.zh-CN.md)
+- **构建说明**：[构建说明](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.zh-CN.md)
 
 ---
 

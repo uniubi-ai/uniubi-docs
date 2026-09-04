@@ -1,8 +1,8 @@
 # 宇泛机器人 Low-level C++ API 参考
 
-[English](low-level.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/low-level.md) | **简体中文**
 
-[返回 API 参考](../README.zh-CN.md) · [查看 Python API](../python/low-level.zh-CN.md)
+[返回 API 参考](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.zh-CN.md) · [查看 Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.zh-CN.md)
 
 > SDK 入口类：`uniubi::RobotSdk::IMotionLowLevelClient`
 > C++ 头文件：`include/uniubi/robot_sdk/MotionLowLevelClient.h`
@@ -87,7 +87,7 @@ int main() {
 
 最小可起跑的项目模板，开发者照着复制 + 写自己的应用代码即可编译运行。
 
-> 完整构建说明（含交叉编译 / wheel 打包 / Troubleshooting）参见 [`BUILD.md`](../../BUILD.zh-CN.md)。
+> 完整构建说明（含交叉编译 / wheel 打包 / Troubleshooting）参见 [`BUILD.md`](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.zh-CN.md)。
 
 ### 依赖
 
@@ -709,7 +709,7 @@ lowlevel> quit
 在 Orin 上原生编译以及 Ubuntu 22.04 x86_64 → JetPack 6.2.1 Orin 的 NVIDIA APT
 交叉编译链路均已实机验证。交叉编译必须使用 `cross-linux-aarch64` 专用软件源，
 并将 TensorRT 整组固定在 10.3，不能直接安装仓库中的默认最新版本。完整的软件源、
-版本 pin、CMake 参数、磁盘占用和部署说明见 [`BUILD.md` §3.1](../../BUILD.zh-CN.md#31-交叉编译-tensorrt-示例的额外边界)。
+版本 pin、CMake 参数、磁盘占用和部署说明见 [`BUILD.md` §3.1](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.zh-CN.md#31-交叉编译-tensorrt-示例的额外边界)。
 
 ---
 

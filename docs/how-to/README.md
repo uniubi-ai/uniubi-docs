@@ -1,39 +1,39 @@
 # How-to Guides
 
-**English** | [简体中文](README.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/README.zh-CN.md)
 
 Each guide addresses a specific development task. It defines the goal and prerequisites, provides a minimal procedure, and states observable success criteria and the next project entry point.
 
-> If you have not yet chosen a control mode, application runtime, or implementation, begin with the [Quick Start](../../README.md#quick-start).
+> If you have not yet chosen a control mode, application runtime, or implementation, begin with the [Quick Start](https://github.com/uniubi-ai/uniubi-docs/blob/main/README.md#quick-start).
 
 ## Environment and Device Access
 
 | Task | Guide | When to use it |
 |---|---|---|
-| Obtain device IPs from the app and confirm the login address and service ports | [Robot network access](../core-concepts/device-network.md) | Before connecting to a real robot |
-| Connect and power a USB, Ethernet, or other onboard peripheral | [Connect peripherals](connect-peripherals.md) | Before deploying an onboard perception or peripheral application |
-| Prepare the build environment | [Build, installation, and cross-compilation](../BUILD.md) | Before SDK or ROS 2 development |
-| Prepare an SDK project | [SDK first use](sdk-first-use.md) | After selecting High-level or Low-level SDK development |
+| Obtain device IPs from the app and confirm the login address and service ports | [Robot network access](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/device-network.md) | Before connecting to a real robot |
+| Connect and power a USB, Ethernet, or other onboard peripheral | [Connect peripherals](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.md) | Before deploying an onboard perception or peripheral application |
+| Prepare the build environment | [Build, installation, and cross-compilation](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.md) | Before SDK or ROS 2 development |
+| Prepare an SDK project | [SDK first use](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/sdk-first-use.md) | After selecting High-level or Low-level SDK development |
 
 ## Control and Integration
 
 | Task | Guide | When to use it |
 |---|---|---|
-| Use built-in motion capabilities without controlling individual joints | [Use built-in robot actions](high-level-control.md) | After selecting High-level in the Quick Start |
-| Run a custom controller and directly command joint position or torque | [Run a custom joint-control policy](low-level-control.md) | After selecting Low-level in the Quick Start |
-| Write a ROS 2 application node | [Start and validate Motion Bridge](ros2-motion-bridge.md) | After selecting High-level + ROS 2 |
+| Use built-in motion capabilities without controlling individual joints | [Use built-in robot actions](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/high-level-control.md) | After selecting High-level in the Quick Start |
+| Run a custom controller and directly command joint position or torque | [Run a custom joint-control policy](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/low-level-control.md) | After selecting Low-level in the Quick Start |
+| Write a ROS 2 application node | [Start and validate Motion Bridge](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/ros2-motion-bridge.md) | After selecting High-level + ROS 2 |
 
 ## Application data and device capabilities
 
 | Task | Guide | Support scope |
 |---|---|---|
-| Read GPS, UWB, motors, IMU, power, and Walk odometry | [Read sensor and motion observations](read-sensor-data.md) | GPS/UWB are available in both clients; Walk odometry is High-level only |
-| Query device, battery, and network status | [Query device status](query-device-status.md) | Complete status is High-level only; Low-level exposes lightweight power observations |
-| Use voice, camera lights, video, and microphone data | [Use voice, lights, and media frames](use-media-and-device-io.md) | Voice/lights are High-level only; either client can create MediaBus |
+| Read GPS, UWB, motors, IMU, power, and Walk odometry | [Read sensor and motion observations](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/read-sensor-data.md) | GPS/UWB are available in both clients; Walk odometry is High-level only |
+| Query device, battery, and network status | [Query device status](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/query-device-status.md) | Complete status is High-level only; Low-level exposes lightweight power observations |
+| Use voice, camera lights, video, and microphone data | [Use voice, lights, and media frames](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/use-media-and-device-io.md) | Voice/lights are High-level only; either client can create MediaBus |
 
 ## Training and Validation
 
 | Task | Guide | When to use it |
 |---|---|---|
-| Train, export, and replay a policy | [Policy training and replay](train-export-replay.md) | During Low-level policy development |
-| Validate the SDK path without hardware | [Mock / Sim2Sim](mock-sim2sim.md) | Before real-robot SDK testing |
+| Train, export, and replay a policy | [Policy training and replay](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/train-export-replay.md) | During Low-level policy development |
+| Validate the SDK path without hardware | [Mock / Sim2Sim](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/mock-sim2sim.md) | Before real-robot SDK testing |

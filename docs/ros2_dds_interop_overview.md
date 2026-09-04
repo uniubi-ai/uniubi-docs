@@ -1,6 +1,6 @@
 # ROS 2 MSG/SRV to DDS IDL mapping specification
 
-**English** | [简体中文](ros2_dds_interop_overview.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/ros2_dds_interop_overview.zh-CN.md)
 
 This document explains how ROS 2 `.msg` and `.srv` interface files map to DDS IDL for native OMG DDS integration, including DDS topic names, DDS type names, and request/response correlation rules.
 
@@ -62,7 +62,7 @@ Example:
 
 ## Robot data topics
 
-The robot's native DDS data channels follow the ROS 2 naming convention above: an `rt/` topic prefix and a `<module>::msg::dds_::<Type>_` type name. See [`uniubi_robot_dds_api.md`](uniubi_robot_dds_api.md) for complete IDL definitions and field dimensions. The following table lists the wire-level names required for native DDS integration:
+The robot's native DDS data channels follow the ROS 2 naming convention above: an `rt/` topic prefix and a `<module>::msg::dds_::<Type>_` type name. See [`uniubi_robot_dds_api.md`](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/uniubi_robot_dds_api.md) for complete IDL definitions and field dimensions. The following table lists the wire-level names required for native DDS integration:
 
 | DDS topic | Direction | DDS type | IDL file | Purpose |
 |---|---|---|---|---|

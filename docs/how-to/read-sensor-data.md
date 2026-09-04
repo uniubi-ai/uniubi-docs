@@ -1,6 +1,6 @@
 # Read Sensor and Motion Observations
 
-**English** | [简体中文](read-sensor-data.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/read-sensor-data.zh-CN.md)
 
 This guide shows how applications read GPS, UWB, motors, IMU, remote-controller input, power, and Walk odometry. Choose a client by its supported contract; do not infer support merely because a shared structure contains a field.
 
@@ -67,7 +67,7 @@ Low-level has no supported Walk-odometry access path. Use High-level when Walk o
 - High-level: enable `motionEnable` and read the motion callback; use `get_power_info(timeout_ms=...)` for the latest power cache.
 - Low-level: in `kPrepared`, call `get_latest_observation(timeout_ms=...)` for motors, IMU, TRC, and lightweight power data.
 
-Entering Low-level `kPrepared` switches the robot to the joint-control path. Do not enter Low-level control on an unattended robot merely to read battery level. Prefer High-level for complete status; see [Query Device Status](query-device-status.md).
+Entering Low-level `kPrepared` switches the robot to the joint-control path. Do not enter Low-level control on an unattended robot merely to read battery level. Prefer High-level for complete status; see [Query Device Status](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/query-device-status.md).
 
 ## Validate data before use
 

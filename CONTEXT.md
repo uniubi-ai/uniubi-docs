@@ -1,6 +1,6 @@
 # Uniubi Robot Development
 
-[简体中文](CONTEXT.zh-CN.md) | **English**
+[简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/CONTEXT.zh-CN.md) | **English**
 
 This glossary defines the control and deployment language used across the Uniubi developer documentation.
 

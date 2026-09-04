@@ -1,6 +1,6 @@
 # 核心概念
 
-[English](README.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/README.md) | **简体中文**
 
 Core Concepts 解释 Uniubi 机器人开发中的软硬件分工、控制模型和系统边界。它不负责再次选择仓库，而是帮助你理解：大小脑分别负责什么、应用到底控制什么、控制闭环由谁负责，以及 SDK、ROS 2 和机器人服务各自承担什么职责。
 
@@ -18,7 +18,7 @@ Uniubi 机器狗采用大脑与小脑协同的系统架构：
 
 High-level 是控制抽象，不是固定的运行位置。开发者应用既可以运行在外部 Linux PC / 工控机上，也可以运行在机器人大脑上；无论应用位于哪里，High-level 的实时运动闭环和安全边界始终由机器人端的内置运动服务承担。
 
-![High-level 双部署架构](images/high-level-dual-deployment.zh-CN.png)
+![High-level 双部署架构](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/core-concepts/images/high-level-dual-deployment.zh-CN.png)
 
 | 维度 | 外部 Linux 主机 | 机器人大脑 |
 |---|---|---|
@@ -69,17 +69,17 @@ flowchart LR
 连接真机前，先从 App 获取 4G、Wi-Fi 和有线 IP 信息。开发机可使用 Wi-Fi IP 或有线 IP 登录设备；需要对外提供的用户服务使用规定的开放端口范围。
 机器人内部的“大脑”和“小脑”通过 `eth0.100` 通信。High-level 可运行在外部电脑或机器人“大脑”侧；真机 Low-level SDK 必须运行在“大脑”侧。
 
-[阅读机器人网络接入](device-network.zh-CN.md)
+[阅读机器人网络接入](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/device-network.zh-CN.md)
 
 ## 3. 机身坐标系与默认站姿
 
 CYVET 采用右手坐标系：+X 向前，+Y 向左，+Z 向上；roll、pitch 和 yaw 的正方向遵循右手定则。
 
-![CYVET 机身坐标系](images/cyvet-coordinate-system.zh-CN.png)
+![CYVET 机身坐标系](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/core-concepts/images/cyvet-coordinate-system.zh-CN.png)
 
 以下尺寸基于当前机器人资产和默认关节姿态 `[0, 0.8, -1.5]`。其中 `0.392 m` 是沿穿过 base 原点的竖直线测得的躯体上表面离地高度，不是机器人或网格的全局最高点。
 
-![CYVET 默认站姿尺寸](images/cyvet-default-standing-dimensions.zh-CN.png)
+![CYVET 默认站姿尺寸](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/core-concepts/images/cyvet-default-standing-dimensions.zh-CN.png)
 
 ## 4. 两种控制抽象
 
@@ -166,7 +166,7 @@ Mock / Sim2Sim 验证通过不等于实机验证完成。迁移到真实机器�
 - High-level 发送动作或运动意图，由机器人内置能力完成后续闭环。
 - Low-level 必须按约定周期持续运行自己的策略，并发送关节位置或扭矩控制量；控制循环、周期和退出行为都属于应用需要验证的内容。
 
-控制权生命周期的具体 API 和状态机见 [API 参考](../api-reference/README.zh-CN.md)。
+控制权生命周期的具体 API 和状态机见 [API 参考](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.zh-CN.md)。
 
 ## 6. 各层组件的职责
 
@@ -210,7 +210,7 @@ Low-level 策略的典型验证链路如下：
 
 ## 继续阅读
 
-- [快速开始](../../README.zh-CN.md#快速开始)：选择控制模式和实现方式。
-- [操作指南](../how-to/README.zh-CN.md)：按任务完成环境准备和最小验证。
-- [API 参考](../api-reference/README.zh-CN.md)：查阅接口、字段和生命周期。
-- [高级主题](../advanced/README.zh-CN.md)：处理协议、DDS、QoS 和特殊集成场景。
+- [快速开始](https://github.com/uniubi-ai/uniubi-docs/blob/main/README.zh-CN.md#快速开始)：选择控制模式和实现方式。
+- [操作指南](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/README.zh-CN.md)：按任务完成环境准备和最小验证。
+- [API 参考](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.zh-CN.md)：查阅接口、字段和生命周期。
+- [高级主题](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/advanced/README.zh-CN.md)：处理协议、DDS、QoS 和特殊集成场景。

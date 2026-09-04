@@ -1,6 +1,6 @@
 # 宇泛机器人开发术语
 
-**简体中文** | [English](CONTEXT.md)
+**简体中文** | [English](https://github.com/uniubi-ai/uniubi-docs/blob/main/CONTEXT.md)
 
 本词汇表定义宇泛开发者文档中控制抽象与部署位置的统一语言。
 

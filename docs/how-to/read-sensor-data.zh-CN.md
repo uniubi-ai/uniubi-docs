@@ -1,6 +1,6 @@
 # 读取传感器与运动观测
 
-[English](read-sensor-data.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/read-sensor-data.md) | **简体中文**
 
 本文帮助应用读取 GPS、UWB、电机、IMU、遥控器、电源和 Walk 里程计。先按能力选择客户端，不要因为公共结构中出现某个字段就推断该客户端正式支持它。
 
@@ -67,7 +67,7 @@ Low-level 不提供受支持的 Walk 里程计读取入口。需要 Walk 里程�
 - High-level：开启 `motionEnable` 后通过运控观测回调读取；电源也可通过 `get_power_info(timeout_ms=...)` 读取最新缓存。
 - Low-level：在 `kPrepared` 中调用 `get_latest_observation(timeout_ms=...)`，返回电机、IMU、TRC 和轻量电源观测。
 
-进入 Low-level `kPrepared` 会切换到关节级控制路径。不要仅为了读取电量而在无人值守的真机上进入 Low-level 控制模式；完整设备状态优先使用 High-level，见[查询设备状态](query-device-status.zh-CN.md)。
+进入 Low-level `kPrepared` 会切换到关节级控制路径。不要仅为了读取电量而在无人值守的真机上进入 Low-level 控制模式；完整设备状态优先使用 High-level，见[查询设备状态](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/query-device-status.zh-CN.md)。
 
 ## 正确判断数据是否可用
 

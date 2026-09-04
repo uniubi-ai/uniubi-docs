@@ -1,14 +1,14 @@
 # Uniubi Robot Motion SDK Build Guide
 
-**English** | [简体中文](BUILD.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.zh-CN.md)
 
 This guide covers the C++ SDK, Python SDK, ROS 2 message package, and ROS 2 examples. The C++ and Python SDKs are built separately; `uniubi_robot_sdk` no longer builds the Python binding as a subdirectory.
 
 Related documents:
-- **High-level API:** [Python](api-reference/python/high-level.md) · [C++](api-reference/cpp/high-level.md)
-- **Low-level API:** [Python](api-reference/python/low-level.md) · [C++](api-reference/cpp/low-level.md)
-- **MediaBus API:** [Python](api-reference/python/media.md) · [C++](api-reference/cpp/media.md)
-- **Direct DDS / ROS 2 API**: [`uniubi_robot_dds_api.md`](uniubi_robot_dds_api.md) — device protocol contracts and project templates for direct OMG DDS or ROS 2 integration without the SDK
+- **High-level API:** [Python](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.md) · [C++](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.md)
+- **Low-level API:** [Python](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.md) · [C++](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/low-level.md)
+- **MediaBus API:** [Python](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.md) · [C++](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/media.md)
+- **Direct DDS / ROS 2 API**: [`uniubi_robot_dds_api.md`](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/uniubi_robot_dds_api.md) — device protocol contracts and project templates for direct OMG DDS or ROS 2 integration without the SDK
 
 ---
 

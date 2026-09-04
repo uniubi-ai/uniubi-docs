@@ -1,6 +1,6 @@
 # 机器人网络接入
 
-[English](device-network.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/device-network.md) | **简体中文**
 
 连接真实机器人前，先从设备 App 获取当前的 4G、Wi-Fi 和有线 IP 信息。开发机可以使用 Wi-Fi IP 或有线 IP 登录设备；具体账号和认证方式由设备交付配置决定。
 
@@ -8,7 +8,7 @@
 
 下图只描述开发者需要理解的接入流程，以及机器人内部大小脑之间的通信接口；不表示设备内部的实际网络路由：
 
-![机器人网络接入](images/device-network-topology.zh-CN.png)
+![机器人网络接入](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/core-concepts/images/device-network-topology.zh-CN.png)
 
 ## 从 App 获取设备 IP
 

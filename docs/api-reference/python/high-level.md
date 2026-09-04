@@ -1,8 +1,8 @@
 # Uniubi Robot High-level Python API Reference
 
-**English** | [简体中文](high-level.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.zh-CN.md)
 
-[API Reference](../README.md) · [C++ API](../cpp/high-level.md)
+[API Reference](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.md) · [C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.md)
 
 Python module: `robot_motion_sdk`
 Primary client: `sdk.MotionHighLevelClient`

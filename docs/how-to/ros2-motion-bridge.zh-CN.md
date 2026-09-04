@@ -1,12 +1,12 @@
 # 启动并验证 ROS 2 Motion bridge
 
-[English](ros2-motion-bridge.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/ros2-motion-bridge.md) | **简体中文**
 
 ## 目标
 
 面向普通 ROS 2 业务节点，启动 `uniubi_motion_bridge`，先完成只读观测验证，再决定是否进入控制流程。
 
-本指南不覆盖原始 DDS / RPC 协议开发；需要协议级接入时，转到 [DDS / ROS 2 直连接入 API](../uniubi_robot_dds_api.zh-CN.md)。
+本指南不覆盖原始 DDS / RPC 协议开发；需要协议级接入时，转到 [DDS / ROS 2 直连接入 API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/uniubi_robot_dds_api.zh-CN.md)。
 
 ## 前置条件
 

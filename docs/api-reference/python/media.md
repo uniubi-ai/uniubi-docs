@@ -1,8 +1,8 @@
 # Uniubi Robot MediaBus Python API Reference
 
-**English** | [简体中文](media.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.zh-CN.md)
 
-[API Reference](../README.md) · [C++ API](../cpp/media.md)
+[API Reference](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.md) · [C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/media.md)
 
 Python module: `robot_motion_sdk`
 

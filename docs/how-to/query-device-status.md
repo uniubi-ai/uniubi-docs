@@ -1,6 +1,6 @@
 # Query Device Status
 
-**English** | [简体中文](query-device-status.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/query-device-status.zh-CN.md)
 
 Applications must distinguish complete system status from the lightweight power observation carried in motion frames. They are different interfaces.
 
@@ -27,7 +27,7 @@ print("battery", battery)
 print("interfaces", list(network.keys()))
 ```
 
-See the [Python High-level API: `query_system_status()` return schema](../api-reference/python/high-level.md#21-query_system_status-return-schema) for the complete dict schema and field semantics. Applications should tolerate optional fields that are unavailable on a device model or software build.
+See the [Python High-level API: `query_system_status()` return schema](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.md#21-query_system_status-return-schema) for the complete dict schema and field semantics. Applications should tolerate optional fields that are unavailable on a device model or software build.
 
 ## High-level: lightweight power cache
 

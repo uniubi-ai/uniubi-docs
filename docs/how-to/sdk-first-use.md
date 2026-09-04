@@ -1,8 +1,8 @@
 # SDK First Use
 
-**English** | [简体中文](sdk-first-use.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/sdk-first-use.zh-CN.md)
 
-> This page does not choose a control mode. Select High-level or Low-level from the [How-to entry point](README.md), then return here to prepare the SDK.
+> This page does not choose a control mode. Select High-level or Low-level from the [How-to entry point](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/README.md), then return here to prepare the SDK.
 
 ## Goal
 
@@ -31,10 +31,10 @@ The external-host High-level C++ SDK, Python SDK, and ROS 2 paths have all been 
 ## Prerequisites
 
 - A Linux environment and SDK runtime libraries for the target architecture
-- Device IPs obtained from the app, plus a confirmed login address, externally accessible service ports, and robot-facing network interface; see [Robot Network Access](../core-concepts/device-network.md). External High-level mode must use the interface that actually reaches the robot network; onboard High-level mode must select `eth0.100`
+- Device IPs obtained from the app, plus a confirmed login address, externally accessible service ports, and robot-facing network interface; see [Robot Network Access](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/device-network.md). External High-level mode must use the interface that actually reaches the robot network; onboard High-level mode must select `eth0.100`
 - An external Linux High-level application does not have a blanket root requirement. Onboard, Low-level, and Media runtimes follow the permissions required by the target device; C++ compilation itself does not require `sudo`
 - Matching C++ SDK, Python binding, architecture, version, and ABI
-- Completion of the [Build, Installation, and Cross-compilation Guide](../BUILD.md)
+- Completion of the [Build, Installation, and Cross-compilation Guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.md)
 
 On the robot compute module, install the Python SDK into the system `python3`. Run examples with the `sudo env` form documented by the corresponding SDK README so that the dynamic-library environment is preserved.
 
@@ -64,7 +64,7 @@ UNIUBI_SDK_ROOT="$UNIUBI_SDK_ROOT" python3 -m pip install .
 python3 -c "import robot_motion_sdk as sdk; print(sdk.MotionHighLevelClient)"
 ```
 
-If runtime libraries, architecture, or media libraries do not match, return to the [Build Guide](../BUILD.md). Do not modify the Python binding to work around an environment mismatch.
+If runtime libraries, architecture, or media libraries do not match, return to the [Build Guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.md). Do not modify the Python binding to work around an environment mismatch.
 
 ## 3. Complete Read-only Validation
 
@@ -79,7 +79,7 @@ Success criteria:
 
 ## Next Steps
 
-- High-level: [Use Built-in Robot Actions](high-level-control.md), then choose the [Python API](../api-reference/python/high-level.md) or [C++ API](../api-reference/cpp/high-level.md)
-- Low-level: [Run a Custom Joint-control Policy](low-level-control.md), then choose the [Python API](../api-reference/python/low-level.md) or [C++ API](../api-reference/cpp/low-level.md)
-- Media frames: choose the [Python API](../api-reference/python/media.md) or [C++ API](../api-reference/cpp/media.md)
+- High-level: [Use Built-in Robot Actions](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/high-level-control.md), then choose the [Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.md) or [C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.md)
+- Low-level: [Run a Custom Joint-control Policy](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/low-level-control.md), then choose the [Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.md) or [C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/low-level.md)
+- Media frames: choose the [Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.md) or [C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/media.md)
 - Repository-specific build details: [`uniubi_robot_sdk`](https://github.com/uniubi-ai/uniubi_robot_sdk) and [`uniubi_robot_sdk_py`](https://github.com/uniubi-ai/uniubi_robot_sdk_py)

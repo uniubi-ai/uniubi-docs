@@ -1,6 +1,6 @@
 # Validate the SDK Path with Mock / Sim2Sim
 
-**English** | [简体中文](mock-sim2sim.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/mock-sim2sim.zh-CN.md)
 
 ## Goal
 

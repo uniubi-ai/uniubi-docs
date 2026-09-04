@@ -1,6 +1,6 @@
 # Robot Network Access
 
-**English** | [简体中文](device-network.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/device-network.zh-CN.md)
 
 Before connecting to a real robot, use the device app to obtain its current 4G, Wi-Fi, and wired IP information. A development host can use the Wi-Fi IP or wired IP to log in to the device. Login accounts and authentication methods are determined by the device delivery configuration.
 
@@ -8,7 +8,7 @@ Before connecting to a real robot, use the device app to obtain its current 4G, 
 
 The diagram shows only the developer-facing access flow and the communication interface between the robot's brain and cerebellum. It does not represent the robot's internal network routing:
 
-![Robot network access](images/device-network-topology.en.png)
+![Robot network access](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/core-concepts/images/device-network-topology.en.png)
 
 ## Getting Device IPs from the App
 

@@ -1,6 +1,6 @@
 # 连接外设
 
-[English](connect-peripherals.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.md) | **简体中文**
 
 ## 目标
 
@@ -18,7 +18,7 @@
 | DC 12V 输出 | 机载供电系统 | 标准 XT30 电源输出接口，12V 输出总功率不高于 36W |
 | DC 24V 输出 | 机载供电系统 | 标准 XT30 电源输出接口，24V 输出功率不高于 120W |
 
-![CYVET 外设接口布局](images/cyvet-peripheral-interface-layout.svg)
+![CYVET 外设接口布局](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/how-to/images/cyvet-peripheral-interface-layout.svg)
 
 示意图采用实物照片向左旋转 90 度后的实际安装方向：`USB-BASE` 位于 `USB-EXT` 上方，RJ45 位于两个 Type-C 接口右侧，两个直流电源输出接口位于更右侧。
 
@@ -28,7 +28,7 @@
 
 机器人背盖提供两根同规格导轨，用于安装上装支架或其他外设。两根导轨平行布置，截面规格相同。
 
-![CYVET 背盖导轨安装尺寸](images/cyvet-back-rail-mounting-dimensions.zh-CN.png)
+![CYVET 背盖导轨安装尺寸](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/how-to/images/cyvet-back-rail-mounting-dimensions.zh-CN.png)
 
 关键机械尺寸如下：
 
@@ -127,6 +127,6 @@ USB 或网络可达只说明通信链路已经建立。还需要继续检查设�
 
 ## 下一步
 
-- 需要确认机器人登录地址和对外服务端口时，阅读[机器人网络接入](../core-concepts/device-network.zh-CN.md)。
-- 需要通过 Uniubi SDK 获取相机帧时，阅读[媒体 API](../api-reference/README.zh-CN.md)。
-- 编写 ROS 2 应用时，继续阅读[启动并验证 Motion bridge](ros2-motion-bridge.zh-CN.md)或对应设备驱动文档。
+- 需要确认机器人登录地址和对外服务端口时，阅读[机器人网络接入](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/device-network.zh-CN.md)。
+- 需要通过 Uniubi SDK 获取相机帧时，阅读[媒体 API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.zh-CN.md)。
+- 编写 ROS 2 应用时，继续阅读[启动并验证 Motion bridge](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/ros2-motion-bridge.zh-CN.md)或对应设备驱动文档。

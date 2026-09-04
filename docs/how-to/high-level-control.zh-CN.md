@@ -1,8 +1,8 @@
 # High-level：使用机器人内置动作
 
-[English](high-level-control.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/high-level-control.md) | **简体中文**
 
-![High-level 双部署拓扑](../core-concepts/images/high-level-dual-deployment.zh-CN.png)
+![High-level 双部署拓扑](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/core-concepts/images/high-level-dual-deployment.zh-CN.png)
 
 ## 目标
 
@@ -93,7 +93,7 @@ Low-level 真机的部署边界不同：关节控制应用仍运行在板内。�
 
 ## 这条路径不解决什么问题
 
-如果你要自己训练或运行控制策略，并直接输出每个关节的位置或扭矩，请转到 [Low-level：自定义关节控制策略](low-level-control.zh-CN.md)。
+如果你要自己训练或运行控制策略，并直接输出每个关节的位置或扭矩，请转到 [Low-level：自定义关节控制策略](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/low-level-control.zh-CN.md)。
 
 ## 选择实现方式
 
@@ -102,7 +102,7 @@ Low-level 真机的部署边界不同：关节控制应用仍运行在板内。�
 | C++ / Python SDK | `MotionHighLevelClient` | 直接使用 SDK 开发控制或观测程序 |
 | ROS 2 | `uniubi_motion_bridge` | 编写普通 ROS 2 业务节点，使用标准 topic/service |
 
-如果使用 SDK，先完成 [SDK 通用准备](sdk-first-use.zh-CN.md)。如果使用 ROS 2，直接进入 [启动并验证 Motion bridge](ros2-motion-bridge.zh-CN.md)。
+如果使用 SDK，先完成 [SDK 通用准备](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/sdk-first-use.zh-CN.md)。如果使用 ROS 2，直接进入 [启动并验证 Motion bridge](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/ros2-motion-bridge.zh-CN.md)。
 
 ## 对应仓库
 
@@ -120,7 +120,7 @@ Low-level 真机的部署边界不同：关节控制应用仍运行在板内。�
 High-level 控制过程中如遇紧急情况，可再次按 `M` 键，直到听到“遥控器已连接”的语音提示，
 再开始使用遥控器接管。
 
-![遥控器按键示意图，M 键位于手柄正面下方中央](images/remote-controller-buttons.png)
+![遥控器按键示意图，M 键位于手柄正面下方中央](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/how-to/images/remote-controller-buttons.png)
 
 _此图只用于定位遥控器按键；High-level 取权以本节文字说明的断连前置条件为准。_
 
@@ -132,6 +132,6 @@ _此图只用于定位遥控器按键；High-level 取权以本节文字说明�
    实际动作已经进入 `walking`，再触发目标动作。`laying` 不要求这一步前置切换。
 4. 在具备急停和人工接管条件后，再执行站立、趴下或低速运动等低风险动作。
 
-High-level 控制流程和安全边界见 [Python API](../api-reference/python/high-level.zh-CN.md)、[C++ API](../api-reference/cpp/high-level.zh-CN.md) 及 [ROS 2 Motion bridge 导读](ros2-motion-bridge.zh-CN.md)。
+High-level 控制流程和安全边界见 [Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.zh-CN.md)、[C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.zh-CN.md) 及 [ROS 2 Motion bridge 导读](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/ros2-motion-bridge.zh-CN.md)。
 
 外部主机 High-level C++ SDK、Python SDK 和 ROS 2 路径均已完成真机验证；使用时都必须选择实际连接机器人网络的网卡，并传入目标设备 ID（SN）。

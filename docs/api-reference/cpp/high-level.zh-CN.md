@@ -1,8 +1,8 @@
 # 宇泛机器人 High-level C++ API 参考
 
-[English](high-level.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.md) | **简体中文**
 
-[返回 API 参考](../README.zh-CN.md) · [查看 Python API](../python/high-level.zh-CN.md)
+[返回 API 参考](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.zh-CN.md) · [查看 Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.zh-CN.md)
 
 > SDK 入口类：`uniubi::RobotSdk::IMotionHighLevelClient`
 > C++ 头文件：`include/uniubi/robot_sdk/MotionHighLevelClient.h`
@@ -125,7 +125,7 @@ svc->shutdown();
 
 最小可起跑的项目模板，开发者照着复制 + 写自己的应用代码即可编译运行。
 
-> 完整构建说明（含交叉编译 / wheel 打包 / Troubleshooting）参见 [`BUILD.md`](../../BUILD.zh-CN.md)。
+> 完整构建说明（含交叉编译 / wheel 打包 / Troubleshooting）参见 [`BUILD.md`](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.zh-CN.md)。
 
 ### 依赖
 

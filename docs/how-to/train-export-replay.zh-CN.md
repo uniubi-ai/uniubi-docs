@@ -1,6 +1,6 @@
 # 训练、导出和回放策略
 
-[English](train-export-replay.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/train-export-replay.md) | **简体中文**
 
 ## 目标
 

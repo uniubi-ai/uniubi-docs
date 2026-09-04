@@ -1,8 +1,8 @@
 # 宇泛机器人 Low-level Python API 参考
 
-[English](low-level.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.md) | **简体中文**
 
-[返回 API 参考](../README.zh-CN.md) · [查看 C++ API](../cpp/low-level.zh-CN.md)
+[返回 API 参考](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.zh-CN.md) · [查看 C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/low-level.zh-CN.md)
 
 Python 模块：`robot_motion_sdk`
 主要客户端：`sdk.MotionLowLevelClient`

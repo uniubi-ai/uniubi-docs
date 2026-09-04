@@ -1,8 +1,8 @@
 # Uniubi Robot Low-level Python API Reference
 
-**English** | [简体中文](low-level.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.zh-CN.md)
 
-[API Reference](../README.md) · [C++ API](../cpp/low-level.md)
+[API Reference](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.md) · [C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/low-level.md)
 
 Python module: `robot_motion_sdk`
 Primary client: `sdk.MotionLowLevelClient`

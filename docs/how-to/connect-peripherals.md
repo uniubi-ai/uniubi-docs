@@ -1,6 +1,6 @@
 # Connect Peripherals
 
-**English** | [简体中文](connect-peripherals.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.zh-CN.md)
 
 ## Goal
 
@@ -18,7 +18,7 @@ This guide applies to the Creator version. It describes external peripheral conn
 | DC 12V output | Onboard power system | Standard XT30 power output; total 12V output power must not exceed 36W |
 | DC 24V output | Onboard power system | Standard XT30 power output; 24V output power must not exceed 120W |
 
-![CYVET external interface layout](images/cyvet-peripheral-interface-layout.svg)
+![CYVET external interface layout](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/how-to/images/cyvet-peripheral-interface-layout.svg)
 
 The diagram follows the actual installed orientation shown in the hardware photo: `USB-BASE` is above `USB-EXT`, RJ45 is to their right, and the two DC power outputs are further to the right.
 
@@ -28,7 +28,7 @@ The two Type-C connectors look similar, but only the connector marked `USB-EXT` 
 
 The robot back cover provides two rails of the same specification for mounting payload brackets or other peripherals. The rails are parallel and use the same cross-section.
 
-![CYVET back-rail mounting dimensions](images/cyvet-back-rail-mounting-dimensions.en.png)
+![CYVET back-rail mounting dimensions](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/how-to/images/cyvet-back-rail-mounting-dimensions.en.png)
 
 The key mechanical dimensions are:
 
@@ -127,6 +127,6 @@ Network or USB reachability proves only the transport path. Continue by checking
 
 ## Next Steps
 
-- For robot login addresses and externally accessible service ports, see [Robot Network Access](../core-concepts/device-network.md).
-- For camera-frame access through the Uniubi SDK, see the [Media API](../api-reference/README.md).
-- For a ROS 2 application, continue with [Start and Validate Motion Bridge](ros2-motion-bridge.md) or the relevant device driver.
+- For robot login addresses and externally accessible service ports, see [Robot Network Access](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/device-network.md).
+- For camera-frame access through the Uniubi SDK, see the [Media API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.md).
+- For a ROS 2 application, continue with [Start and Validate Motion Bridge](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/ros2-motion-bridge.md) or the relevant device driver.

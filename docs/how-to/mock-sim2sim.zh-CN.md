@@ -1,6 +1,6 @@
 # 使用 Mock / Sim2Sim 验证 SDK 链路
 
-[English](mock-sim2sim.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/mock-sim2sim.md) | **简体中文**
 
 ## 目标
 

@@ -1,6 +1,6 @@
 # Low-level: Run a Custom Joint-control Policy
 
-**English** | [简体中文](low-level-control.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/low-level-control.zh-CN.md)
 
 ## Goal
 
@@ -14,7 +14,7 @@ Typical goals include:
 
 ## Out of Scope
 
-If you only need built-in standing, walking, turning, or other actions, follow [High-level: Use Built-in Robot Actions](high-level-control.md).
+If you only need built-in standing, walking, turning, or other actions, follow [High-level: Use Built-in Robot Actions](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/high-level-control.md).
 
 ## Use the SDK
 
@@ -29,9 +29,9 @@ ROS 2 Motion Bridge does not provide an equivalent joint-level interface. Direct
 
 ## Recommended Workflow
 
-1. **Train or prepare the policy:** follow [Policy Training, Export, and Replay](train-export-replay.md) and confirm checkpoint replay in simulation.
-2. **Prepare the SDK:** follow [SDK First Use](sdk-first-use.md) and verify that bindings, headers, runtime libraries, architecture, and ABI match.
-3. **Validate the SDK path:** use [Mock / Sim2Sim](mock-sim2sim.md) to validate the policy, simulation bridge, and SDK client without hardware.
+1. **Train or prepare the policy:** follow [Policy Training, Export, and Replay](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/train-export-replay.md) and confirm checkpoint replay in simulation.
+2. **Prepare the SDK:** follow [SDK First Use](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/sdk-first-use.md) and verify that bindings, headers, runtime libraries, architecture, and ABI match.
+3. **Validate the SDK path:** use [Mock / Sim2Sim](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/mock-sim2sim.md) to validate the policy, simulation bridge, and SDK client without hardware.
 4. **Move to the real robot:** begin with read-only checks and low-risk posture validation. Verify the control rate, joint order, on-board inference format, emergency stop, and manual-takeover procedure.
 
 ## SDK and Model Joint Order
@@ -72,8 +72,8 @@ Never execute `walk` while the robot is suspended. During both stages, keep the 
 
 ## Detailed Interfaces
 
-- [Python Low-level API](../api-reference/python/low-level.md)
-- [C++ Low-level API](../api-reference/cpp/low-level.md)
+- [Python Low-level API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.md)
+- [C++ Low-level API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/low-level.md)
 - [`uniubi_robot_sdk` Low-level example](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/examples/example_lowlevel.cpp)
 - [`uniubi_robot_sdk_py` examples](https://github.com/uniubi-ai/uniubi_robot_sdk_py/tree/main/examples)
 

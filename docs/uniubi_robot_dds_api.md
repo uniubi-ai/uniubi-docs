@@ -1,6 +1,6 @@
 # Uniubi Quadruped DDS / ROS 2 Direct Integration API
 
-**English** | [简体中文](uniubi_robot_dds_api.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/uniubi_robot_dds_api.zh-CN.md)
 
 > Intended audience: developers integrating directly with a robot through OMG DDS (Cyclone DDS 0.10.5 recommended) or ROS 2 without using the Uniubi SDK.
 > This document describes the underlying protocol contract exposed by the High-level SDK and is aligned with its capabilities.
@@ -65,7 +65,7 @@ This chapter **does not define business-layer names or values**. Values such as 
 | Access method | Applicable scenarios |
 |---|---|
 | **Native OMG DDS** (C/C++/Java/Python/Go) | Use any OMG DDS implementation (Cyclone DDS 0.10.5 / RTI Connext / Fast DDS / OpenDDS) with the IDL and QoS defined by this protocol |
-| **ROS 2** | Create DDS topics directly from the IDL without ROS message conversion; Cyclone DDS is recommended for the RMW. See [`ros2_dds_interop_overview.md`](ros2_dds_interop_overview.md) for ROS 2 `.msg` / `.srv` naming, type, and QoS mappings |
+| **ROS 2** | Create DDS topics directly from the IDL without ROS message conversion; Cyclone DDS is recommended for the RMW. See [`ros2_dds_interop_overview.md`](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/ros2_dds_interop_overview.md) for ROS 2 `.msg` / `.srv` naming, type, and QoS mappings |
 
 The two methods are equivalent at the wire level: both publish and subscribe to the same IDL types in the same DDS domain. Only the client framework differs.
 

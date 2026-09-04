@@ -1,8 +1,8 @@
 # Uniubi Robot Low-level C++ API Reference
 
-**English** | [简体中文](low-level.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/low-level.zh-CN.md)
 
-[API Reference](../README.md) · [Python API](../python/low-level.md)
+[API Reference](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.md) · [Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.md)
 
 > SDK entry class: `uniubi::RobotSdk::IMotionLowLevelClient`
 > C++ header file: `include/uniubi/robot_sdk/MotionLowLevelClient.h`
@@ -86,7 +86,7 @@ int main() {
 
 This is the smallest buildable project template. Copy it, add the application code, then build and run it.
 
-> For complete build instructions (including cross-compilation/wheel packaging/Troubleshooting), see [`BUILD.md`](../../BUILD.md).
+> For complete build instructions (including cross-compilation/wheel packaging/Troubleshooting), see [`BUILD.md`](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.md).
 
 ### Dependencies
 
@@ -691,7 +691,7 @@ Never execute `walk` while the feet are suspended. Keep the emergency stop withi
 
 On exit, the TensorRT example calls `setMotionEnable(false)` only if the client is in the prepared state, then disconnects the client and shuts down the SDK. It does **not** call `emergencyStop()` or `restoreMotionControlMode()`. These exit semantics intentionally differ from the general posture-control example in §5.1.
 
-Both native compilation on Orin and cross-compilation on Ubuntu 22.04 x86_64 for JetPack 6.2.1 have been verified on hardware. Cross-compilation must use NVIDIA's `cross-linux-aarch64` repository and pin the complete TensorRT package set to 10.3; do not install the repository's latest default versions. For repository configuration, version pinning, CMake parameters, disk usage, and deployment instructions, see [`BUILD.md` §3.1](../../BUILD.md#31-additional-requirements-for-the-tensorrt-example).
+Both native compilation on Orin and cross-compilation on Ubuntu 22.04 x86_64 for JetPack 6.2.1 have been verified on hardware. Cross-compilation must use NVIDIA's `cross-linux-aarch64` repository and pin the complete TensorRT package set to 10.3; do not install the repository's latest default versions. For repository configuration, version pinning, CMake parameters, disk usage, and deployment instructions, see [`BUILD.md` §3.1](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.md#31-additional-requirements-for-the-tensorrt-example).
 
 ---
 

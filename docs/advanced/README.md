@@ -1,6 +1,6 @@
 # Advanced
 
-**English** | [简体中文](README.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/advanced/README.zh-CN.md)
 
 This section is for developers who have completed Quick Start, understand the control modes, and have finished basic validation. It covers protocols, DDS, QoS, and specialized integrations and is not the normal starting point for application development.
 
@@ -8,8 +8,8 @@ This section is for developers who have completed Quick Start, understand the co
 
 | Topic | Documentation | Use when |
 |---|---|---|
-| Direct DDS / ROS 2 integration | [DDS / ROS 2 API](../uniubi_robot_dds_api.md) | Integrating directly with the device protocol without the SDK |
-| ROS 2 and DDS mapping | [ROS 2 / DDS Interoperability](../ros2_dds_interop_overview.md) | Troubleshooting wire contracts, topics, services, and QoS mappings |
+| Direct DDS / ROS 2 integration | [DDS / ROS 2 API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/uniubi_robot_dds_api.md) | Integrating directly with the device protocol without the SDK |
+| ROS 2 and DDS mapping | [ROS 2 / DDS Interoperability](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/ros2_dds_interop_overview.md) | Troubleshooting wire contracts, topics, services, and QoS mappings |
 
 ## Boundaries
 

@@ -1,6 +1,6 @@
 # Train, Export, and Replay a Policy
 
-**English** | [简体中文](train-export-replay.zh-CN.md)
+**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/train-export-replay.zh-CN.md)
 
 ## Goal
 

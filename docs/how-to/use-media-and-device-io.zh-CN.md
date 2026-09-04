@@ -1,6 +1,6 @@
 # 使用语音、灯光和媒体帧
 
-[English](use-media-and-device-io.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/use-media-and-device-io.md) | **简体中文**
 
 语音播放、麦克风音频、摄像头视频和摄像头灯光属于不同能力。先区分控制面与媒体数据面。
 

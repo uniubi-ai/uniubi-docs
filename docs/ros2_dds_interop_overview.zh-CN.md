@@ -1,6 +1,6 @@
 # ROS 2 MSG/SRV 到 DDS IDL 的映射规范
 
-[English](ros2_dds_interop_overview.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/ros2_dds_interop_overview.md) | **简体中文**
 
 本文说明使用 OMG DDS 原生接口接入 ROS 2 时，如何把 ROS 2 的 `.msg`、`.srv` 接口文件对应到 DDS IDL 文件，以及由此得到 DDS topic 名、DDS 类型名和请求/响应匹配规则。
 
@@ -62,7 +62,7 @@ dds_create_topic + dds_create_reader/writer
 
 ## 本机器人数据 topic 一览（具体映射）
 
-本机器人的原生 DDS 数据通道遵循上述 ROS 2 命名约定（`rt/` 前缀 + `<module>::msg::dds_::<Type>_` 类型名）。完整 IDL 与字段量纲见 [`uniubi_robot_dds_api.md`](uniubi_robot_dds_api.zh-CN.md)，下表给出 ROS 2 原生接入时需要的 wire 名称：
+本机器人的原生 DDS 数据通道遵循上述 ROS 2 命名约定（`rt/` 前缀 + `<module>::msg::dds_::<Type>_` 类型名）。完整 IDL 与字段量纲见 [`uniubi_robot_dds_api.md`](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/uniubi_robot_dds_api.zh-CN.md)，下表给出 ROS 2 原生接入时需要的 wire 名称：
 
 | DDS topic | 方向 | DDS 类型 | IDL 文件 | 用途 |
 |---|---|---|---|---|

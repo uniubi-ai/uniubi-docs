@@ -1,6 +1,6 @@
 # 高级主题
 
-[English](README.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/advanced/README.md) | **简体中文**
 
 本节面向已经完成 Quick Start、理解控制模式并完成基础验证的开发者。这里的内容涉及协议、DDS、QoS 和特殊集成，不是普通开发的第一入口。
 
@@ -8,8 +8,8 @@
 
 | 主题 | 文档 | 适用场景 |
 |---|---|---|
-| DDS / ROS 2 直连接入 | [DDS / ROS 2 API](../uniubi_robot_dds_api.zh-CN.md) | 不使用 SDK，直接对接设备协议 |
-| ROS 2 与 DDS 映射 | [ROS 2 / DDS Interop](../ros2_dds_interop_overview.zh-CN.md) | 排查 wire contract、topic、service 和 QoS 映射 |
+| DDS / ROS 2 直连接入 | [DDS / ROS 2 API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/uniubi_robot_dds_api.zh-CN.md) | 不使用 SDK，直接对接设备协议 |
+| ROS 2 与 DDS 映射 | [ROS 2 / DDS Interop](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/ros2_dds_interop_overview.zh-CN.md) | 排查 wire contract、topic、service 和 QoS 映射 |
 
 ## 阅读边界
 

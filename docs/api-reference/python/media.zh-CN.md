@@ -1,8 +1,8 @@
 # 宇泛机器人 MediaBus Python API 参考
 
-[English](media.md) | **简体中文**
+[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.md) | **简体中文**
 
-[返回 API 参考](../README.zh-CN.md) · [查看 C++ API](../cpp/media.zh-CN.md)
+[返回 API 参考](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.zh-CN.md) · [查看 C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/media.zh-CN.md)
 
 Python 模块：`robot_motion_sdk`
 
