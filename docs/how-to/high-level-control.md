@@ -31,7 +31,7 @@ means `velocity` (rad/s). “None” means that no speed command should be passe
 |---|---|---|---|---|
 | Basic posture | Lie down | `laying` | None | Move the robot into a stable lying posture. |
 | Basic posture | Stand | `standing` | None | Move the robot into a stable standing posture. |
-| Locomotion | Walk | `walking` | Slow: `vx [-1.5, 1.5]`, `vy [-1, 1]`, `wz [-3, 3]`; fast: `vx [-2.5, 3]`, `vy [-1, 1]`, `wz [-3, 3]` | Control forward, lateral, and turning motion; the slow profile is the default. |
+| Locomotion | Walk | `walking` | Slow: `vx [-1.5, 1.5]`, `vy [-1, 1]`, `wz [-2.5, 2.5]`; fast: `vx [-2.5, 3]`, `vy [-1, 1]`, `wz [-3, 3]` | Control forward, lateral, and turning motion; the slow profile is the default. |
 | Locomotion | Step in place | `tweak` | `vx/vy [-0.2, 0.2]`, `wz [-0.5, 0.5]` | Step in place or perform a low-speed adjustment. |
 | Special posture | Biped stand | `bipedStand` | `vx/vy [-0.3, 0.3]`, `wz [-1.5, 1.5]` | Balance on the rear legs in a biped posture. |
 | Special posture | Handstand | `handstand` | `vx/vy [-0.3, 0.3]`, `wz [-1.5, 1.5]` | Balance on the front legs in a handstand posture. |
