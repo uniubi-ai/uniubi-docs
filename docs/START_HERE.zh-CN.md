@@ -4,7 +4,7 @@
 
 仓库根目录的 [README.md](https://github.com/uniubi-ai/uniubi-docs/blob/main/README.zh-CN.md) 是统一入口。
 
-> 二次开发权限和具身智能开发平台资料请统一从[具身智能开发者平台](https://www.uniubi.com/developer/embodied)获取；如尚未开通权限，请按页面指引登录或提交申请。
+> 二次开发申请、设备绑定等操作指南请统一查阅[应用开发文档](https://help.uni-ubi.com/docs/cyvet/app-development/)，并按文档指引完成相关准备。
 
 推荐阅读顺序：
 

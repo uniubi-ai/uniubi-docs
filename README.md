@@ -4,7 +4,7 @@
 
 Uniubi Docs is the central documentation site for developing with Uniubi robots. Start with the task you want to complete, run the smallest useful validation, and then continue to the relevant repository and API reference.
 
-> Obtain secondary-development access and embodied-intelligence platform materials from the [Embodied Intelligence Developer Portal](https://www.uniubi.com/developer/embodied); if access is not enabled yet, follow the page instructions to sign in or apply.
+> For secondary-development access applications, device binding, and related setup guides, see the [Application Development documentation](https://help.uni-ubi.com/docs/cyvet/app-development/) and follow the instructions to complete the required preparations.
 
 ## Quick Start
 

@@ -4,7 +4,7 @@
 
 The repository [README](https://github.com/uniubi-ai/uniubi-docs/blob/main/README.md) is the main documentation entry point.
 
-> Obtain secondary-development access and embodied-intelligence platform materials from the [Embodied Intelligence Developer Portal](https://www.uniubi.com/developer/embodied); if access is not enabled yet, follow the page instructions to sign in or apply.
+> For secondary-development access applications, device binding, and related setup guides, see the [Application Development documentation](https://help.uni-ubi.com/docs/cyvet/app-development/) and follow the instructions to complete the required preparations.
 
 Recommended reading order:
 

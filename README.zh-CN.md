@@ -4,7 +4,7 @@
 
 Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读和最小验证，再进入对应仓库。
 
-> 二次开发权限和具身智能开发平台资料请统一从[具身智能开发者平台](https://www.uniubi.com/developer/embodied)获取；如尚未开通权限，请按页面指引登录或提交申请。
+> 二次开发申请、设备绑定等操作指南请统一查阅[应用开发文档](https://help.uni-ubi.com/docs/cyvet/app-development/)，并按文档指引完成相关准备。
 
 <a id="quick-start"></a>
 ## 快速开始
