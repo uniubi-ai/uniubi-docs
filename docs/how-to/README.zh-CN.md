@@ -12,6 +12,7 @@
 |---|---|---|
 | 从 App 获取设备 IP，并确认登录地址和服务端口 | [机器人网络接入](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/device-network.zh-CN.md) | 连接真实机器人之前 |
 | 连接 USB、网络或其他上装外设并为其供电 | [连接外设](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.zh-CN.md) | 部署板载感知或其他外设应用之前 |
+| 为大脑网口设置持久化静态 IP | [大脑网口静态 IP 配置](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/orin-static-ip.zh-CN.md) | 连接激光雷达等网络外设时 |
 | 准备构建和安装环境 | [构建、安装和交叉编译](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.zh-CN.md) | 进入 SDK 或 ROS 2 之前 |
 | SDK 通用准备 | [SDK 通用准备](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/sdk-first-use.zh-CN.md) | 已选 High-level 或 Low-level，准备使用 SDK |
 

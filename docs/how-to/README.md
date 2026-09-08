@@ -12,6 +12,7 @@ Each guide addresses a specific development task. It defines the goal and prereq
 |---|---|---|
 | Obtain device IPs from the app and confirm the login address and service ports | [Robot network access](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/device-network.md) | Before connecting to a real robot |
 | Connect and power a USB, Ethernet, or other onboard peripheral | [Connect peripherals](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.md) | Before deploying an onboard perception or peripheral application |
+| Set a persistent static IP on the robot brain Ethernet port | [Configure a Static IP on the Robot Brain Ethernet Port](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/orin-static-ip.md) | When connecting a LiDAR or another Ethernet peripheral |
 | Prepare the build environment | [Build, installation, and cross-compilation](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.md) | Before SDK or ROS 2 development |
 | Prepare an SDK project | [SDK first use](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/sdk-first-use.md) | After selecting High-level or Low-level SDK development |
 

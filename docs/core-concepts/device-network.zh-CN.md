@@ -35,6 +35,10 @@ IP 地址可能随设备当前连接的网络而变化。每次连接真机前�
 
 端口范围可能随产品配置调整，使用时以当前设备文档和交付配置为准。
 
+## 连接网络外设时配置静态 IP
+
+连接激光雷达等外设，需要为 Orin 对外网口设置持久化静态 IP 时，阅读[大脑网口静态 IP 配置](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/orin-static-ip.zh-CN.md)。该指南适用于由 RobotBrain 管理的 `eth0`，与下文大小脑通信接口 `eth0.100` 用途不同。
+
 ## 大脑与小脑通信
 
 机器人内部的“大脑”和“小脑”通过 `eth0.100` 双向通信。

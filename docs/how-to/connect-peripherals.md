@@ -72,9 +72,9 @@ Before testing connectivity:
    ip -br addr
    ```
 
-3. Configure a static IP address for the robot-brain interface in the same subnet as the peripheral.
+3. Configure a static IP address for the robot-brain interface in the same subnet as the peripheral. For Orin systems where RobotBrain manages eth0, follow [Configure a Static IP on the Robot Brain Ethernet Port](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/orin-static-ip.md).
 4. Ensure that the two addresses are different and do not conflict with another device.
-5. If the peripheral address is configurable, configure both endpoints consistently. Follow the network-management method supplied with the delivered system when making the robot-brain configuration persistent.
+5. If the peripheral address is configurable, configure both endpoints consistently. For persistent brain-side settings, update the configuration and verify after reboot as described in [Configure a Static IP on the Robot Brain Ethernet Port](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/orin-static-ip.md); follow the corresponding delivery instructions for other systems.
 6. Verify reachability:
 
    ```bash

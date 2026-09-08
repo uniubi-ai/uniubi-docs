@@ -72,9 +72,9 @@
    ip -br addr
    ```
 
-3. 为该大脑网络接口配置与外设处于同一网段的静态 IP 地址。
+3. 为该大脑网络接口配置与外设处于同一网段的静态 IP 地址。 使用 RobotBrain 管理 eth0 的 Orin 系统，按[大脑网口静态 IP 配置](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/orin-static-ip.zh-CN.md)操作。
 4. 确保大脑与外设的 IP 地址不同，并且不与其他设备冲突。
-5. 如果外设的 IP 地址可配置，也可以同时调整两端配置。需要持久化大脑侧配置时，应使用当前交付系统规定的网络管理方式。
+5. 如果外设的 IP 地址可配置，也可以同时调整两端配置。需要持久化大脑侧配置时，按[大脑网口静态 IP 配置](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/orin-static-ip.zh-CN.md)修改配置并重启验证；其他系统遵循对应交付说明。
 6. 验证网络可达性：
 
    ```bash

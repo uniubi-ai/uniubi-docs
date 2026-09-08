@@ -35,6 +35,10 @@ Login users, keys, and passwords are determined by the device delivery configura
 
 The port range may change with the product configuration. Follow the current device documentation and delivery configuration when deploying a service.
 
+## Static IP for Ethernet Peripherals
+
+For a persistent static IP on the Orin external port when connecting a LiDAR or another peripheral, see [Configure a Static IP on the Robot Brain Ethernet Port](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/orin-static-ip.md). That guide applies to `eth0` managed by RobotBrain, which serves a different purpose from the `eth0.100` brain-to-cerebellum interface below.
+
 ## Brain-to-Cerebellum Communication
 
 Inside the robot, the brain and cerebellum communicate bidirectionally through `eth0.100`.
