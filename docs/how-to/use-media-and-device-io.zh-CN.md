@@ -33,6 +33,119 @@ client.stop_audio_play()
 
 自定义音频文件使用 `add_audio_file()` / `delete_audio_file()`；文件 ID、URL/本地文件模式和格式限制见 High-level API。语音播放不是麦克风采集接口。
 
+## 自定义音频：通过 URL 上传并播放
+
+播放服务在 **DV500** 上，SDK 通常运行在 **Orin 或 PC** 上，因此这些部署应使用 `url`。Orin 上的文件路径不是 DV500 的本地路径；`file` 仅适用于文件已经在 DV500 上且播放服务能直接读取的情况。
+
+### 1. 准备文件和 HTTP 地址
+
+将 `turn_left_90.wav` 放在 Orin 的独立目录中，在该目录启动 HTTP 服务：
+
+```bash
+cd ~/audio
+python3 -m http.server 8000 --bind 172.29.110.2
+```
+
+这里假设 Orin 的 `eth0.100` 地址为 `172.29.110.2`，请用 `ip -4 addr show eth0.100` 核对。对应 URL 为 `http://172.29.110.2:8000/turn_left_90.wav`。保持这个终端运行，直到文件入库。
+
+文件也可以放在 PC 的独立目录，通过 `python3 -m http.server 8000` 提供服务；URL 使用 **DV500 能访问的 PC IP**，确认网络路由和防火墙允许访问。不要使用 `localhost`，也不要把电脑文件路径作为 `file` 传入。
+
+本次实机验证使用 16 kHz、单声道、16 位 PCM WAV，58,446 字节、1.824 秒。其他编码和大小限制需按目标机型确认。
+
+### 2. 在 Orin 上添加并播放
+
+以下示例假设 Python SDK 已安装，`import robot_motion_sdk` 可用。保存为 `play_custom_audio.py`，然后在另一个终端运行：
+
+```bash
+sudo python3 -u play_custom_audio.py
+```
+
+若 SDK 位于自定义目录，使用 `sudo env PYTHONPATH=<SDK包父目录> python3 -u play_custom_audio.py`。板上 SDK 锁文件为 root 属主时需要 sudo；不能仅依赖普通用户的 Python 环境。
+
+```python
+import time
+import robot_motion_sdk as sdk
+
+AUDIO_ID = "custom_turn_left_90"
+URL = "http://172.29.110.2:8000/turn_left_90.wav"
+client = None
+
+def require(ok, operation):
+    if not ok:
+        raise RuntimeError(f"{operation}: {client.get_last_error()}")
+
+def wait_until(check, seconds, message):
+    deadline = time.monotonic() + seconds
+    while not check():
+        if time.monotonic() >= deadline:
+            raise RuntimeError(message)
+        time.sleep(0.2)
+
+def audio_ready():
+    result = client.query_audio_play_list({"type": "customVoice"})
+    return result is not None and any(
+        item["id"] == AUDIO_ID for item in result.get("customVoice", [])
+    )
+
+sdk.service.set_network_interface("eth0.100")
+try:
+    if not sdk.service.initial(None, "custom-audio-example"):
+        raise RuntimeError("SDK initialization failed")
+    if sdk.service.is_multi_device():
+        raise RuntimeError("This example requires on-board Orin deployment")
+    client = sdk.MotionHighLevelClient()
+    require(client.connect(lease_ms=60000), "connect")
+    wait_until(lambda: client.query_audio_play_detail() is not None,
+               10, "Audio RPC unavailable")
+    detail = client.query_audio_play_detail()
+    if detail is None or detail.get("playing"):
+        raise RuntimeError("Cannot start: status unavailable or audio already playing")
+    require(client.start_control(timeout_ms=10000), "start_control")
+    wait_until(lambda: client.get_state() == sdk.HighLevelState.kControlled,
+               12, "Control acquisition timed out")
+    if not audio_ready():
+        require(client.add_audio_file({
+            "id": AUDIO_ID,
+            "name": "turn_left_90.wav",
+            "url": URL,
+            "describe": "Custom voice prompt",
+        }, timeout_ms=30000), "add_audio_file")
+        wait_until(audio_ready, 30, "Audio download/import did not finish")
+    require(client.start_audio_play({
+        "list": [{"id": AUDIO_ID}], "volume": 50, "repeat": 1,
+    }), "start_audio_play")
+    # Observe this short clip; retain control until playback has stopped.
+    deadline = time.monotonic() + 15
+    while True:
+        detail = client.query_audio_play_detail()
+        print(detail, flush=True)
+        if detail is not None and detail.get("currentId") == AUDIO_ID:
+            if not detail.get("playing"):
+                break
+        if time.monotonic() >= deadline:
+            client.stop_audio_play()
+            raise RuntimeError("Playback observation timed out")
+        time.sleep(0.2)
+finally:
+    if client is not None:
+        try:
+            if client.get_state() == sdk.HighLevelState.kControlled:
+                client.release_control()
+        finally:
+            client.disconnect()
+    sdk.service.shutdown()
+```
+
+### 3. 判断结果和重复播放
+
+- `start_control()` 可能先返回，必须等待状态达到 `kControlled`。
+- **`add_audio_file()` 返回成功不代表下载入库已完成。** 轮询 `query_audio_play_list({"type":"customVoice"})`，直到目标 ID 出现，再调用播放；过早播放可能被拒绝。
+- HTTP 日志应有来自 DV500 的 `GET` 和 `200`；文件入库后可关闭 HTTP 服务。后续播放使用 ID，无需再次下载。
+- 重跑示例会复用同一 ID，不覆盖文件。换音频应换一个唯一 ID；不要用同一 ID 误认为已更新内容。
+- `playing: true → false` 表示设备报告开始播放后结束；也可订阅播放事件。实机测试收到 `started → stopped`，实际听感仍需现场确认。
+
+脚本播放一次、音量 50，并释放控制权，不发送运动动作。示例的播放观察上限是 15 秒，长音频应相应调整。若添加后 30 秒仍查不到 ID，检查 HTTP 日志、DV500 网络可达性、格式和存储容量，不要直接继续播放。
+
 ## High-level：控制摄像头灯光
 
 ```python
