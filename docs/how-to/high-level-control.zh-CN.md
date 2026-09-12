@@ -59,15 +59,15 @@
 
 能力配置中的数字 `id`（例如 `0` / `1`）是机器人内部 profile ID，不能作为
 High-level RPC 的 `controlProfile` 参数；传入数字会被服务端以参数类型错误拒绝。
-切换档位时建议先将三轴速度清零，并在一次全量参数调用中明确传入三轴：
+切换档位无需先将三轴速度清零，可以在保持非零目标速度的情况下切换。以下示例在一次全量参数调用中明确传入三轴：
 
 ```text
-highlevel> start walking {"controlProfile":"slow","lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0}
-highlevel> set {"controlProfile":"fast","lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0}
+highlevel> start walking {"controlProfile":"slow","lineVelocityX":0.2,"lineVelocityY":0.0,"velocity":0.0}
+highlevel> set {"controlProfile":"fast","lineVelocityX":0.2,"lineVelocityY":0.0,"velocity":0.0}
 highlevel> state
 ```
 
-确认设置请求成功且机器人保持零速稳定后，再逐步设置目标速度。`set` 只修改当前动作参数，
+`set` 只修改当前动作参数，
 不会切换动作；部分服务端版本的状态查询不回传档位名称，不能只靠状态 JSON 验证档位。
 
 ## 先选择应用部署位置

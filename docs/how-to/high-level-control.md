@@ -60,16 +60,16 @@ profiles are:
 
 Numeric configuration IDs such as `0` and `1` are internal robot profile IDs. Do not send them
 as the High-level RPC `controlProfile` value; the server rejects numeric values as a parameter
-type error. Clear all three velocity axes before switching profiles and send the axes together:
+type error. You can switch profiles while maintaining a nonzero target velocity; there is no need
+to zero the three velocity axes first. This example explicitly sends all three axes in one call:
 
 ```text
-highlevel> start walking {"controlProfile":"slow","lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0}
-highlevel> set {"controlProfile":"fast","lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0}
+highlevel> start walking {"controlProfile":"slow","lineVelocityX":0.2,"lineVelocityY":0.0,"velocity":0.0}
+highlevel> set {"controlProfile":"fast","lineVelocityX":0.2,"lineVelocityY":0.0,"velocity":0.0}
 highlevel> state
 ```
 
-Set the target velocity gradually only after the request succeeds and the robot remains stable at
-zero velocity. `set` changes the current action parameters; it does not switch actions. Some server
+`set` changes the current action parameters; it does not switch actions. Some server
 versions do not return the profile name in motion-state JSON, so state output alone may not verify it.
 
 ## Choose Where the Application Runs
