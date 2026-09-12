@@ -82,7 +82,7 @@ cat /tmp/pcm4-brain-01/summary.json
 aplay -t raw -f S16_LE -r 16000 -c 1 /tmp/pcm4-brain-01/channel0.pcm
 ```
 
-Replace the directory with your output path. These are execution and acceptance instructions, not a claim that four-source capture has been validated on all three physical platforms.
+Replace the directory with your output path.
 
 ## Python API sequence
 

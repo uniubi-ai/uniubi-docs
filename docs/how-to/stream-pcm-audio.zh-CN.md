@@ -82,7 +82,7 @@ cat /tmp/pcm4-brain-01/summary.json
 aplay -t raw -f S16_LE -r 16000 -c 1 /tmp/pcm4-brain-01/channel0.pcm
 ```
 
-将路径替换为本次输出目录。以上是运行与验收方法，不代表四路采集已完成三端真机验证。
+将路径替换为本次输出目录。
 
 ## Python 接口顺序
 
