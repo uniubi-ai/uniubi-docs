@@ -12,7 +12,7 @@
 
 媒体总线与控制权无关：任何已 `connect` 的客户端（高级或低级）`setup` 后即可订阅，无需 `startControl`。
 
-> ⚠️ **仅 `aarch64` 板内本地部署支持**：媒体帧订阅只在 SDK 与机器人同机（板内）且目标平台为 `aarch64` 时可用；**多设备 / 远端模式不提供帧订阅**。`x86_64` / `i386` 平台不要调用 `createMediaBusClient()` / `setup()` / `start*Frame()`。
+> x86_64、i386、aarch64、aarch64_host 默认开启 MediaBus。Orin 本机模式支持视频、音频和布局查询；远端模式通过 `media.setup(host)` 支持 PCM 采集和 RawBack 播放。远端视频订阅和布局查询返回 `kNotSupported`。SDK 头文件、运行库、Python 扩展与设备软件必须版本匹配。
 
 相关文档：
 - **高级接口手册**：[High-level C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.zh-CN.md)
@@ -41,7 +41,8 @@ auto media  = client->createMediaBusClient();   // 也可由 IMotionLowLevelClie
 
 | 接口 | 说明 |
 |---|---|
-| `bool setup()` | 启动媒体总线；订阅 / 查询前必须先调用，失败用 `getLastError()` 取因 |
+| `bool setup(std::string host = {})` | 启动媒体总线；订阅 / 查询前必须先调用，失败用 `getLastError()` 取因 |
+| `IAudioRawBackStream::Ptr createAudioRawBack()` | 获取本机或远端播放对象，需先 setup 媒体 client |
 | `void shutdown()` | 关闭媒体总线，自动停掉所有订阅 |
 | `bool getMediaLayout(MediaLayout& layout)` | 查询音视频能力（mic / camera / 编码器数量） |
 | `bool startRawVideoFrame(int32_t channel, RawVideoFrameCallback cb)` | 订阅视频原始帧 |
@@ -62,9 +63,9 @@ using EncodedVideoFrameCallback = std::function<void(int32_t channel, const Enco
 
 ---
 
-## 3. 通道与能力
+## 3. 本机通道与能力
 
-`channel` 取值范围由 `getMediaLayout` 返回的 `MediaLayout` 决定，越界返回 `kInvalidChannel`：
+本机模式的 `channel` 取值范围由 `getMediaLayout` 返回的 `MediaLayout` 决定，越界返回 `kInvalidChannel`：
 
 | 流类型 | 合法 channel 范围 |
 |---|---|
@@ -147,6 +148,10 @@ typedef enum {
     kInvalidCallback,     // 帧回调为空
     kSourceUnavailable,   // 编码源不可用（创建失败 / 无视频轨）
     kSourceStartFailed,   // 编码源启动失败
+    kInvalidParam,        // 参数无效
+    kCaptureFailed,       // 采集订阅登记失败
+    kConnectFailed,       // 远端连接启动失败
+    kNotSupported,        // 当前模式不支持
 } MediaBusError;
 ```
 
@@ -208,7 +213,7 @@ client->disconnect();
 service->shutdown();
 ```
 
-完整示例（含原始视频按平面落盘、音频 PCM、编码码流落盘）：`examples/example_media_frames.cpp`，仅 `aarch64` 板内本地部署构建和运行。
+完整示例（含原始视频按平面落盘、音频 PCM、编码码流落盘）：`examples/example_media_frames.cpp`，可在所有支持架构构建，但该视频示例仅在 Orin 本机模式运行。
 
 ---
 
@@ -218,3 +223,12 @@ service->shutdown();
 - **回调在 SDK 媒体线程触发**：回调里不要做重活 / 阻塞，避免拖累后续帧；耗时处理转交自己的队列 / 线程。
 - **原始视频按平面读**：见 §4.1，勿把 `data()` 当连续整图。
 - **退出务必 `shutdown()`**：否则订阅线程不退，且与 GC / 析构争用可能死锁（请显式停止订阅并调用 `shutdown()`）。
+
+
+## PCM audio / RawBack
+
+先调用 `media.setup(host)`（本机省略 host），再调用 `createAudioRawBack()` 获取播放对象，依次调用 `setup()`、等待 `ready()`、`setVolume()`、`write(frame)`。结束时调用播放对象 `shutdown()`，再关闭媒体 client。`reset()` 清空播放队列。仅支持 16 kHz、s16le、单声道 PCM。
+
+`setup()` 成功只表示初始化或连接启动；通过实际回调统计验证采集，通过设备输出验证播放。采集回调可以保留 AudioFrame；停止订阅及关闭请在业务控制线程调用。
+
+[PCM audio guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/stream-pcm-audio.zh-CN.md).

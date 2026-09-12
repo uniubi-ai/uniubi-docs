@@ -51,7 +51,7 @@ finally:
 | `getState / getLastError` | `get_state()` / `get_last_error()`（返回 enum） |
 | `setMotionEnable` | `set_motion_enable(enable)` |
 | `emergencyStop` | `emergency_stop(timeout_ms=5000)` |
-| `createMediaBusClient` | `create_media_bus_client()`；返回 `MediaBusClient`（同一 client 复用同一实例，仅 `aarch64` 板内本地媒体帧订阅使用；Python 需先确认 `sdk.MEDIA_ENABLED == True`） |
+| `createMediaBusClient` | Low-level 本机模式的媒体入口；远端音频使用 High-level client，详见 MediaBus 文档 |
 | `sendControl(action[, cmd])` | `send_control(action, cmd=None)`；`action` 是 `sdk.MotorCtrlAction()`，动作相关控制帧传 `sdk.LowLevelMotionCmd()` 并填写 `action/ac_name` |
 | `sendMaxTorque(action)` | `send_max_torque(action)`；使用 `action.motors[i].torque` 表示目标最大扭矩 |
 | `getLatestObservation` | `get_latest_observation(timeout_ms=5)`；返回 `LowLevelMotionObserved` 或 `None` |

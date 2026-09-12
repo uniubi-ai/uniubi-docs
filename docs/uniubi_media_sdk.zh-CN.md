@@ -1,5 +1,7 @@
 # MediaBus SDK API 语言入口
 
+普通 ARM64 外部主机请选择 `aarch64_host`：构建传入 `-DPLATFORM=aarch64_host`（Python 为 `-Ccmake.define.PLATFORM=aarch64_host`），运行时使用 `lib/aarch64_host/`。其媒体能力与 x86 远端模式相同，仅支持远程音频；Orin 本地视频/布局示例仍使用 `aarch64`。
+
 [English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/uniubi_media_sdk.md) | **简体中文**
 
 MediaBus API 参考已按语言拆分：

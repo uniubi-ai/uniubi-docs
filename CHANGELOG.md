@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Document default media support on all SDK architectures, local and remote PCM capture/RawBack playback, and the unified MediaBus lifecycle.
 ### Added
 
 - Document the distinct High-level, Low-level real-robot, and Low-level simulation transport paths.

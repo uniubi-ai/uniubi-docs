@@ -13,7 +13,7 @@
 | 麦克风原始音频 | MediaBus | MediaBus | 与运动控制权无关 |
 | 摄像头原始帧 / 编码帧 | MediaBus | MediaBus | 与运动控制权无关 |
 
-> MediaBus 仅支持 `aarch64` 机器人板内本地部署。运行前确认 `sdk.MEDIA_ENABLED == True`；远端 PC、多设备模式及 `x86_64/i386` 不提供媒体帧订阅。
+> x86_64、i386、aarch64、aarch64_host 默认开启 MediaBus。Orin 本机模式支持视频、音频和布局查询；远端模式通过 `media.setup(host)` 支持 PCM 采集和 RawBack 播放。远端视频订阅和布局查询返回 `kNotSupported`。SDK 头文件、运行库、Python 扩展与设备软件必须版本匹配。
 
 ## High-level：播放语音
 

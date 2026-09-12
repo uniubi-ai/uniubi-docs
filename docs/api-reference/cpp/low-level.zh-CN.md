@@ -132,7 +132,7 @@ cmake --build build -j"$(nproc)"
 # 运行前确保 SDK .so 在动态库路径
 case "$(uname -m)" in
   x86_64|amd64) SDK_ARCH=x86_64 ;;
-  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  aarch64|arm64) SDK_ARCH=${SDK_ARCH:-aarch64} ;;
   i386|i486|i586|i686) SDK_ARCH=i386 ;;
   *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
 esac
@@ -307,7 +307,7 @@ auto client = IMotionLowLevelClient::create();
 | `int32_t getState() const` | 任意 | 当前 `LowLevelState` |
 | `int32_t getLastError() const` | 任意 | 读后清零的最后失败原因 |
 | `void setConnectCallback(ConnectCallback cb)` | 任意 | 注册状态回调 |
-| `IMediaBusClient::Ptr createMediaBusClient()` | 任意 | 创建音视频帧订阅通道；仅 `aarch64` 板内本地媒体帧订阅使用（用法见 MediaBus 文档） |
+| `IMediaBusClient::Ptr createMediaBusClient()` | 任意 | Low-level 本机模式的媒体入口；远端音频使用 High-level client，详见 MediaBus 文档 |
 | `bool restoreMotionControlMode(uint32_t timeoutMs = 5000)` | `kConnected` 后即可 | 恢复运控模式到出厂默认；同步 RPC，timeout 单位 ms |
 
 #### `connect` 的超时与重试策略（重要）

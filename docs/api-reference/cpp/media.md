@@ -12,7 +12,7 @@ The media bus (`IMediaBusClient`) provides **frame-level subscriptions** to the 
 
 Media subscriptions are independent of motion control ownership. A connected High-level or Low-level client can subscribe after `setup()` without calling `startControl()`.
 
-> ⚠️ **Supported only for local deployment on an `aarch64` robot compute board:** media frame subscriptions require the SDK and robot runtime to run on the same machine. **Multi-device and remote modes do not provide frame subscriptions.** Do not call `createMediaBusClient()` / `setup()` / `start*Frame()` on `x86_64` or `i386`. MEDIA_ENABLED == False` by default, and `create_media_bus_client()` raises `RuntimeError("MediaBus is not available in this SDK build")`.
+> MediaBus is enabled by default on x86_64, i386, aarch64, and aarch64_host. Local Orin deployment supports video, audio, and layout queries; remote deployment supports PCM capture and RawBack playback via `media.setup(host)`. Remote video subscriptions and layout queries return `kNotSupported`. SDK headers, runtime libraries, Python extensions, and device software must use matching versions.
 
 Related documents:
 - **High-level API reference:** [High-level C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.md)
@@ -41,7 +41,8 @@ Repeated calls to `createMediaBusClient()` on the same client return the same in
 
 | Interface | Description |
 |---|---|
-| `bool setup()` | Start the media bus. Call this before subscriptions or queries; use `getLastError()` if it fails |
+| `bool setup(std::string host = {})` | Start the media bus. Call this before subscriptions or queries; use `getLastError()` if it fails |
+| `IAudioRawBackStream::Ptr createAudioRawBack()` | Get local or remote playback after setting up the media client |
 | `void shutdown()` | Close the media bus and automatically stop all subscriptions |
 | `bool getMediaLayout(MediaLayout& layout)` | Query audio and video capabilities (microphone, camera, and encoder counts) |
 | `bool startRawVideoFrame(int32_t channel, RawVideoFrameCallback cb)` | Subscribe to raw video frames |
@@ -62,9 +63,9 @@ using EncodedVideoFrameCallback = std::function<void(int32_t channel, const Enco
 
 ---
 
-## 3. Channels and capabilities
+## 3. Local channels and capabilities
 
-The `MediaLayout` returned by `getMediaLayout()` determines the valid `channel` range. An out-of-range channel produces `kInvalidChannel`:
+In local mode, the `MediaLayout` returned by `getMediaLayout()` determines the valid `channel` range. An out-of-range channel produces `kInvalidChannel`:
 
 | Stream type | Valid channel range |
 |---|---|
@@ -147,6 +148,10 @@ typedef enum {
     kInvalidCallback,     // Frame callback is empty
     kSourceUnavailable,   // Encoded source unavailable (creation failed or no video track)
     kSourceStartFailed,   // Failed to start the encoded source
+    kInvalidParam,        // Invalid parameter
+    kCaptureFailed,       // Capture registration failed
+    kConnectFailed,       // Remote connection startup failed
+    kNotSupported,        // Unsupported in this deployment mode
 } MediaBusError;
 ```
 
@@ -208,7 +213,7 @@ client->disconnect();
 service->shutdown();
 ```
 
-The complete example writes raw video plane by plane, audio PCM, and encoded streams to disk: `examples/example_media_frames.cpp`. It is built and run only for local `aarch64` deployment.
+The complete example writes raw video plane by plane, audio PCM, and encoded streams to disk: `examples/example_media_frames.cpp`. It builds on all supported architectures; this video example runs in local Orin deployment.
 
 ---
 
@@ -218,3 +223,11 @@ The complete example writes raw video plane by plane, audio PCM, and encoded str
 - **Callbacks run on the SDK media thread:** do not block or perform expensive work in a callback. Hand off time-consuming processing to an application queue or worker thread.
 - **Read raw video by plane:** as described in §4.1, do not assume that `data()` contains one contiguous image.
 - **Call `shutdown()` before exit:** otherwise subscription threads may remain active and deadlock with garbage collection or destruction. Stop subscriptions explicitly and call `shutdown()` before exit.
+
+## PCM audio / RawBack
+
+Call `media.setup(host)` (omit host locally), then `createAudioRawBack()` to obtain playback. Call `setup()`, wait for `ready()`, then use `setVolume()` and `write(frame)`. Call playback `shutdown()` before shutting down the media client. `reset()` clears the playback queue. PCM must be 16 kHz, s16le, mono.
+
+Successful setup indicates initialization or connection startup; verify capture by counting actual frames and playback at the device output. AudioFrame objects may be retained after capture callbacks. Stop subscriptions and shut down on the application control thread.
+
+[PCM audio guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/stream-pcm-audio.md).

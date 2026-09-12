@@ -170,7 +170,7 @@ cmake --build build -j"$(nproc)"
 # 运行前确保 SDK .so 在动态库路径
 case "$(uname -m)" in
   x86_64|amd64) SDK_ARCH=x86_64 ;;
-  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  aarch64|arm64) SDK_ARCH=${SDK_ARCH:-aarch64} ;;
   i386|i486|i586|i686) SDK_ARCH=i386 ;;
   *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
 esac
@@ -988,9 +988,11 @@ media->stopRawVideoFrame(0);
 media->shutdown();
 ```
 
+远端模式需传入 DV500 host，支持 PCM 采集和 RawBack 播放；视频与布局查询仅支持本机模式。详见 [MediaBus](media.zh-CN.md)。
+
 | 方法 | 说明 |
 |---|---|
-| `bool setup()` | 初始化媒体总线连接（订阅前必须先调用）|
+| `bool setup(std::string host = {})` | 初始化媒体总线连接（订阅前必须先调用）|
 | `void shutdown()` | 断开媒体总线连接，停止所有订阅 |
 | `int32_t getLastError() const` | 最后一次失败原因（`MediaBusError`）|
 | `bool getMediaLayout(MediaLayout& layout)` | 查询音视频硬件布局（`micNum` / `cameraNum` / `videoEncoderNum`）|
@@ -1015,6 +1017,10 @@ media->shutdown();
 | `kInvalidCallback` | 帧回调为空 |
 | `kSourceUnavailable` | 编码源不可用（创建失败 / 无视频轨）|
 | `kSourceStartFailed` | 编码源启动失败 |
+| `kInvalidParam` | 参数无效 |
+| `kCaptureFailed` | 采集订阅登记失败 |
+| `kConnectFailed` | 远端连接启动失败 |
+| `kNotSupported` | 当前部署模式不支持 |
 
 **`VideoFrame` 原始帧格式**
 

@@ -12,6 +12,42 @@ Related documents:
 
 ---
 
+## Generic ARM64 external hosts (`aarch64_host`)
+
+Use `aarch64_host` for a Linux ARM64 computer outside the robot brain board. It supports remote High-level control and remote PCM capture/RawBack playback, using the same generic media backend as x86. Low-level SHM control and local video/layout access require the robot brain board.
+
+Both platforms have an ARM64 CPU: `CMAKE_SYSTEM_PROCESSOR=aarch64` alone selects the Orin runtime `lib/aarch64/`. Explicitly pass `-DPLATFORM=aarch64_host` to select `lib/aarch64_host/`, including when building against an installed SDK with `find_package(UniubiRobotSdk)`. Use a new build directory when switching platforms.
+
+The host bundle uses independently rebuilt aarch64_host DDS, iceoryx, OpenSSL, zlib, ACL, and attr dependencies from the main repository (Build commit da59f36), compiled with the generic GCC 11.4 toolchain. The delivered host libraries do not depend on NVIDIA media libraries. The target needs glibc >= 2.34, libstdc++ exporting `GLIBCXX_3.4.30` (GCC 12 runtime or later). Copy the complete matching `lib/aarch64_host/` directory, including DDS and other companion libraries.
+
+From the C++ SDK repository, build natively on the ARM64 host:
+
+```bash
+cmake -S . -B build-aarch64-host -DPLATFORM=aarch64_host
+cmake --build build-aarch64-host -j
+cmake --install build-aarch64-host --prefix "$HOME/.local/uniubi-aarch64-host"
+export SDK_ARCH=aarch64_host
+export LD_LIBRARY_PATH="$PWD/lib/$SDK_ARCH:${LD_LIBRARY_PATH:-}"
+```
+
+For an x86-to-ARM64 cross-build, add `-DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-aarch64-linux-gnu.cmake` to the configure command and install the GNU `gcc-aarch64-linux-gnu` / `g++-aarch64-linux-gnu` toolchain. Deploy the result to the ARM64 host. The Orin TensorRT example is not enabled by default for this platform.
+
+From the Python SDK repository, build on the target ARM64 host with its Python interpreter:
+
+```bash
+export UNIUBI_SDK_ROOT=/path/to/uniubi_robot_sdk
+python3 -m pip install . -Ccmake.define.PLATFORM=aarch64_host -Cbuild-dir=build/aarch64_host
+export SDK_ARCH=aarch64_host
+export LD_LIBRARY_PATH="$UNIUBI_SDK_ROOT/lib/$SDK_ARCH:${LD_LIBRARY_PATH:-}"
+# Alternatively, create a wheel for this host platform:
+python3 -m pip wheel . --no-deps -w dist/aarch64_host -Ccmake.define.PLATFORM=aarch64_host -Cbuild-dir=build/aarch64_host
+```
+
+Python wheels do not bundle SDK runtime libraries. Orin and external-host wheels can have the same `linux_aarch64` tag: retain the platform-specific output directory and use matching runtime libraries; the wheel tag does not distinguish the deployment platform. SDK headers, libraries, extensions, and device software must match.
+
+For remote media, connect the High-level client using the robot device ID, then call `media.setup(robot_ip)`. Use the C++ `example_audio_rawback` or Python `example_audio_rawback.py --host ROBOT_IP --device-id DEVICE_ID` with a PCM input file. Remote video subscriptions and layout queries return `kNotSupported`.
+
+
 ## 0. Prerequisites
 
 | Dependency | Requirement |
@@ -22,7 +58,7 @@ Related documents:
 | CMake | ≥ 3.18 |
 | Python development files | Python 3.8+ and `python3-dev` for Python bindings |
 | System runtime libraries | Installed on the target and available through the standard dynamic-library search path |
-| SDK runtime libraries | `librobotMotionSdk.so`, `libmediaBus.so`, `libudbus.so`, and `libubase.so` from one version and architecture; `MediaBusClient` supports local on-board media subscription on `aarch64` only |
+| SDK runtime libraries | `librobotMotionSdk.so`, `libmediaBus.so`, `libudbus.so`, and `libubase.so` from one version and architecture; MediaBus supports local Orin audio/video and remote audio |
 
 ---
 
@@ -47,6 +83,7 @@ uniubi_robot_sdk/
 │   └── UBase/                     infrastructure headers such as Delegate and Define
 ├── lib/                           SDK runtime libraries by target architecture
 │   ├── x86_64/   librobotMotionSdk.so  libmediaBus.so  libudbus.so  libubase.so
+│   ├── aarch64_host/  librobotMotionSdk.so  libmediaBus.so  libudbus.so  libubase.so
 │   ├── aarch64/  librobotMotionSdk.so  libmediaBus.so  libudbus.so  libubase.so
 │   └── i386/     librobotMotionSdk.so  libmediaBus.so  libudbus.so  libubase.so
 ├── examples/                      C++ examples
@@ -89,20 +126,20 @@ cmake -S . -B build
 cmake --build build -j$(nproc)
 ```
 
-CMake searches for `librobotMotionSdk.so`, `libmediaBus.so`, and `libubase.so` under `lib/<arch>/`. Dynamic loading also requires `libudbus.so` from the same directory. Keep all four libraries at the same version and architecture. The `aarch64` target builds the media example by default. Search order:
+CMake searches for `librobotMotionSdk.so`, `libmediaBus.so`, and `libubase.so` under `lib/<arch>/`. Dynamic loading also requires `libudbus.so` from the same directory. Keep all four libraries at the same version and architecture. All supported architectures build the media and audio examples by default. Search order:
 
 1. `${UNIUBI_SDK_ROOT}/lib/<arch>` (`-D` command line or environment variable)
 2. `${CMAKE_CURRENT_SOURCE_DIR}/lib/<arch>` (included in the repository)
 3. `/opt/uniubi/lib/<arch>` (default prefix)
 
-> Media-frame subscription supports only local on-board deployment on `aarch64`. `x86_64` and `i386` builds do not enable `example_media_frames`; applications on those platforms must not call `createMediaBusClient()`, `setup()`, or `start*Frame()`. Keep the delivered `.so` files as a matched version and architecture set even when the application does not call a media interface.
+> MediaBus is enabled by default on x86_64, i386, aarch64, and aarch64_host. Local Orin deployment supports video, audio, and layout queries; remote deployment supports PCM capture and RawBack playback via `media.setup(host)`. Remote video subscriptions and layout queries return `kNotSupported`. SDK headers, runtime libraries, Python extensions, and device software must use matching versions.
 
 `<arch>` is automatically determined by `CMAKE_SYSTEM_PROCESSOR`:
 
 | `CMAKE_SYSTEM_PROCESSOR` | Selected subdirectory |
 |---|---|
 | `x86_64` / `amd64` / `AMD64` | `x86_64` |
-| `aarch64` / `arm64` / `ARM64` | `aarch64` |
+| `aarch64` / `arm64` / `ARM64` | `aarch64_host` when `PLATFORM=aarch64_host`; otherwise `aarch64` |
 | `i386` / `i486` / `i586` / `i686` / `x86` | `i386` |
 
 During cross-compilation, the toolchain file sets `CMAKE_SYSTEM_PROCESSOR`; do not override the target architecture manually.
@@ -159,7 +196,7 @@ This target uses the CUDA 12.6 and TensorRT 10.3 C++ development files provided 
 
 | Output | Location |
 |---|---|
-| C++ examples | `build/examples/example_lowlevel`, `build/examples/example_highlevel`; `aarch64` additionally builds `example_media_frames`; native Orin additionally builds `example_lowlevel_tensorrt` |
+| C++ examples | `build/examples/example_lowlevel`, `build/examples/example_highlevel`; all supported architectures also build `example_media_frames`, `example_audio`, and `example_audio_rawback`; native Orin additionally builds `example_lowlevel_tensorrt` |
 | Installed examples | `<prefix>/bin/example_lowlevel`, `<prefix>/bin/example_highlevel`, plus examples enabled by the media and TensorRT build options |
 | CMake package | `<prefix>/lib/cmake/UniubiRobotSdk/` |
 
@@ -256,7 +293,7 @@ SDK programs require root privileges on current devices; compilation does not. B
 export SDK_ROOT="${SDK_ROOT:-$HOME/uniubi_robot_sdk}"
 case "$(uname -m)" in
   x86_64|amd64) SDK_ARCH=x86_64 ;;
-  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  aarch64|arm64) SDK_ARCH=${SDK_ARCH:-aarch64} ;;
   i386|i486|i586|i686) SDK_ARCH=i386 ;;
   *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
 esac
@@ -302,7 +339,7 @@ SDK programs still require root privileges at runtime. Use the system `python3` 
 git clone https://github.com/uniubi-ai/uniubi_robot_sdk_py.git ~/uniubi_robot_sdk_py
 case "$(uname -m)" in
   x86_64|amd64) SDK_ARCH=x86_64 ;;
-  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  aarch64|arm64) SDK_ARCH=${SDK_ARCH:-aarch64} ;;
   i386|i486|i586|i686) SDK_ARCH=i386 ;;
   *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
 esac
@@ -338,11 +375,11 @@ The Python native binding uses `UNIUBI_SDK_ENABLE_MEDIA` to control media-frame 
 
 | Variable | Default | Description |
 |---|---|---|
-| `UNIUBI_SDK_ENABLE_MEDIA` | `aarch64=ON`; `x86_64/i386=OFF` | An `OFF` build retains LowLevel/HighLevel motion interfaces; `create_media_bus_client()` reports that MediaBus is unavailable |
+| `UNIUBI_SDK_ENABLE_MEDIA` | `ON` on all supported architectures | An `OFF` build retains LowLevel/HighLevel motion interfaces; `create_media_bus_client()` reports that MediaBus is unavailable |
 
 At runtime, use `sdk.MEDIA_ENABLED` to determine whether the wheel includes media bindings. When it is `False`, `create_media_bus_client()` raises `RuntimeError("MediaBus is not available in this SDK build")`, and importing `robot_motion_sdk.media_frame` raises `ImportError("MediaBus is not available in this SDK build")`.
 
-Media-frame subscription supports only local on-board `aarch64` deployment. `x86_64` and `i386` wheels disable media bindings by default and cannot use the media client.
+MediaBus is enabled by default on x86_64, i386, aarch64, and aarch64_host. Local Orin deployment supports video, audio, and layout queries; remote deployment supports PCM capture and RawBack playback via `media.setup(host)`. Remote video subscriptions and layout queries return `kNotSupported`. SDK headers, runtime libraries, Python extensions, and device software must use matching versions.
 
 ### C. Build a distributable wheel
 
@@ -365,13 +402,13 @@ python3 -m pip install uniubi_robot_motion_sdk-1.0.0-cp310-cp310-linux_aarch64.w
 Each combination produces a separate wheel:
 
 ```
-(x86_64 / aarch64 / i386)  ×  (cp38 / cp39 / cp310 / cp311 / cp312)  =  15 wheels
+(x86_64 / aarch64 / aarch64_host / i386) × (cp38 / cp39 / cp310 / cp311 / cp312) = 20 platform/ABI builds
 ```
 
 Recommended approach:
 
 - Run the matrix with `cibuildwheel` and GitHub Actions or another CI system.
-- Use `auditwheel repair` to bundle `librobotMotionSdk.so`, `libmediaBus.so`, `libudbus.so`, `libubase.so`, and required transitive dependencies. `aarch64` wheels default to `MEDIA_ENABLED=True`; `x86_64` and `i386` wheels default to `False`.
+- Use `auditwheel repair` to bundle `librobotMotionSdk.so`, `libmediaBus.so`, `libudbus.so`, `libubase.so`, and required transitive dependencies. all supported architecture wheels default to `MEDIA_ENABLED=True`.
 - Verify that the resulting wheel can be installed with a single `pip install` command.
 
 ---
@@ -396,7 +433,7 @@ After building, run a minimal import test:
 export SDK_ROOT="${SDK_ROOT:-$HOME/uniubi_robot_sdk}"
 case "$(uname -m)" in
   x86_64|amd64) SDK_ARCH=x86_64 ;;
-  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  aarch64|arm64) SDK_ARCH=${SDK_ARCH:-aarch64} ;;
   i386|i486|i586|i686) SDK_ARCH=i386 ;;
   *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
 esac
@@ -423,7 +460,7 @@ For end-to-end examples, see `examples/example_lowlevel.cpp`, `examples/example_
 export SDK_ROOT="${SDK_ROOT:-$HOME/uniubi_robot_sdk}"
 case "$(uname -m)" in
   x86_64|amd64) SDK_ARCH=x86_64 ;;
-  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  aarch64|arm64) SDK_ARCH=${SDK_ARCH:-aarch64} ;;
   i386|i486|i586|i686) SDK_ARCH=i386 ;;
   *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
 esac
