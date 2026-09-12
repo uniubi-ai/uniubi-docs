@@ -495,7 +495,7 @@ struct MotorInfo {
 };
 ```
 
-Currently DV500 12-joint `MotorLayout` uses leg-major sequence:
+Currently cerebellum controller 12-joint `MotorLayout` uses leg-major sequence:
 
 ```text
 FL_ABAD, FL_HIP, FL_KNEE,
@@ -628,11 +628,11 @@ lowlevel> quit
 - `release`: Send short-term damping first, then stop the control thread and call `setMotionEnable(false)`.
 - `quit` / `Ctrl+C`: Run the release sequence, disable Low-level control, release the session, and disconnect. This generic example does **not** call `restoreMotionControlMode()`. After the process has completely exited, run the dedicated `release_control_to_dv500.sh` helper from the Python SDK examples if the built-in motion controller must be restored.
 
-The attitude control period is 50 Hz, the default trajectory time is 2 seconds, and the position change in a single cycle does not exceed 0.25 rad. The program matches observation and control according to `(limbNo, jointNo)` and does not rely on the array order; when the actual tracking error exceeds 0.25 rad, trajectory advancement is suspended. The attitude command only supports the standard DV500 12-joint layout, other layouts will be rejected.
+The attitude control period is 50 Hz, the default trajectory time is 2 seconds, and the position change in a single cycle does not exceed 0.25 rad. The program matches observation and control according to `(limbNo, jointNo)` and does not rely on the array order; when the actual tracking error exceeds 0.25 rad, trajectory advancement is suspended. The attitude command only supports the standard cerebellum controller 12-joint layout, other layouts will be rejected.
 
 Low-level SDK does not have `take` / `startControl` interface: `connect()` establishes and maintains session, `setMotionEnable(true/false)` switches prepare. The CLI directly follows this set of semantics without adding fake permission commands.
 
-Standing target is `hip=0.0, thigh=0.8, calf=-1.5` rad per leg. The target for lying down is `thigh=1.10, calf=-2.72` rad, the left leg is `hip=+0.48` rad, and the right leg is `hip=-0.48` rad. Kp/Kd uses the proven stand/lay configuration in DV500 board header `motionCapacity`.
+Standing target is `hip=0.0, thigh=0.8, calf=-1.5` rad per leg. The target for lying down is `thigh=1.10, calf=-2.72` rad, the left leg is `hip=+0.48` rad, and the right leg is `hip=-0.48` rad. Kp/Kd uses the proven stand/lay configuration in cerebellum controller board header `motionCapacity`.
 
 ### 5.2 C++ TensorRT policy example
 

@@ -32,11 +32,11 @@ client.pause_audio_play()
 client.stop_audio_play()
 ```
 
-Use `add_audio_file()` / `delete_audio_file()` for custom files. See the High-level API for file IDs, URL/local-file modes, and format restrictions. Voice playback is not a microphone-capture interface.
+Use `add_audio_file()` / `delete_audio_file()` for custom files. See the High-level API for file IDs, URL uploads, and format restrictions. Voice playback is not a microphone-capture interface.
 
 ## Custom audio: upload by URL and play
 
-The playback service runs on **DV500**, while the SDK normally runs on **Orin or a PC**. Use `url` in these deployments. An Orin path is not a DV500-local path. `file` applies only when the file is already accessible to the playback service on DV500.
+The playback service runs on the **cerebellum controller**. Serve the audio file over HTTP from the brain board or an external host, pass a reachable address as `url`, and wait for the audio ID to appear before playback.
 
 ### 1. Prepare the file and HTTP URL
 
@@ -49,7 +49,7 @@ python3 -m http.server 8000 --bind 172.29.110.2
 
 This assumes Orin uses `172.29.110.2` on `eth0.100`; check with `ip -4 addr show eth0.100`. The URL is `http://172.29.110.2:8000/turn_left_90.wav`. Keep this terminal running until import completes.
 
-You can also serve a dedicated directory on a PC with `python3 -m http.server 8000`. Use a **PC IP reachable from DV500** and check routing and firewall access. Do not use `localhost` or pass the PC file path as `file`.
+You can also serve a dedicated directory on a PC with `python3 -m http.server 8000`. Use a **PC IP reachable from cerebellum controller** and check routing and firewall access. Use an HTTP URL reachable from the cerebellum controller, not `localhost`.
 
 The hardware test used a 16 kHz, mono, 16-bit PCM WAV: 58,446 bytes, 1.824 seconds. Confirm other encodings and size limits for the target model.
 
@@ -141,11 +141,11 @@ finally:
 
 - `start_control()` may return before ownership is acquired; wait for `kControlled`.
 - **Success from `add_audio_file()` does not guarantee that download/import has completed.** Poll `query_audio_play_list({"type":"customVoice"})` until the target ID appears before playing. Immediate playback may be rejected.
-- The HTTP log should show a DV500 `GET` with status `200`. Once imported, stop the HTTP server; playback uses the stored ID and needs no further download.
+- The HTTP log should show a cerebellum controller `GET` with status `200`. Once imported, stop the HTTP server; playback uses the stored ID and needs no further download.
 - Running the example again reuses the ID without overwriting its content. Use a unique new ID for a different file.
 - `playing: true → false` indicates the device reported playback and then completion. Playback events are another option. The hardware test received `started → stopped`; audible output still needs an on-site check.
 
-The script plays once at volume 50, releases control, and sends no motion actions. Its playback observation limit is 15 seconds; increase it for longer audio. If the ID does not appear within 30 seconds, inspect HTTP logs, DV500 connectivity, format, and storage capacity before attempting playback.
+The script plays once at volume 50, releases control, and sends no motion actions. Its playback observation limit is 15 seconds; increase it for longer audio. If the ID does not appear within 30 seconds, inspect HTTP logs, cerebellum controller connectivity, format, and storage capacity before attempting playback.
 
 ## High-level: control the camera light
 

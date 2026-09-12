@@ -7,7 +7,7 @@ x86_64、i386 和 aarch64 默认启用媒体接口。SDK 与设备软件必须�
 | 模式 | 采集 / 播放 | 初始化 |
 |---|---|---|
 | Orin 本机 | SHM 音视频采集、PCM RawBack 播放、布局查询 | `media.setup()` |
-| 远端 PC | 网络 PCM 采集与 RawBack 播放 | `media.setup(host)`，host 为 DV500 地址 |
+| 远端 PC | 网络 PCM 采集与 RawBack 播放 | `media.setup(host)`，host 为 小脑 地址 |
 
 远端模式不支持视频订阅或布局查询，返回 `kNotSupported`。先建立 High-level client 连接，再创建 MediaBus client。远端音频需保证主机能够访问机器人，且设备音频服务及对应采集通道已启用。本机采集前需确认 `/etc/robot/sdk_config.json` 中的通道配置与设备一致，详见[本机采集配置](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/docs/media-capture.zh-CN.md)。
 
@@ -17,7 +17,7 @@ Python 远端播放并同时采集 source 0：
 
 ```bash
 sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" python3 examples/example_audio_rawback.py input.pcm \
-  --host <DV500_IP> --device-id <ROBOT_SN> --interface <DDS_INTERFACE> \
+  --host <ROBOT_IP> --device-id <ROBOT_SN> --interface <DDS_INTERFACE> \
   --volume 20 --capture-channel 0
 ```
 

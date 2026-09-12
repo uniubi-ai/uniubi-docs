@@ -662,7 +662,7 @@ Each method gives: **Request `params`** (message format + fields), **Response `p
 | `stopPlayList` | Holding rights | — | [§3.3.5](#335-audio-control) |
 | `getAudioPlayList` | None | `type` (such as customVoice) | [§3.3.5](#335-audio-control) |
 | `getAudioPlayDetail` | None | — | [§3.3.5](#335-audio-control) |
-| `addAudioFile` | Holding rights | `id` / `name` / `file` or `url`, etc. | [§3.3.5](#335-audio-control) |
+| `addAudioFile` | Holding rights | `id` / `name` / `url` | [§3.3.5](#335-audio-control) |
 | `deleteAudioFile` | Holding rights | `id` | [§3.3.5](#335-audio-control) |
 | `getCameraLightBrightness` | Holding rights | — | [§3.3.6](#336-system-settings) |
 | `setCameraLightBrightness` | Holding rights | `brightness`(0~100) | [§3.3.6](#336-system-settings) |
@@ -1240,18 +1240,7 @@ Query the current playback details. Event `statistics/play_list` will push incre
 
 ##### `addAudioFile`
 
-Add (upload) a custom audio file to the device. Supports **two ways of obtaining files**:
-
-- **`file` mode (local path)**: The caller passes in a local file path that the device can directly read (for example, the client and the robot board are deployed at the same time, and the file is already on the local machine/shared disk). No download steps, fastest.
-- **`url` mode (remote download)**: The caller passes in the HTTP URL, and **DV500 downloads the file** from this URL and imports it. The RPC may return before the download completes. The caller needs to deploy an HTTP file server to play the audio, and the robot can directly GET it.
-
-**Choose one of the two modes `file` and `url`** (give priority to `url` when given both at the same time).
-
-| Deployment form | Recommendation |
-|---|---|
-| SDK on Orin, playback service on DV500 | Use `url`; an Orin path is not a DV500-local path |
-| File already readable by the playback service on DV500 | `file` can refer to that DV500-local path |
-| SDK application on remote host (multiple robots/external machines) | Use `url` - you need to run an HTTP file server yourself to expose the audio |
+Add custom audio using an HTTP URL. Serve the file from the brain board or an external host; the cerebellum controller downloads and imports it. The RPC may return before the download completes, so wait for the audio ID to appear in the playlist before playback.
 
 **Request `params`**
 
@@ -1259,14 +1248,10 @@ Add (upload) a custom audio file to the device. Supports **two ways of obtaining
 |---|---|---|---|
 | `id` | string | Yes | File id; customized by the client, ensure that it does not conflict with existing non-system files |
 | `name` | string | Yes | File name (including extension, such as `"hello.mp3"`) |
-| `file` | string | Choose one of the two | **Local path mode**: The absolute path of the file that can be read directly by the robot side |
-| `url` | string | Choose one of the two | **Remote download mode**: HTTP URL, the robot will pull it and put it into the database |
+| `url` | string | Yes | **Remote download mode**: HTTP URL, the robot will pull it and put it into the database |
 | `describe` | string | No | Notes/Description |
 
 ```jsonc
-// Local-path mode (on-board deployment)
-{ "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": { "id": "custom_1", "name": "hello.mp3", "file": "/var/audio/hello.mp3", "describe": "example" } }
-
 // Remote-download mode (external host deployment)
 { "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": { "id": "custom_1", "name": "hello.mp3", "url": "http://192.168.1.x:8000/audio/hello.mp3", "describe": "example" } }
 ```
@@ -1278,8 +1263,7 @@ Add (upload) a custom audio file to the device. Supports **two ways of obtaining
 - After the addition is successful, the file will be classified as `customVoice` and can be queried through `getAudioPlayList` or used as `id` of `startPlayList` / `deleteAudioFile`.
 - Supported audio formats: `mp3` / `wav` and other common formats; the specific support list and single file size limit are given by the device according to the model.
 - `url` mode: RPC success does not guarantee download/import completion. Use a 30s add-request timeout, then poll `getAudioPlayList` with a separate deadline until the target ID appears before playback.
-- `file` mode: The path must be accessible to the robot; confirm the mounting and read permissions when using NAS/shared disks
-- Typical failures: `0x01 paramsTypeError` / `0x02 paramsDeletion` (field error); `0x08 outOfDeviceCaps` (the maximum number of audios that can be stored in the device is reached); `id` conflicts (same as existing non-system files); `url` pull failure / `file` path does not exist
+- Typical failures: `0x01 paramsTypeError` / `0x02 paramsDeletion` (field error); `0x08 outOfDeviceCaps` (the maximum number of audios that can be stored in the device is reached); `id` conflicts (same as existing non-system files); `url` pull failure
 
 ##### `deleteAudioFile`
 

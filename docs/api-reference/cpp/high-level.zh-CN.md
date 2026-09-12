@@ -678,7 +678,7 @@ client->startAudioPlay(R"({"list":[{"id":"1"}],"volume":50,"repeat":1})");
 | `bool startAudioPlay(const std::string& paramsJson, uint32_t timeoutMs = 5000)` | 见下表 | 复用 RPC，按字段决定语义 |
 | `bool stopAudioPlay(uint32_t timeoutMs = 5000)` | — | 空参即停止 |
 | `bool pauseAudioPlay(uint32_t timeoutMs = 5000)` | 内部传 `{"pause":true}` | 恢复用 `startAudioPlay` 的 resume 形态 |
-| `bool addAudioFile(const std::string& paramsJson, uint32_t timeoutMs = 30000)` | `{"id":"custom_1","name":"hello.mp3","file":"/data/hello.mp3"}` 或 URL 形态 | 新增自定义音频文件 |
+| `bool addAudioFile(const std::string& paramsJson, uint32_t timeoutMs = 30000)` | `{"id":"custom_1","name":"hello.mp3","url":"http://HOST_IP:8000/hello.mp3"}` | 新增自定义音频文件 |
 | `bool deleteAudioFile(const std::string& paramsJson, uint32_t timeoutMs = 5000)` | `{"id":"1"}` | id 为待删音频 ID |
 
 **`startAudioPlay.paramsJson` 形态**
@@ -988,7 +988,7 @@ media->stopRawVideoFrame(0);
 media->shutdown();
 ```
 
-远端模式需传入 DV500 host，支持 PCM 采集和 RawBack 播放；视频与布局查询仅支持本机模式。详见 [MediaBus](media.zh-CN.md)。
+远端模式需传入 小脑 host，支持 PCM 采集和 RawBack 播放；视频与布局查询仅支持本机模式。详见 [MediaBus](media.zh-CN.md)。
 
 | 方法 | 说明 |
 |---|---|

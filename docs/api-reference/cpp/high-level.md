@@ -677,7 +677,7 @@ client->startAudioPlay(R"({"list":[{"id":"1"}],"volume":50,"repeat":1})");
 | `bool startAudioPlay(const std::string& paramsJson, uint32_t timeoutMs = 5000)` | See the table below | Start, resume, or update playback according to the supplied fields |
 | `bool stopAudioPlay(uint32_t timeoutMs = 5000)` | — | Stop playback |
 | `bool pauseAudioPlay(uint32_t timeoutMs = 5000)` | Sends `{"pause":true}` internally | Pause playback; resume with `startAudioPlay()` and `{"resume":true}` |
-| `bool addAudioFile(const std::string& paramsJson, uint32_t timeoutMs = 30000)` | `{"id":"custom_1","name":"hello.mp3","file":"/data/hello.mp3"}` or URL form | Add custom audio file |
+| `bool addAudioFile(const std::string& paramsJson, uint32_t timeoutMs = 30000)` | `{"id":"custom_1","name":"hello.mp3","url":"http://HOST_IP:8000/hello.mp3"}` | Add custom audio file |
 | `bool deleteAudioFile(const std::string& paramsJson, uint32_t timeoutMs = 5000)` | `{"id":"1"}` | Delete the specified audio ID |
 
 **`startAudioPlay.paramsJson` form**
@@ -987,7 +987,7 @@ media->stopRawVideoFrame(0);
 media->shutdown();
 ```
 
-Remote mode requires the DV500 host and supports PCM capture and RawBack playback; video and layout queries require local mode. See [MediaBus](media.md).
+Remote mode requires the cerebellum controller host and supports PCM capture and RawBack playback; video and layout queries require local mode. See [MediaBus](media.md).
 
 | Method | Description |
 |---|---|

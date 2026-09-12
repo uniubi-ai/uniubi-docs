@@ -496,7 +496,7 @@ struct MotorInfo {
 };
 ```
 
-当前 DV500 12 关节 `MotorLayout` 使用 leg-major 顺序：
+当前 小脑 12 关节 `MotorLayout` 使用 leg-major 顺序：
 
 ```text
 FL_ABAD, FL_HIP, FL_KNEE,
@@ -633,11 +633,11 @@ lowlevel> quit
 - `release`：先发送短时阻尼，再停止控制线程并调用 `setMotionEnable(false)`。
 - `quit` / `Ctrl+C`：执行释放流程、关闭 Low-level 控制、释放会话并断开连接。这个通用示例**不会**调用 `restoreMotionControlMode()`。如果需要恢复内置运控，应等待进程完全退出后，再运行 Python SDK examples 中独立的 `release_control_to_dv500.sh`。
 
-姿态控制周期为 50 Hz，默认轨迹时间为 2 秒，单周期位置变化不超过 0.25 rad。程序按 `(limbNo, jointNo)` 匹配观测与控制，不依赖数组顺序；当实际跟踪误差超过 0.25 rad 时暂停轨迹推进。姿态命令只支持标准 DV500 12 关节布局，其他布局会被拒绝。
+姿态控制周期为 50 Hz，默认轨迹时间为 2 秒，单周期位置变化不超过 0.25 rad。程序按 `(limbNo, jointNo)` 匹配观测与控制，不依赖数组顺序；当实际跟踪误差超过 0.25 rad 时暂停轨迹推进。姿态命令只支持标准 小脑 12 关节布局，其他布局会被拒绝。
 
 Low-level SDK 没有 `take` / `startControl` 接口：`connect()` 建立并维护 session，`setMotionEnable(true/false)` 切换 prepare。CLI 直接沿用这套语义，不增加伪造的取权命令。
 
-站立目标每腿为 `hip=0.0, thigh=0.8, calf=-1.5` rad。趴下目标为 `thigh=1.10, calf=-2.72` rad，左腿 `hip=+0.48` rad、右腿 `hip=-0.48` rad。Kp/Kd 使用 DV500 板端 `motionCapacity` 中已经验证的站立/趴下配置。
+站立目标每腿为 `hip=0.0, thigh=0.8, calf=-1.5` rad。趴下目标为 `thigh=1.10, calf=-2.72` rad，左腿 `hip=+0.48` rad、右腿 `hip=-0.48` rad。Kp/Kd 使用 小脑 板端 `motionCapacity` 中已经验证的站立/趴下配置。
 
 ### 5.2 C++ TensorRT 策略示例
 

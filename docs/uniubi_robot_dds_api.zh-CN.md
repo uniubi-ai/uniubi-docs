@@ -661,7 +661,7 @@ business_ok = (response.code == 0) AND (payload.result == true)
 | `stopPlayList` | 持权 | — | [§3.3.5](#335-音频控制) |
 | `getAudioPlayList` | 无 | `type`(如 customVoice) | [§3.3.5](#335-音频控制) |
 | `getAudioPlayDetail` | 无 | — | [§3.3.5](#335-音频控制) |
-| `addAudioFile` | 持权 | `id` / `name` / `file` 或 `url` 等 | [§3.3.5](#335-音频控制) |
+| `addAudioFile` | 持权 | `id` / `name` / `url` | [§3.3.5](#335-音频控制) |
 | `deleteAudioFile` | 持权 | `id` | [§3.3.5](#335-音频控制) |
 | `getCameraLightBrightness` | 持权 | — | [§3.3.6](#336-系统设置) |
 | `setCameraLightBrightness` | 持权 | `brightness`(0~100) | [§3.3.6](#336-系统设置) |
@@ -1244,18 +1244,7 @@ business_ok = (response.code == 0) AND (payload.result == true)
 
 ##### `addAudioFile`
 
-向设备新增（上传）一个自定义音频文件。支持**两种获取文件的方式**：
-
-- **`file` 模式（本地路径）**：调用方传入设备能直接读到的本地文件路径（如客户端跟机器人板内同部署、文件已在本机/共享盘上）。无下载步骤，最快。
-- **`url` 模式（远程下载）**：调用方传入 HTTP URL，**DV500 从该 URL 下载文件**到本地后再入库；RPC 可能在下载完成前返回。调用方需要部署 HTTP 文件服务器把音频放出来，机器人能直接 GET 到。
-
-**两种模式 `file` 和 `url` 二选一**（同时给两个时优先 `url`）。
-
-| 部署形态 | 推荐 |
-|---|---|
-| SDK 在 Orin 上，播放服务在 DV500 上 | 用 `url` —— Orin 文件路径不是 DV500 本地路径 |
-| 文件已在 DV500 上且播放服务可直接读取 | 可用 `file` —— 指定 DV500 本地路径 |
-| SDK 应用在远端主机（多机器人 / 外部机器） | 用 `url` —— 需自己跑一个 HTTP 文件服务器把音频暴露出来 |
+通过 HTTP URL 向设备添加自定义音频。开发者在大脑或外部主机上提供 HTTP 文件服务，小脑下载音频后入库。RPC 可能在下载完成前返回，需等待音频 ID 出现在播放列表中再播放。
 
 **请求 `params`**
 
@@ -1263,14 +1252,10 @@ business_ok = (response.code == 0) AND (payload.result == true)
 |---|---|---|---|
 | `id` | string | 是 | 文件 id；客户端自定义，需保证不与已存在的非系统文件冲突 |
 | `name` | string | 是 | 文件名（含扩展名，如 `"hello.mp3"`） |
-| `file` | string | 二选一 | **本地路径模式**：机器人侧能直接读到的文件绝对路径 |
-| `url` | string | 二选一 | **远程下载模式**：HTTP URL，机器人会拉取后入库 |
+| `url` | string | 是 | **远程下载模式**：HTTP URL，机器人会拉取后入库 |
 | `describe` | string | 否 | 备注 / 描述 |
 
 ```jsonc
-// 本地路径模式（板内部署）
-{ "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": { "id": "custom_1", "name": "hello.mp3", "file": "/var/audio/hello.mp3", "describe": "示例" } }
-
 // 远程下载模式（外部主机部署）
 { "call": { "clientId": "0xGUefQ7T9VWxulv" }, "params": { "id": "custom_1", "name": "hello.mp3", "url": "http://192.168.1.x:8000/audio/hello.mp3", "describe": "示例" } }
 ```
@@ -1282,8 +1267,7 @@ business_ok = (response.code == 0) AND (payload.result == true)
 - 新增成功后，文件归类为 `customVoice`，可通过 `getAudioPlayList` 查询，亦可作为 `startPlayList` / `deleteAudioFile` 的 `id` 入参
 - 支持的音频格式：`mp3` / `wav` 等常见格式；具体支持列表与单文件大小上限由设备方按机型给出
 - `url` 模式：RPC 返回成功不保证下载入库完成。建议添加请求设置 30s 超时，并另行轮询 `getAudioPlayList`，直到目标 ID 出现再播放；轮询也应设置超时。
-- `file` 模式：路径必须是机器人能访问的；走 NAS / 共享盘时确认挂载与读权限
-- 典型失败：`0x01 paramsTypeError` / `0x02 paramsDeletion`（字段错）；`0x08 outOfDeviceCaps`（达到设备最大可存储音频数）；`id` 冲突（与已有非系统文件相同）；`url` 拉取失败 / `file` 路径不存在
+- 典型失败：`0x01 paramsTypeError` / `0x02 paramsDeletion`（字段错）；`0x08 outOfDeviceCaps`（达到设备最大可存储音频数）；`id` 冲突（与已有非系统文件相同）；`url` 拉取失败
 
 ##### `deleteAudioFile`
 

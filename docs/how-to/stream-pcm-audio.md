@@ -7,7 +7,7 @@ Media is enabled by default on x86_64, i386, and aarch64. SDK and device softwar
 | Mode | Capture / playback | Initialization |
 |---|---|---|
 | Local Orin | SHM audio/video capture, PCM RawBack playback, layout queries | `media.setup()` |
-| Remote PC | Network PCM capture and RawBack playback | `media.setup(host)`, with the DV500 address |
+| Remote PC | Network PCM capture and RawBack playback | `media.setup(host)`, with the cerebellum controller address |
 
 Remote video subscriptions and layout queries return `kNotSupported`. Connect a High-level client before creating MediaBus. For remote audio, ensure the host can reach the robot and that its audio service and capture channels are enabled. Before local capture, check that the channels in `/etc/robot/sdk_config.json` match the device; see [local capture configuration](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/docs/media-capture.md).
 
@@ -17,7 +17,7 @@ Python remote playback with simultaneous capture from source 0:
 
 ```bash
 sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" python3 examples/example_audio_rawback.py input.pcm \
-  --host <DV500_IP> --device-id <ROBOT_SN> --interface <DDS_INTERFACE> \
+  --host <ROBOT_IP> --device-id <ROBOT_SN> --interface <DDS_INTERFACE> \
   --volume 20 --capture-channel 0
 ```
 
