@@ -9,7 +9,7 @@ x86_64、i386 和 aarch64 默认启用媒体接口。SDK 与设备软件必须�
 | Orin 本机 | SHM 音视频采集、PCM RawBack 播放、布局查询 | `media.setup()` |
 | 远端 PC | 网络 PCM 采集与 RawBack 播放 | `media.setup(host)`，host 为 DV500 地址 |
 
-远端模式不支持视频订阅或布局查询，返回 `kNotSupported`。先建立 High-level client 连接，再创建 MediaBus client。远端音频使用设备 TCP 1000 服务；设备音频服务及对应通道必须已配置并运行。本机模式使用 `/etc/robot/sdk_config.json` 的 `streamDefine` 和 SHM，RawBack 通道为 `robotsdk.audioRawBack`。
+远端模式不支持视频订阅或布局查询，返回 `kNotSupported`。先建立 High-level client 连接，再创建 MediaBus client。远端音频需保证主机能够访问机器人，且设备音频服务及对应采集通道已启用。本机采集前需确认 `/etc/robot/sdk_config.json` 中的通道配置与设备一致，详见[本机采集配置](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/docs/media-capture.zh-CN.md)。
 
 ## 运行完整示例
 

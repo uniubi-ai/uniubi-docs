@@ -9,7 +9,7 @@ Media is enabled by default on x86_64, i386, and aarch64. SDK and device softwar
 | Local Orin | SHM audio/video capture, PCM RawBack playback, layout queries | `media.setup()` |
 | Remote PC | Network PCM capture and RawBack playback | `media.setup(host)`, with the DV500 address |
 
-Remote video subscriptions and layout queries return `kNotSupported`. Connect a High-level client before creating MediaBus. Remote audio uses the device service on TCP 1000; its audio service and channels must be configured and running. Local deployment uses `streamDefine` in `/etc/robot/sdk_config.json` and SHM, with RawBack channel `robotsdk.audioRawBack`.
+Remote video subscriptions and layout queries return `kNotSupported`. Connect a High-level client before creating MediaBus. For remote audio, ensure the host can reach the robot and that its audio service and capture channels are enabled. Before local capture, check that the channels in `/etc/robot/sdk_config.json` match the device; see [local capture configuration](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/docs/media-capture.md).
 
 ## Run the complete example
 
