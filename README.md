@@ -6,6 +6,10 @@ Uniubi Docs is the central documentation site for developing with Uniubi robots.
 
 > For secondary-development access applications, device binding, and related setup guides, see the [Application Development documentation](https://help.uni-ubi.com/docs/cyvet/app-development/) and follow the instructions to complete the required preparations.
 
+## Robot Version Requirement
+
+Required robot software version: [Cyvet-V1.00.000](http://192.168.1.8/RobotRelease/System/littleDog/Release/dv500/Cyvet-V1.00.000).
+
 ## Quick Start
 
 Choose a control mode first. For High-level, choose the application runtime next, then select an implementation. Do not begin by choosing a programming language or repository.
