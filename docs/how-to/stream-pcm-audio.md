@@ -1,5 +1,7 @@
 # PCM audio capture and playback
 
+For generic ARM64 external hosts, select `aarch64_host`: build with `-DPLATFORM=aarch64_host` (Python: `-Ccmake.define.PLATFORM=aarch64_host`) and load `lib/aarch64_host/`. Media support matches x86 remote mode: remote audio only. Orin local video/layout examples still use `aarch64`.
+
 Media is enabled by default on x86_64, i386, and aarch64. SDK and device software versions must match.
 
 | Mode | Capture / playback | Initialization |

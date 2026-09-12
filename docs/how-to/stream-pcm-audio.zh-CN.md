@@ -1,5 +1,7 @@
 # PCM 音频采集与播放
 
+普通 ARM64 外部主机请选择 `aarch64_host`：构建传入 `-DPLATFORM=aarch64_host`（Python 为 `-Ccmake.define.PLATFORM=aarch64_host`），运行时使用 `lib/aarch64_host/`。其媒体能力与 x86 远端模式相同，仅支持远程音频；Orin 本地视频/布局示例仍使用 `aarch64`。
+
 x86_64、i386 和 aarch64 默认启用媒体接口。SDK 与设备软件必须版本匹配。
 
 | 模式 | 采集 / 播放 | 初始化 |

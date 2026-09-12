@@ -13,6 +13,42 @@
 
 ---
 
+## 普通 ARM64 外部主机（`aarch64_host`）
+
+机器人非大脑板的 ARM64 Linux 主机使用 `aarch64_host`，支持远端 High-level 控制、PCM 采集和 RawBack 播放，媒体后端与 x86 相同。Low-level 共享内存控制、本地视频和布局访问要求在机器人大脑板运行。
+
+两个平台都是 ARM64 CPU：仅设置 `CMAKE_SYSTEM_PROCESSOR=aarch64` 仍选择 Orin 的 `lib/aarch64/`。必须显式传入 `-DPLATFORM=aarch64_host` 才会选择 `lib/aarch64_host/`，通过 `find_package(UniubiRobotSdk)` 使用已安装 SDK 时也需要传入。切换平台请使用新的构建目录。
+
+交付的 host 库不依赖 NVIDIA 媒体库。目标系统需要 glibc ≥ 2.34、提供 `GLIBCXX_3.4.30` 的 libstdc++（GCC 12 或更新的运行库）及 `libatomic.so.1`。请完整携带同版本 `lib/aarch64_host/`，包括 DDS 等配套依赖。
+
+在普通 ARM64 主机的 C++ SDK 仓库中原生构建：
+
+```bash
+cmake -S . -B build-aarch64-host -DPLATFORM=aarch64_host
+cmake --build build-aarch64-host -j
+cmake --install build-aarch64-host --prefix "$HOME/.local/uniubi-aarch64-host"
+export SDK_ARCH=aarch64_host
+export LD_LIBRARY_PATH="$PWD/lib/$SDK_ARCH:${LD_LIBRARY_PATH:-}"
+```
+
+从 x86 交叉编译时，在配置命令中增加 `-DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-aarch64-linux-gnu.cmake`，并安装通用 GNU `gcc-aarch64-linux-gnu` / `g++-aarch64-linux-gnu` 工具链。将产物部署到 ARM64 主机运行。该平台默认不开启 Orin TensorRT 示例。
+
+在目标 ARM64 主机的 Python SDK 仓库中，使用目标 Python 构建：
+
+```bash
+export UNIUBI_SDK_ROOT=/path/to/uniubi_robot_sdk
+python3 -m pip install . -Ccmake.define.PLATFORM=aarch64_host -Cbuild-dir=build/aarch64_host
+export SDK_ARCH=aarch64_host
+export LD_LIBRARY_PATH="$UNIUBI_SDK_ROOT/lib/$SDK_ARCH:${LD_LIBRARY_PATH:-}"
+# 或生成该 host 平台的 wheel：
+python3 -m pip wheel . --no-deps -w dist/aarch64_host -Ccmake.define.PLATFORM=aarch64_host -Cbuild-dir=build/aarch64_host
+```
+
+Python wheel 不内置 SDK 运行库。Orin 和外部主机 wheel 可能具有相同的 `linux_aarch64` 标签，请保留按平台区分的产物目录并配套使用运行库；wheel 标签无法区分部署平台。SDK 头文件、运行库、扩展与设备软件必须版本匹配。
+
+远程媒体需先通过设备 ID 连接 High-level 客户端，再调用 `media.setup(robot_ip)`。使用 C++ `example_audio_rawback` 或 Python `example_audio_rawback.py --host ROBOT_IP --device-id DEVICE_ID` 并提供 PCM 文件。远端视频订阅和布局查询返回 `kNotSupported`。
+
+
 ## 0. 前置依赖
 
 | 依赖 | 要求 |
@@ -48,6 +84,7 @@ uniubi_robot_sdk/
 │   └── UBase/                     Delegate / Define 等基础设施头
 ├── lib/                           SDK 运行库，按目标架构分子目录
 │   ├── x86_64/   librobotMotionSdk.so  libmediaBus.so  libudbus.so  libubase.so
+│   ├── aarch64_host/  librobotMotionSdk.so  libmediaBus.so  libudbus.so  libubase.so
 │   ├── aarch64/  librobotMotionSdk.so  libmediaBus.so  libudbus.so  libubase.so
 │   └── i386/     librobotMotionSdk.so  libmediaBus.so  libudbus.so  libubase.so
 ├── examples/                      C++ 示例
@@ -96,14 +133,14 @@ CMake 在 `lib/<arch>/` 下查找 `librobotMotionSdk.so`、`libmediaBus.so`、`l
 2. `${CMAKE_CURRENT_SOURCE_DIR}/lib/<arch>`（仓库内自带）
 3. `/opt/uniubi/lib/<arch>`（默认前缀）
 
-> x86_64、i386、aarch64 默认开启 MediaBus。Orin 本机模式支持视频、音频和布局查询；远端模式通过 `media.setup(host)` 支持 PCM 采集和 RawBack 播放。远端视频订阅和布局查询返回 `kNotSupported`。SDK 头文件、运行库、Python 扩展与设备软件必须版本匹配。
+> x86_64、i386、aarch64、aarch64_host 默认开启 MediaBus。Orin 本机模式支持视频、音频和布局查询；远端模式通过 `media.setup(host)` 支持 PCM 采集和 RawBack 播放。远端视频订阅和布局查询返回 `kNotSupported`。SDK 头文件、运行库、Python 扩展与设备软件必须版本匹配。
 
 `<arch>` 由 `CMAKE_SYSTEM_PROCESSOR` 自动决定：
 
 | CMAKE_SYSTEM_PROCESSOR | 选用子目录 |
 |---|---|
 | `x86_64` / `amd64` / `AMD64` | `x86_64` |
-| `aarch64` / `arm64` / `ARM64` | `aarch64` |
+| `aarch64` / `arm64` / `ARM64` | `PLATFORM=aarch64_host` 时为 `aarch64_host`，否则为 `aarch64` |
 | `i386` / `i486` / `i586` / `i686` / `x86` | `i386` |
 
 交叉编译时由工具链文件设置 `CMAKE_SYSTEM_PROCESSOR`，无需手动指定目标 arch。
@@ -274,7 +311,7 @@ SDK CMake 在 aarch64 交叉链接时允许这些目标端符号保持未解析�
 export SDK_ROOT="${SDK_ROOT:-$HOME/uniubi_robot_sdk}"
 case "$(uname -m)" in
   x86_64|amd64) SDK_ARCH=x86_64 ;;
-  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  aarch64|arm64) SDK_ARCH=${SDK_ARCH:-aarch64} ;;
   i386|i486|i586|i686) SDK_ARCH=i386 ;;
   *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
 esac
@@ -319,7 +356,7 @@ High-level CLI 启动后输入 `status`、`motors`、`sensor 5`、`odom 5` 做�
 git clone https://github.com/uniubi-ai/uniubi_robot_sdk_py.git ~/uniubi_robot_sdk_py
 case "$(uname -m)" in
   x86_64|amd64) SDK_ARCH=x86_64 ;;
-  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  aarch64|arm64) SDK_ARCH=${SDK_ARCH:-aarch64} ;;
   i386|i486|i586|i686) SDK_ARCH=i386 ;;
   *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
 esac
@@ -359,7 +396,7 @@ Python native binding 使用 `UNIUBI_SDK_ENABLE_MEDIA` 控制是否编译媒体�
 
 运行时可用 `sdk.MEDIA_ENABLED` 判断当前 wheel 是否包含媒体绑定。`False` 时 `create_media_bus_client()` 抛出 `RuntimeError("MediaBus is not available in this SDK build")`，`robot_motion_sdk.media_frame` 导入抛出 `ImportError("MediaBus is not available in this SDK build")`。
 
-x86_64、i386、aarch64 默认开启 MediaBus。Orin 本机模式支持视频、音频和布局查询；远端模式通过 `media.setup(host)` 支持 PCM 采集和 RawBack 播放。远端视频订阅和布局查询返回 `kNotSupported`。SDK 头文件、运行库、Python 扩展与设备软件必须版本匹配。
+x86_64、i386、aarch64、aarch64_host 默认开启 MediaBus。Orin 本机模式支持视频、音频和布局查询；远端模式通过 `media.setup(host)` 支持 PCM 采集和 RawBack 播放。远端视频订阅和布局查询返回 `kNotSupported`。SDK 头文件、运行库、Python 扩展与设备软件必须版本匹配。
 
 ### C. 生成 wheel（分发给客户）
 
@@ -382,7 +419,7 @@ python3 -m pip install uniubi_robot_motion_sdk-1.0.0-cp310-cp310-linux_aarch64.w
 每个组合产一份 wheel：
 
 ```
-(x86_64 / aarch64 / i386)  ×  (cp38 / cp39 / cp310 / cp311 / cp312)  =  15 wheels
+(x86_64 / aarch64 / aarch64_host / i386) × (cp38 / cp39 / cp310 / cp311 / cp312) = 20 platform/ABI builds
 ```
 
 推荐流程：
@@ -413,7 +450,7 @@ python3 -m pip install uniubi_robot_motion_sdk-1.0.0-cp310-cp310-linux_aarch64.w
 export SDK_ROOT="${SDK_ROOT:-$HOME/uniubi_robot_sdk}"
 case "$(uname -m)" in
   x86_64|amd64) SDK_ARCH=x86_64 ;;
-  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  aarch64|arm64) SDK_ARCH=${SDK_ARCH:-aarch64} ;;
   i386|i486|i586|i686) SDK_ARCH=i386 ;;
   *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
 esac
@@ -441,7 +478,7 @@ print('clients:', sdk.MotionLowLevelClient, sdk.MotionHighLevelClient)
 export SDK_ROOT="${SDK_ROOT:-$HOME/uniubi_robot_sdk}"
 case "$(uname -m)" in
   x86_64|amd64) SDK_ARCH=x86_64 ;;
-  aarch64|arm64) SDK_ARCH=aarch64 ;;
+  aarch64|arm64) SDK_ARCH=${SDK_ARCH:-aarch64} ;;
   i386|i486|i586|i686) SDK_ARCH=i386 ;;
   *) echo "Unsupported architecture: $(uname -m)"; exit 1 ;;
 esac
