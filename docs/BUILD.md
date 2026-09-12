@@ -22,7 +22,7 @@ Related documents:
 | CMake | ≥ 3.18 |
 | Python development files | Python 3.8+ and `python3-dev` for Python bindings |
 | System runtime libraries | Installed on the target and available through the standard dynamic-library search path |
-| SDK runtime libraries | `librobotMotionSdk.so`, `libmediaBus.so`, `libudbus.so`, and `libubase.so` from one version and architecture; `MediaBusClient` supports local on-board media subscription on `aarch64` only |
+| SDK runtime libraries | `librobotMotionSdk.so`, `libmediaBus.so`, `libudbus.so`, and `libubase.so` from one version and architecture; MediaBus supports local Orin audio/video and remote audio |
 
 ---
 
@@ -89,13 +89,13 @@ cmake -S . -B build
 cmake --build build -j$(nproc)
 ```
 
-CMake searches for `librobotMotionSdk.so`, `libmediaBus.so`, and `libubase.so` under `lib/<arch>/`. Dynamic loading also requires `libudbus.so` from the same directory. Keep all four libraries at the same version and architecture. The `aarch64` target builds the media example by default. Search order:
+CMake searches for `librobotMotionSdk.so`, `libmediaBus.so`, and `libubase.so` under `lib/<arch>/`. Dynamic loading also requires `libudbus.so` from the same directory. Keep all four libraries at the same version and architecture. All supported architectures build the media and audio examples by default. Search order:
 
 1. `${UNIUBI_SDK_ROOT}/lib/<arch>` (`-D` command line or environment variable)
 2. `${CMAKE_CURRENT_SOURCE_DIR}/lib/<arch>` (included in the repository)
 3. `/opt/uniubi/lib/<arch>` (default prefix)
 
-> Media-frame subscription supports only local on-board deployment on `aarch64`. `x86_64` and `i386` builds do not enable `example_media_frames`; applications on those platforms must not call `createMediaBusClient()`, `setup()`, or `start*Frame()`. Keep the delivered `.so` files as a matched version and architecture set even when the application does not call a media interface.
+> MediaBus is enabled by default on x86_64, i386, and aarch64. Local Orin deployment supports video, audio, and layout queries; remote deployment supports PCM capture and RawBack playback via `media.setup(host)`. Remote video subscriptions and layout queries return `kNotSupported`. SDK headers, runtime libraries, Python extensions, and device software must use matching versions.
 
 `<arch>` is automatically determined by `CMAKE_SYSTEM_PROCESSOR`:
 
@@ -159,7 +159,7 @@ This target uses the CUDA 12.6 and TensorRT 10.3 C++ development files provided 
 
 | Output | Location |
 |---|---|
-| C++ examples | `build/examples/example_lowlevel`, `build/examples/example_highlevel`; `aarch64` additionally builds `example_media_frames`; native Orin additionally builds `example_lowlevel_tensorrt` |
+| C++ examples | `build/examples/example_lowlevel`, `build/examples/example_highlevel`; all supported architectures also build `example_media_frames`, `example_audio`, and `example_audio_rawback`; native Orin additionally builds `example_lowlevel_tensorrt` |
 | Installed examples | `<prefix>/bin/example_lowlevel`, `<prefix>/bin/example_highlevel`, plus examples enabled by the media and TensorRT build options |
 | CMake package | `<prefix>/lib/cmake/UniubiRobotSdk/` |
 
@@ -338,11 +338,11 @@ The Python native binding uses `UNIUBI_SDK_ENABLE_MEDIA` to control media-frame 
 
 | Variable | Default | Description |
 |---|---|---|
-| `UNIUBI_SDK_ENABLE_MEDIA` | `aarch64=ON`; `x86_64/i386=OFF` | An `OFF` build retains LowLevel/HighLevel motion interfaces; `create_media_bus_client()` reports that MediaBus is unavailable |
+| `UNIUBI_SDK_ENABLE_MEDIA` | `ON` on all supported architectures | An `OFF` build retains LowLevel/HighLevel motion interfaces; `create_media_bus_client()` reports that MediaBus is unavailable |
 
 At runtime, use `sdk.MEDIA_ENABLED` to determine whether the wheel includes media bindings. When it is `False`, `create_media_bus_client()` raises `RuntimeError("MediaBus is not available in this SDK build")`, and importing `robot_motion_sdk.media_frame` raises `ImportError("MediaBus is not available in this SDK build")`.
 
-Media-frame subscription supports only local on-board `aarch64` deployment. `x86_64` and `i386` wheels disable media bindings by default and cannot use the media client.
+MediaBus is enabled by default on x86_64, i386, and aarch64. Local Orin deployment supports video, audio, and layout queries; remote deployment supports PCM capture and RawBack playback via `media.setup(host)`. Remote video subscriptions and layout queries return `kNotSupported`. SDK headers, runtime libraries, Python extensions, and device software must use matching versions.
 
 ### C. Build a distributable wheel
 
@@ -371,7 +371,7 @@ Each combination produces a separate wheel:
 Recommended approach:
 
 - Run the matrix with `cibuildwheel` and GitHub Actions or another CI system.
-- Use `auditwheel repair` to bundle `librobotMotionSdk.so`, `libmediaBus.so`, `libudbus.so`, `libubase.so`, and required transitive dependencies. `aarch64` wheels default to `MEDIA_ENABLED=True`; `x86_64` and `i386` wheels default to `False`.
+- Use `auditwheel repair` to bundle `librobotMotionSdk.so`, `libmediaBus.so`, `libudbus.so`, `libubase.so`, and required transitive dependencies. all supported architecture wheels default to `MEDIA_ENABLED=True`.
 - Verify that the resulting wheel can be installed with a single `pip install` command.
 
 ---

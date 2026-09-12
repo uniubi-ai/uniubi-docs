@@ -6,7 +6,7 @@
 
 Python 模块：`robot_motion_sdk`
 
-> MediaBus Python API 仅支持 SDK 与机器人运行时同机的 `aarch64` 板载环境。`x86_64` / `i386` wheel 默认不包含媒体帧 binding。
+> x86_64、i386、aarch64 默认开启 MediaBus。Orin 本机模式支持视频、音频和布局查询；远端模式通过 `media.setup(host)` 支持 PCM 采集和 RawBack 播放。远端视频订阅和布局查询返回 `kNotSupported`。SDK 头文件、运行库、Python 扩展与设备软件必须版本匹配。
 
 ## 一、API 一览
 
@@ -14,7 +14,7 @@ Python 模块：`robot_motion_sdk`
 |---|---|
 | 检查 binding | `sdk.MEDIA_ENABLED` |
 | 创建客户端 | `client.create_media_bus_client()` |
-| 启动 / 关闭 | `media.setup()` / `media.shutdown()` |
+| 启动 / 关闭 | `media.setup(host="")` / `media.shutdown()` |
 | 查询布局 | `media.get_media_layout()` |
 | 原始视频 | `start_raw_video_frame()` / `stop_raw_video_frame()` |
 | 原始音频 | `start_raw_audio_frame()` / `stop_raw_audio_frame()` |
@@ -57,7 +57,7 @@ sdk.service.shutdown()
 
 `MediaBusClient` 支持 `with` 上下文（退出自动 `shutdown`）。完整示例：`uniubi_robot_sdk_py/examples/example_media_frames.py`，仅 `aarch64` 板内本地部署运行。
 
-Python native binding 使用 `UNIUBI_SDK_ENABLE_MEDIA` 控制媒体帧绑定。默认值为 `aarch64=ON`、`x86_64/i386=OFF`。`sdk.MEDIA_ENABLED == False` 时，`robot_motion_sdk.media_frame` 不可导入，`MediaBusError` 为 `None`，不会提供媒体帧类型。
+Python native binding 使用 `UNIUBI_SDK_ENABLE_MEDIA` 控制媒体帧绑定。所有支持架构默认 `ON`。`sdk.MEDIA_ENABLED == False` 时，`robot_motion_sdk.media_frame` 不可导入，`MediaBusError` 为 `None`，不会提供媒体帧类型。
 
 ## 三、帧数据访问
 
@@ -100,3 +100,12 @@ Python native binding 使用 `UNIUBI_SDK_ENABLE_MEDIA` 控制媒体帧绑定。�
 - **回调在 SDK 媒体线程触发**：回调里不要做重活 / 阻塞，避免拖累后续帧；耗时处理转交自己的队列 / 线程。
 - **原始视频按平面读**：见 §4.1，勿把 `data()` 当连续整图。
 - **退出务必 `shutdown()`**：否则订阅线程不退，且与 GC / 析构争用可能死锁（使用 `with` 或 `try/finally` 显式清理）。
+
+
+## PCM audio / RawBack
+
+先调用 `media.setup(host)`（本机省略 host），再调用 `create_audio_raw_back()` 获取播放对象，依次调用 `setup()`、等待 `ready()`、`set_volume()`、`write(frame)`。结束时调用播放对象 `shutdown()`，再关闭媒体 client。`reset()` 清空播放队列。仅支持 16 kHz、s16le、单声道 PCM。
+
+`setup()` 成功只表示初始化或连接启动；通过实际回调统计验证采集，通过设备输出验证播放。采集回调可以保留 AudioFrame；停止订阅及关闭请在业务控制线程调用。
+
+[PCM audio guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/stream-pcm-audio.zh-CN.md).

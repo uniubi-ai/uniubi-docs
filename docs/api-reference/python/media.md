@@ -6,7 +6,7 @@
 
 Python module: `robot_motion_sdk`
 
-> The MediaBus Python API is supported only when the SDK and robot runtime run together on an onboard `aarch64` system. The `x86_64` and `i386` wheels do not include media-frame bindings by default.
+> MediaBus is enabled by default on x86_64, i386, and aarch64. Local Orin deployment supports video, audio, and layout queries; remote deployment supports PCM capture and RawBack playback via `media.setup(host)`. Remote video subscriptions and layout queries return `kNotSupported`. SDK headers, runtime libraries, Python extensions, and device software must use matching versions.
 
 ## 1. API Overview
 
@@ -14,13 +14,13 @@ Python module: `robot_motion_sdk`
 |---|---|
 | Check bindings | `sdk.MEDIA_ENABLED` |
 | Create client | `client.create_media_bus_client()` |
-| Start / stop | `media.setup()` / `media.shutdown()` |
+| Start / stop | `media.setup(host="")` / `media.shutdown()` |
 | Query layout | `media.get_media_layout()` |
 | Raw video | `start_raw_video_frame()` / `stop_raw_video_frame()` |
 | Raw audio | `start_raw_audio_frame()` / `stop_raw_audio_frame()` |
 | Encoded video | `start_encoded_video_frame()` / `stop_encoded_video_frame()` |
 
-## 2. Usage Example
+## 2. Local video example
 
 ```python
 import robot_motion_sdk as sdk
@@ -57,7 +57,7 @@ sdk.service.shutdown()
 
 `MediaBusClient` supports the `with` context manager, which calls `shutdown()` on exit. The complete example is `uniubi_robot_sdk_py/examples/example_media_frames.py` and runs only in local `aarch64` deployment.
 
-The native Python binding uses `UNIUBI_SDK_ENABLE_MEDIA` to control media-frame bindings. The defaults are `aarch64=ON` and `x86_64/i386=OFF`. When `sdk.MEDIA_ENABLED == False`, `robot_motion_sdk.media_frame` cannot be imported, `MediaBusError` is `None`, and media frame types are unavailable.
+The native Python binding uses `UNIUBI_SDK_ENABLE_MEDIA` to control media-frame bindings. The default is `ON` on all supported architectures. When `sdk.MEDIA_ENABLED == False`, `robot_motion_sdk.media_frame` cannot be imported, `MediaBusError` is `None`, and media frame types are unavailable.
 
 ## 3. Frame Data Access
 
@@ -100,3 +100,11 @@ The callback receives a `VideoFrame`, `AudioFrame`, or `EncodedVideoFrame` wrapp
 - **Callbacks run on the SDK media thread:** do not block or perform expensive work in a callback. Hand off time-consuming processing to an application queue or worker thread.
 - **Read raw video by plane:** as described in §4.1, do not assume that `data()` contains one contiguous image.
 - **Call `shutdown()` before exit:** otherwise subscription threads may remain active and deadlock with garbage collection or destruction. Use `with` or `try/finally` for explicit cleanup.
+
+## PCM audio / RawBack
+
+Call `media.setup(host)` (omit host locally), then `create_audio_raw_back()` to obtain playback. Call `setup()`, wait for `ready()`, then use `set_volume()` and `write(frame)`. Call playback `shutdown()` before shutting down the media client. `reset()` clears the playback queue. PCM must be 16 kHz, s16le, mono.
+
+Successful setup indicates initialization or connection startup; verify capture by counting actual frames and playback at the device output. AudioFrame objects may be retained after capture callbacks. Stop subscriptions and shut down on the application control thread.
+
+[PCM audio guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/stream-pcm-audio.md).

@@ -13,7 +13,7 @@ Voice playback, microphone audio, camera video, and camera lights are separate c
 | Raw microphone audio | MediaBus | MediaBus | Independent of motion control |
 | Raw / encoded camera video | MediaBus | MediaBus | Independent of motion control |
 
-> MediaBus supports local on-board deployment on `aarch64` only. Confirm `sdk.MEDIA_ENABLED == True` before use. Remote PCs, multi-device mode, `x86_64`, and `i386` do not provide media-frame subscriptions.
+> MediaBus is enabled by default on x86_64, i386, and aarch64. Local Orin deployment supports video, audio, and layout queries; remote deployment supports PCM capture and RawBack playback via `media.setup(host)`. Remote video subscriptions and layout queries return `kNotSupported`. SDK headers, runtime libraries, Python extensions, and device software must use matching versions.
 
 ## High-level: play voice audio
 

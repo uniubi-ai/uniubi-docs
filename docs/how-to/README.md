@@ -38,3 +38,5 @@ Each guide addresses a specific development task. It defines the goal and prereq
 |---|---|---|
 | Train, export, and replay a policy | [Policy training and replay](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/train-export-replay.md) | During Low-level policy development |
 | Validate the SDK path without hardware | [Mock / Sim2Sim](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/mock-sim2sim.md) | Before real-robot SDK testing |
+
+- [Onboard PCM audio capture and playback](stream-pcm-audio.md)

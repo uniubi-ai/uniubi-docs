@@ -987,9 +987,11 @@ media->stopRawVideoFrame(0);
 media->shutdown();
 ```
 
+Remote mode requires the DV500 host and supports PCM capture and RawBack playback; video and layout queries require local mode. See [MediaBus](media.md).
+
 | Method | Description |
 |---|---|
-| `bool setup()` | Initialize media bus connection (must be called before subscribing) |
+| `bool setup(std::string host = {})` | Initialize media bus connection (must be called before subscribing) |
 | `void shutdown()` | Disconnect the media bus and stop all subscriptions |
 | `int32_t getLastError() const` | Reason for the last failure (`MediaBusError`) |
 | `bool getMediaLayout(MediaLayout& layout)` | Query the audio and video hardware layout (`micNum` / `cameraNum` / `videoEncoderNum`) |
@@ -1014,6 +1016,10 @@ media->shutdown();
 | `kInvalidCallback` | Frame callback is empty |
 | `kSourceUnavailable` | Encoding source unavailable (creation failed / no video track) |
 | `kSourceStartFailed` | Failed to start encoding source |
+| `kInvalidParam` | Invalid parameter |
+| `kCaptureFailed` | Capture registration failed |
+| `kConnectFailed` | Remote connection startup failed |
+| `kNotSupported` | Unsupported in this deployment mode |
 
 **`VideoFrame` raw frame format**
 

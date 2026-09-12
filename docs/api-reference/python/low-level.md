@@ -51,7 +51,7 @@ finally:
 | `getState / getLastError` | `get_state()` / `get_last_error()` (return enum) |
 | `setMotionEnable` | `set_motion_enable(enable)` |
 | `emergencyStop` | `emergency_stop(timeout_ms=5000)` |
-| `createMediaBusClient` | `create_media_bus_client()`; return `MediaBusClient` (the same client reuses the same instance, only `aarch64` on-board local media frame subscription is used; Python needs to confirm `sdk.MEDIA_ENABLED == True` first) |
+| `createMediaBusClient` | Media entry point for local Low-level deployment; use a High-level client for remote audio. See the MediaBus reference. |
 | `sendControl(action[, cmd])` | `send_control(action, cmd=None)`; `action` is `sdk.MotorCtrlAction()`, and the action-related control frame is transmitted to `sdk.LowLevelMotionCmd()` and filled in `action/ac_name` |
 | `sendMaxTorque(action)` | `send_max_torque(action)`; use `action.motors[i].torque` to represent the target maximum torque |
 | `getLatestObservation` | `get_latest_observation(timeout_ms=5)`; return `LowLevelMotionObserved` or `None` |

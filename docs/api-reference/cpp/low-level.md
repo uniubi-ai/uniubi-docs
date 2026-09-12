@@ -306,7 +306,7 @@ auto client = IMotionLowLevelClient::create();
 | `int32_t getState() const` | Any | Current `LowLevelState` |
 | `int32_t getLastError() const` | Any | The last failure reason for clearing after reading |
 | `void setConnectCallback(ConnectCallback cb)` | Any | Registration status callback |
-| `IMediaBusClient::Ptr createMediaBusClient()` | Any | Create an audio and video frame subscription channel; only used for local media frame subscription on the `aarch64` board (see the MediaBus documentation for usage) |
+| `IMediaBusClient::Ptr createMediaBusClient()` | Any | Media entry point for local Low-level deployment; use a High-level client for remote audio. See the MediaBus reference. |
 | `bool restoreMotionControlMode(uint32_t timeoutMs = 5000)` | `kConnected` | Restore the motion-control mode to the factory default; synchronize RPC, timeout unit ms |
 
 #### `connect`’s timeout and retry strategy (important)

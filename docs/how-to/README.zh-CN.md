@@ -38,3 +38,5 @@
 |---|---|---|
 | 训练、导出和回放策略 | [训练与策略回放](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/train-export-replay.zh-CN.md) | Low-level 策略开发 |
 | 没有真机，先验证 SDK 链路 | [Mock / Sim2Sim](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/mock-sim2sim.zh-CN.md) | SDK 链路验证 |
+
+- [本机 PCM 音频采集与播放](stream-pcm-audio.zh-CN.md)
