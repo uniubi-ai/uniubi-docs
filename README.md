@@ -52,6 +52,7 @@ Joint-level Low-level control uses the SDK. ROS 2 Motion Bridge does not provide
 - [Read sensor and motion observations](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/read-sensor-data.md): read GPS, UWB, motors, IMU, power, and High-level Walk odometry.
 - [Query device status](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/query-device-status.md): distinguish complete system status from Low-level lightweight power observations.
 - [Use voice, lights, and media frames](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/use-media-and-device-io.md): integrate voice playback, camera lights, video, and microphone data.
+- [Stream camera video over RTSP](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/use-media-and-device-io.md#rtsp-remote-camera-streaming): access two camera streams over Ethernet or Wi-Fi without the SDK.
 
 Each guide begins with a concrete task and an observable success criterion. See the [How-to guides](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/README.md) for additional development and troubleshooting workflows.
 

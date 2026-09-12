@@ -55,6 +55,7 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 - [读取传感器与运动观测](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/read-sensor-data.zh-CN.md)：读取 GPS、UWB、电机、IMU、电源和 High-level Walk 里程计。
 - [查询设备状态](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/query-device-status.zh-CN.md)：区分完整系统状态与 Low-level 轻量电源观测。
 - [使用语音、灯光和媒体帧](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/use-media-and-device-io.zh-CN.md)：接入语音播放、摄像头灯光、视频和麦克风数据。
+- [通过 RTSP 获取摄像头视频](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/use-media-and-device-io.zh-CN.md#rtsp远端摄像头取流)：使用有线或 Wi-Fi 地址访问两路视频，无需 SDK。
 
 每篇导读都从一个具体任务开始，不要求先认识全部仓库，也不要求先读完整 API。其他开发和排查专题可在 [操作指南](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/README.zh-CN.md) 中按需查阅。
 

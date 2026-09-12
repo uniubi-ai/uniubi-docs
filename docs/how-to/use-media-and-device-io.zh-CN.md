@@ -12,6 +12,7 @@
 | 摄像头灯光 | 支持 | 不支持 | High-level `kControlled` |
 | 麦克风原始音频 | MediaBus | MediaBus | 与运动控制权无关 |
 | 摄像头原始帧 / 编码帧 | MediaBus | MediaBus | 与运动控制权无关 |
+| RTSP 摄像头视频 | 无需 SDK | 无需 SDK | 与运动控制权无关 |
 
 > x86_64、i386、aarch64、aarch64_host 默认开启 MediaBus。Orin 本机模式支持视频、音频和布局查询；远端模式通过 `media.setup(host)` 支持 PCM 采集和 RawBack 播放。远端视频订阅和布局查询返回 `kNotSupported`。SDK 头文件、运行库、Python 扩展与设备软件必须版本匹配。
 
@@ -155,6 +156,45 @@ if not client.set_camera_light_brightness(50):
 ```
 
 亮度范围为 0–100，读取和设置均按 High-level API 的控制权要求执行。
+
+## RTSP：远端摄像头取流
+
+x86 host、ARM64 host 等外部主机可以通过 RTSP 直接获取摄像头视频，无需安装或初始化 Uniubi SDK，也不需要申请运动控制权。使用 VLC、FFplay 或其他支持 RTSP 的客户端即可。
+
+### 地址格式
+
+```text
+rtsp://<设备IP>:554/live?channel=<通道号>&stream=0
+```
+
+| 参数 | 说明 |
+|---|---|
+| 设备 IP | 支持设备的有线 IP 或 Wi-Fi IP，主机需能够访问该地址 |
+| `channel` | 支持两路 RTSP 流通道，取值为 `1` 或 `2` |
+| `stream` | 固定为 `0` |
+
+两路地址分别为：
+
+```text
+rtsp://<设备IP>:554/live?channel=1&stream=0
+rtsp://<设备IP>:554/live?channel=2&stream=0
+```
+
+### 播放视频
+
+在 VLC 的“打开网络串流”中粘贴上述地址，或在 host 上使用 FFplay。将下面的 `DEVICE_IP` 替换为设备的有线或 Wi-Fi IP；x86 host 与 ARM64 host 使用相同命令：
+
+```bash
+# 第一路
+ffplay -rtsp_transport tcp "rtsp://DEVICE_IP:554/live?channel=1&stream=0"
+
+# 第二路
+ffplay -rtsp_transport tcp "rtsp://DEVICE_IP:554/live?channel=2&stream=0"
+```
+
+命令中的 URL 需保留引号，避免 `&` 被 shell 当作后台执行符。退出播放器即可停止本次取流。
+
+RTSP 与 MediaBus SDK 的远端音频接口独立；SDK 远端视频订阅返回 `kNotSupported` 不影响通过上述 RTSP 地址访问摄像头。
 
 ## High-level / Low-level：订阅媒体帧
 

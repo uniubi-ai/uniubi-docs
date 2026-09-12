@@ -12,6 +12,7 @@ Voice playback, microphone audio, camera video, and camera lights are separate c
 | Camera light | Supported | Not supported | High-level `kControlled` |
 | Raw microphone audio | MediaBus | MediaBus | Independent of motion control |
 | Raw / encoded camera video | MediaBus | MediaBus | Independent of motion control |
+| RTSP camera video | No SDK required | No SDK required | Independent of motion control |
 
 > MediaBus is enabled by default on x86_64, i386, aarch64, and aarch64_host. Local Orin deployment supports video, audio, and layout queries; remote deployment supports PCM capture and RawBack playback via `media.setup(host)`. Remote video subscriptions and layout queries return `kNotSupported`. SDK headers, runtime libraries, Python extensions, and device software must use matching versions.
 
@@ -155,6 +156,45 @@ if not client.set_camera_light_brightness(50):
 ```
 
 Brightness ranges from 0 to 100. Follow the High-level API control requirements for both reading and writing.
+
+## RTSP: remote camera streaming
+
+External computers, including x86 and ARM64 hosts, can receive camera video directly over RTSP. No Uniubi SDK installation, initialization, or motion-control ownership is required. Use VLC, FFplay, or another RTSP client.
+
+### URL format
+
+```text
+rtsp://<DEVICE_IP>:554/live?channel=<CHANNEL>&stream=0
+```
+
+| Parameter | Description |
+|---|---|
+| Device IP | The device Ethernet or Wi-Fi IP address, reachable from the host |
+| `channel` | Two RTSP stream channels are available: `1` or `2` |
+| `stream` | Always `0` |
+
+The two stream URLs are:
+
+```text
+rtsp://<DEVICE_IP>:554/live?channel=1&stream=0
+rtsp://<DEVICE_IP>:554/live?channel=2&stream=0
+```
+
+### Play video
+
+Paste a URL into VLC's Open Network Stream dialog, or use FFplay on the host. Replace `DEVICE_IP` below with the device Ethernet or Wi-Fi IP address. The same commands apply to x86 and ARM64 hosts:
+
+```bash
+# First channel
+ffplay -rtsp_transport tcp "rtsp://DEVICE_IP:554/live?channel=1&stream=0"
+
+# Second channel
+ffplay -rtsp_transport tcp "rtsp://DEVICE_IP:554/live?channel=2&stream=0"
+```
+
+Keep the URL quoted so the shell does not interpret `&` as a background operator. Close the player to stop streaming.
+
+RTSP is independent of the MediaBus SDK remote-audio interface. A `kNotSupported` result from SDK remote-video subscriptions does not prevent camera access through these RTSP URLs.
 
 ## High-level / Low-level: subscribe to media frames
 
