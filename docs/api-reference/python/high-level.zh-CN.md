@@ -41,6 +41,7 @@ finally:
 | `version()` | `sdk.service.version()` —— 返回 SDK 版本字符串 |
 | `setLogCallback` | `sdk.service.set_log_callback(cb)`；签名 `(level: LogLevel, msg: str) -> None` |
 | `setNetworkInterface` | `sdk.service.set_network_interface(iface: str)` —— 外部主机指定实际网卡；大脑侧 High-level 指定 `eth0.100` |
+| `setNetworkConfig` | `sdk.service.set_network_config(config: dict 或 str) -> bool` —— 在 `initial` 前以 JSON 应用网络设置；字段：`iface`、`dont_route` |
 | `setDiscoverCallback` | `sdk.service.set_discover_callback(cb)`；签名 `(sn: str, info_json: str) -> None` |
 | `isMultiDevice` | `sdk.service.is_multi_device() -> bool` |
 | `discoverDevices` | `sdk.service.discover_devices(timeout_ms=10000) -> bool`（非阻塞） |
@@ -360,6 +361,7 @@ finally:
 - `robot_motion_sdk`、native binding 和 `librobotMotionSdk.so` 必须来自同一 SDK 版本与目标架构。
 - 所有退出路径都要显式 `disconnect()`，最后调用 `sdk.service.shutdown()`。
 - 大脑侧 High-level 必须在初始化前指定 `eth0.100`；外部主机必须指定实际连接机器人网络的网卡，并用目标设备 ID（SN）创建客户端。
+- **外部主机网线直连机器人网口时**，`initial` 之前用 `set_network_config` 开启 `dont_route`：机器人 Wi-Fi 同时开启时必须开启，否则 DDS 可能选中主机不可达的 Wi-Fi 地址；Wi-Fi 未开启时可保持默认。网络配置见[连接外设](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.zh-CN.md)。
 
 ## 六、常见问题
 

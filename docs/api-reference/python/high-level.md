@@ -41,6 +41,7 @@ finally:
 | `version()` | `sdk.service.version()` —— Returns the SDK version string |
 | `setLogCallback` | `sdk.service.set_log_callback(cb)`; signature `(level: LogLevel, msg: str) -> None` |
 | `setNetworkInterface` | `sdk.service.set_network_interface(iface: str)` — select the actual external-host interface, or `eth0.100` for High-level on the robot brain |
+| `setNetworkConfig` | `sdk.service.set_network_config(config: dict or str) -> bool` — apply JSON network settings before `initial`; fields: `iface`, `dont_route` |
 | `setDiscoverCallback` | `sdk.service.set_discover_callback(cb)`; signature `(sn: str, info_json: str) -> None` |
 | `isMultiDevice` | `sdk.service.is_multi_device() -> bool` |
 | `discoverDevices` | `sdk.service.discover_devices(timeout_ms=10000) -> bool` (non-blocking) |
@@ -358,6 +359,7 @@ finally:
 - `robot_motion_sdk`, its native binding, and `librobotMotionSdk.so` must come from the same SDK version and target architecture.
 - Every exit path must call `disconnect()` explicitly, followed by `sdk.service.shutdown()`.
 - Onboard High-level must select `eth0.100` before initialization. An external host must select the interface that actually reaches the robot and create the client with the target Device ID (SN).
+- When an external host is cabled straight into the robot Ethernet port, call `set_network_config` before `initial` with `dont_route` enabled. It is required when the robot Wi-Fi is also on (otherwise DDS may pick the unreachable Wi-Fi address) and optional otherwise. See [Connect Peripherals](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.md) for the network setup.
 
 ## 6. Troubleshooting
 

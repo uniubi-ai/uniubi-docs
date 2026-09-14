@@ -60,6 +60,8 @@ Success means that the expected device appears in USB enumeration and its applic
 
 ## 2. Connect an Ethernet Peripheral
 
+### 2.1 Connect a Peripheral to the Brain
+
 The robot brain does not currently run a DHCP server on the external Ethernet connection. Connecting a cable therefore does not automatically assign an IP address to the peripheral.
 
 Before testing connectivity:
@@ -84,6 +86,35 @@ Before testing connectivity:
 Do not copy an interface name or IP address from another robot without checking the current device. Network-interface names and delivered network settings may differ.
 
 Success means that the robot brain has an address in the peripheral's subnet and can reach the peripheral's IP address without an address conflict.
+
+### 2.2 Connect an External Host (Dev Board / PC) Directly to the Robot Cerebellum
+
+Typical use case: control the robot from your own compute device (dev board / PC) over the High-level SDK.
+
+> Verified on Orin dev boards only.
+
+Assign an IP address to the robot in two steps:
+
+1. Give the dev board eth0 a static address:
+
+   ```bash
+   sudo nmcli con mod "Wired connection 1" ipv4.method manual ipv4.addresses 192.168.50.1/24
+   sudo nmcli con up "Wired connection 1"
+   ```
+
+2. Start DHCP on the dev board to lease an address to the robot over Ethernet:
+
+   ```bash
+   sudo apt install -y dnsmasq
+   sudo tee /etc/dnsmasq.d/eth0-device.conf >/dev/null <<"EOF"
+   interface=eth0
+   bind-interfaces
+   port=0
+   dhcp-range=192.168.50.100,192.168.50.200,255.255.255.0,12h
+   dhcp-option=3,192.168.50.1
+   EOF
+   sudo systemctl enable --now dnsmasq
+   ```
 
 ## 3. Power an External Peripheral
 

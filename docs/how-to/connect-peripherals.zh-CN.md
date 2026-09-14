@@ -60,6 +60,8 @@
 
 ## 2. 连接网络外设
 
+### 2.1 连接大脑外设
+
 机器人大脑当前未在对外以太网连接上运行 DHCP 服务，因此连接网线后不会自动为外设分配 IP 地址。
 
 测试通信前：
@@ -84,6 +86,35 @@
 不要直接复制其他机器人的网卡名称或 IP 地址；不同设备的网卡名称和交付网络配置可能不同。
 
 成功标准是机器人大脑已经获得与外设同网段且不冲突的 IP 地址，并能够访问外设 IP。
+
+### 2.2 外部主机（开发板 / PC）直连机器人小脑
+
+使用场景：用自有的算力设备（开发板 / PC）直连机器人，通过 High-level SDK 控制机器人。
+
+> 目前仅在 Orin 开发板上验证过。
+
+按下面两步为机器人分配 IP：
+
+1. 开发板 eth0 配置静态地址：
+
+   ```bash
+   sudo nmcli con mod "Wired connection 1" ipv4.method manual ipv4.addresses 192.168.50.1/24
+   sudo nmcli con up "Wired connection 1"
+   ```
+
+2. 开发板启动 DHCP，为机器人网口分配地址：
+
+   ```bash
+   sudo apt install -y dnsmasq
+   sudo tee /etc/dnsmasq.d/eth0-device.conf >/dev/null <<"EOF"
+   interface=eth0
+   bind-interfaces
+   port=0
+   dhcp-range=192.168.50.100,192.168.50.200,255.255.255.0,12h
+   dhcp-option=3,192.168.50.1
+   EOF
+   sudo systemctl enable --now dnsmasq
+   ```
 
 ## 3. 为外设供电
 

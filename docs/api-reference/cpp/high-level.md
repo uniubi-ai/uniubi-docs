@@ -327,6 +327,10 @@ void setLogCallback(LogCallback cb);
 /// Ignored onboard; an external host must set the actual robot-facing interface before initialization
 void setNetworkInterface(const char* iface);
 
+/// (Optional) Apply network settings from JSON before initialization
+/// Fields: "iface" (same as setNetworkInterface), "dont_route" (only use directly connected DDS locators)
+bool setNetworkConfig(const char* configJson);
+
 /// Register the device-discovery callback for external-host device-addressing mode
 /// cb(sn, infoJson): infoJson is a device-details JSON string; typical fields are listed below
 void setDiscoverCallback(DeviceDiscover cb);
@@ -365,6 +369,27 @@ In external-host device-addressing mode, the SDK generates a Cyclone DDS QoS pro
 - The default remains `eth0` for compatibility. High-level applications on the robot brain must call `setNetworkInterface("eth0.100")`; external hosts select the interface that actually reaches the robot network.
 - Calling `setNetworkInterface(...)` overrides the default and generates the communication profile for that interface.
 - The selected interface must exist and be available, or SDK initialization fails.
+
+##### About `setNetworkConfig`
+
+`setNetworkConfig` applies JSON network settings before initialization. It is optional and mainly used
+when an external host is cabled straight into the robot.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `iface` | string | Same as `setNetworkInterface`: the interface the SDK uses |
+| `dont_route` | bool | Keep only DDS locators on directly connected subnets (CycloneDDS `<DontRoute>`) |
+
+```cpp
+svc->setNetworkConfig(R"({"iface":"eth0","dont_route":true})");
+```
+
+When the host is cabled straight into the robot Ethernet port:
+
+- if the robot Wi-Fi is also on, set `dont_route` to `true` so DDS will not pick the unreachable Wi-Fi address;
+- if the robot Wi-Fi is off, the default (`false`) is fine, and `true` is also acceptable.
+
+For the network setup, see [Connect Peripherals](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.md).
 
 ##### How to query the available network cards of this machine
 

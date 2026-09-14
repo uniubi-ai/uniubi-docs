@@ -328,6 +328,10 @@ void setLogCallback(LogCallback cb);
 /// 板内模式忽略；外部主机必须在初始化前设置实际通信网卡
 void setNetworkInterface(const char* iface);
 
+/// （可选）初始化前以 JSON 应用网络设置
+/// 字段："iface"（等同于 setNetworkInterface）、"dont_route"（只使用直连网段的 DDS 地址）
+bool setNetworkConfig(const char* configJson);
+
 /// 外部主机设备寻址时注册设备发现回调
 /// cb(sn, infoJson) —— infoJson 是设备详情 JSON 字符串，典型字段见下方
 void setDiscoverCallback(DeviceDiscover cb);
@@ -366,6 +370,26 @@ bool discoverDevices(uint32_t timeoutMs = 10000);
 - 默认值保留为 `eth0` 仅用于兼容。High-level 运行在机器人大脑侧时必须显式调用 `setNetworkInterface("eth0.100")`；外部主机则指定实际连接机器人网络的网卡。
 - 调用 `setNetworkInterface(...)` 会覆盖默认值，并按指定网卡渲染通信 profile。
 - 指定的网卡必须存在且处于可用状态，否则 SDK 初始化会失败。
+
+##### 关于 `setNetworkConfig`
+
+`setNetworkConfig` 在初始化前以 JSON 应用网络设置，可选；主要用于外部主机网线直连机器人的场景。
+
+| 字段 | 类型 | 含义 |
+|---|---|---|
+| `iface` | string | 等同于 `setNetworkInterface`，指定 SDK 使用的网卡 |
+| `dont_route` | bool | 只保留直连网段的 DDS 地址（对应 CycloneDDS `<DontRoute>`） |
+
+```cpp
+svc->setNetworkConfig(R"({"iface":"eth0","dont_route":true})");
+```
+
+**外部主机网线直连机器人网口时**的设置建议：
+
+- 机器人 Wi-Fi 同时开启时，必须设置为 `true`，避免 DDS 选中主机不可达的 Wi-Fi 地址；
+- 机器人 Wi-Fi 未开启时，可保持默认（`false`），也可以设置为 `true`。
+
+网络配置见[连接外设](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.zh-CN.md)。
 
 ##### 如何查询本机可用网卡
 
