@@ -384,7 +384,7 @@ when an external host is cabled straight into the robot.
 svc->setNetworkConfig(R"({"iface":"eth0","dont_route":true})");
 ```
 
-When the host is cabled straight into the robot Ethernet port:
+**When the host is cabled straight into the robot Ethernet port**:
 
 - if the robot Wi-Fi is also on, set `dont_route` to `true` so DDS will not pick the unreachable Wi-Fi address;
 - if the robot Wi-Fi is off, the default (`false`) is fine, and `true` is also acceptable.
