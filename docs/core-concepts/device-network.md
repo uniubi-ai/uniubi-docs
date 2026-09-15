@@ -30,7 +30,7 @@ Login users, keys, and passwords are determined by the device delivery configura
 
 ## Externally Accessible Service Ports
 
-- User services that must be reached from outside the device should use the **`20000–29999`** port range.
+- User services that must be reached from outside the device should use the **`20001–65535`** port range.
 - Other ports are reserved for internal device services. User applications should not occupy them or assume that they are reachable from outside the device.
 
 The port range may change with the product configuration. Follow the current device documentation and delivery configuration when deploying a service.
