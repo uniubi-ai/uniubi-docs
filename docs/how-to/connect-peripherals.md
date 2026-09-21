@@ -112,8 +112,9 @@ Assign an IP address to the robot in two steps:
    port=0
    dhcp-range=192.168.50.100,192.168.50.200,255.255.255.0,12h
    dhcp-option=3,192.168.50.1
+   dhcp-option=6
    EOF
-   sudo systemctl enable --now dnsmasq
+   sudo dnsmasq --test && sudo systemctl enable dnsmasq && sudo systemctl restart dnsmasq
    ```
 
 ## 3. Power an External Peripheral
