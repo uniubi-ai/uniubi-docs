@@ -45,6 +45,8 @@ vi /data/config/robotBrainConfig
 
 找到现有 `network.master`，确认 `enable` 为 `true`，并修改其中的 `netInfo`。下面只是相关字段示例，**不要用它覆盖整个文件**；保留其他网络配置、`priority`、`routes` 和无关字段。
 
+> **注意：配置文件必须使用合法的 JSON 格式，不要添加 `//`、`/* ... */` 等注释。** 下方表格中的字段说明仅供阅读，不要写入配置文件。
+
 ```json
 {
   "network": {

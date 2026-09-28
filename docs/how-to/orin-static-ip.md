@@ -45,6 +45,8 @@ vi /data/config/robotBrainConfig
 
 Locate the existing `network.master`, confirm that `enable` is `true`, and edit its `netInfo` fields. The following is only an example of the relevant fields. **Do not replace the entire file with this example.** Preserve other network settings, `priority`, `routes`, and unrelated fields.
 
+> **Note: The configuration file must contain valid JSON. Do not add comments such as `//` or `/* ... */`.** The field descriptions in the table below are for reference only; do not copy them into the configuration file.
+
 ```json
 {
   "network": {
