@@ -2,6 +2,10 @@
 
 **English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.zh-CN.md)
 
+Before building, complete [Version Selection and Upgrades](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/version-selection.md): select SDK revisions for the firmware, record repository commits, and match runtime libraries with the binding.
+
+For failures, use [Troubleshooting by Symptom](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/troubleshooting.md) to find the relevant checks.
+
 This guide covers the C++ SDK, Python SDK, ROS 2 message package, and ROS 2 examples. The C++ and Python SDKs are built separately; `uniubi_robot_sdk` no longer builds the Python binding as a subdirectory.
 
 Related documents:
@@ -459,6 +463,7 @@ For end-to-end examples, see `examples/example_lowlevel.cpp`, `examples/example_
 
 ---
 
+<a id="troubleshooting--faq"></a>
 ## 9. Troubleshooting / FAQ
 
 ### 9.1 `error while loading shared libraries: librobotMotionSdk.so: cannot open shared object file`
@@ -518,4 +523,4 @@ Or rebuild and reinstall it: `cd ~/uniubi_robot_sdk_py && UNIUBI_SDK_ROOT=$SDK_R
 
 ### 9.6 Python program gets stuck/deadlocked when exiting
 
-If the application does not explicitly call `disconnect()` and `service.shutdown()`, garbage collection can deadlock the GIL against an internal SDK thread. Follow section 6.2 of the relevant API manual and **release resources explicitly in `try/finally`**.
+If the application does not explicitly call `disconnect()` and `service.shutdown()`, garbage collection can deadlock the GIL against an internal SDK thread. Follow [High-level Python shutdown guidance](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.md#3-exit-deadlock-avoidance) or [Low-level Python shutdown guidance](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.md#3-exit-deadlock-avoidance) and **release resources explicitly in `try/finally`**.

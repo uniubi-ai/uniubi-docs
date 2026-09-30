@@ -14,6 +14,50 @@ Typical goals include:
 - using built-in walking, steering, and speed control; and
 - writing a ROS 2 application node that invokes robot motion capabilities.
 
+## Choose Where the Application Runs
+
+High-level real-robot applications support two deployment modes. In both modes, the built-in motion service continues to run on the robot; only the application and SDK client location changes.
+
+| Deployment mode | Application location | Network and target selection |
+|---|---|---|
+| External host | Linux PC or industrial computer | Select the host interface that is actually connected to the robot network, then create the client with the target device ID (SN). Obtain the SN from the Basic Information page in the Uniubi App or SDK discovery. |
+| Onboard | Robot compute module (“brain”) | No device ID is required; use the onboard single-device client overload. |
+
+For external-host discovery, follow this order:
+
+1. Register the discovery callback and set the robot-facing network interface.
+2. Initialize the SDK service.
+3. Start discovery. A `true` return only means that the request was issued; device responses arrive asynchronously through the callback.
+4. If no callback arrives within 5 seconds, retry discovery after checking the interface and robot status.
+5. Deduplicate responses by SN and require the application or operator to choose the intended robot. Do not silently select the first response. If the robot IP is known, compare it with `network.ether.ipv4Addr`, `network.wlan.ipv4Addr`, `network.hotspot.ipv4Addr`, and `network.mobile.ipv4Addr` in the callback `info` to identify the corresponding SN.
+
+The IP provides reachability and filters discovery results. The High-level client still receives the Device ID (SN); never pass an IP address as `device_id`.
+
+Low-level control on real hardware is different: the joint-control application still runs onboard. See the Low-level guide for that deployment boundary.
+
+## Before Real-robot Control: Disconnect the Remote Controller
+
+Before requesting High-level control, either power off the remote controller, or press and hold its `M` button until the robot announces “遥控器连接已断开” (remote controller disconnected). High-level cannot obtain ownership while the remote controller remains connected. Read-only checks do not require this step.
+
+In an emergency during High-level control, press `M` again and wait until the robot announces “遥控器已连接” (remote controller connected). Only then use the remote controller to take over.
+
+![Remote controller button layout; the M button is at the lower center](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/how-to/images/remote-controller-buttons.png)
+
+_This figure is only for locating the controller buttons. Follow the disconnect prerequisite above for High-level ownership._
+
+## From Preparation to the First Action
+
+1. Complete build/import and read-only CLI checks in [SDK First Use](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/sdk-first-use.md); ROS 2 users first validate Motion Bridge.
+2. Disconnect the remote controller as described above and confirm the site, emergency stop and manual takeover conditions. Enter `take` in the validated `--read-only` CLI; it requests ownership without starting an action. Resolve ownership failures before sending actions.
+3. Before any action other than `laying`, start zero-velocity `walking` below and query `state` until the effective `action` is `walking`, then select the target action. RPC success does not confirm that a posture has been reached.
+4. To finish, enter `stop`, then `start laying`; query `state` until `{}` or `action: laying`, confirm a safe posture through observations, then enter `release` and `quit`.
+
+```text
+highlevel> take
+highlevel> start walking {"lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0}
+highlevel> state
+```
+
 ## Common High-level Actions
 
 Available actions can vary by product model and software version. The table below uses the current
@@ -72,27 +116,6 @@ highlevel> state
 `set` changes the current action parameters; it does not switch actions. Some server
 versions do not return the profile name in motion-state JSON, so state output alone may not verify it.
 
-## Choose Where the Application Runs
-
-High-level real-robot applications support two deployment modes. In both modes, the built-in motion service continues to run on the robot; only the application and SDK client location changes.
-
-| Deployment mode | Application location | Network and target selection |
-|---|---|---|
-| External host | Linux PC or industrial computer | Select the host interface that is actually connected to the robot network, then create the client with the target device ID (SN). Obtain the SN from the Basic Information page in the Uniubi App or SDK discovery. |
-| Onboard | Robot compute module (“brain”) | No device ID is required; use the onboard single-device client overload. |
-
-For external-host discovery, follow this order:
-
-1. Register the discovery callback and set the robot-facing network interface.
-2. Initialize the SDK service.
-3. Start discovery. A `true` return only means that the request was issued; device responses arrive asynchronously through the callback.
-4. If no callback arrives within 5 seconds, retry discovery after checking the interface and robot status.
-5. Deduplicate responses by SN and require the application or operator to choose the intended robot. Do not silently select the first response. If the robot IP is known, compare it with `network.ether.ipv4Addr`, `network.wlan.ipv4Addr`, `network.hotspot.ipv4Addr`, and `network.mobile.ipv4Addr` in the callback `info` to identify the corresponding SN.
-
-The IP provides reachability and filters discovery results. The High-level client still receives the Device ID (SN); never pass an IP address as `device_id`.
-
-Low-level control on real hardware is different: the joint-control application still runs onboard. See the Low-level guide for that deployment boundary.
-
 ## Out of Scope
 
 If your application runs its own policy and directly outputs joint position or torque targets, follow [Low-level: Run a Custom Joint-control Policy](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/low-level-control.md).
@@ -113,16 +136,6 @@ For SDK development, first complete [SDK First Use](https://github.com/uniubi-ai
 - ROS 2 interfaces and bridge: [`uniubi_robot_msgs`](https://github.com/uniubi-ai/uniubi_robot_msgs) → [`uniubi_ros2`](https://github.com/uniubi-ai/uniubi_ros2)
 
 `uniubi_robot_msgs` is the authoritative source for ROS 2 interfaces and build dependencies. It is not the normal place for application-specific changes.
-
-## Before Real-robot Control: Disconnect the Remote Controller
-
-Before requesting High-level control, either power off the remote controller, or press and hold its `M` button until the robot announces “遥控器连接已断开” (remote controller disconnected). High-level cannot obtain ownership while the remote controller remains connected. Read-only checks do not require this step.
-
-In an emergency during High-level control, press `M` again and wait until the robot announces “遥控器已连接” (remote controller connected). Only then use the remote controller to take over.
-
-![Remote controller button layout; the M button is at the lower center](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/how-to/images/remote-controller-buttons.png)
-
-_This figure is only for locating the controller buttons. Follow the disconnect prerequisite above for High-level ownership._
 
 ## Minimum Success Criteria
 

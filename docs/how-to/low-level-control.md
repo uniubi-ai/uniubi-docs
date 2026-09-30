@@ -70,6 +70,23 @@ For the first hardware test, secure the robot on a reliable safety rig with all 
 
 Never execute `walk` while the robot is suspended. During both stages, keep the emergency stop within reach and have a dedicated operator attend the robot.
 
+## End Low-level Control and Restore Built-in Control
+
+When restoring DV500/built-in control, first use the original controller to reach a safe posture (usually laying), continuously check observations until joint positions are near the target, stop sending control frames, call `set_motion_enable(False)` (C++: `setMotionEnable(false)`), and wait for the effective state to return to `kConnected`. Acceptance alone is not completion; do not skip the state check after failure or timeout.
+
+For restoration in the original process, call and check `restore_motion_control_mode()` (C++: `restoreMotionControlMode()`) after `kConnected`, then disconnect, shut down the service and end the process. For the separate restoration script, first end the original Low-level controller normally and confirm full exit, then run onboard:
+
+```bash
+cd /path/to/uniubi_robot_sdk_py/examples
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./release_control_to_dv500.sh
+```
+
+The script neither stops other controllers nor validates a safe posture. It waits for `kConnected` or `kPrepared`; if prepared, it disables motion and waits for `kConnected`, then restores built-in control and finally disconnects and shuts down. Require a successful restoration call and `[PASS] built-in/DV500 motion control restored`; retain logs and inspect state after failure before further actions.
+
+Exiting, `disconnect()`, emergency stop or pressing `M` does not restore built-in ownership. If remote input is needed after restoration, press `M` until “遥控器已连接” (remote controller connected); this confirms connection, and manual takeover still requires onsite validation.
+
+Sequence references: [SDK troubleshooting](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/docs/troubleshooting.md), [restoration script](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/release_control_to_dv500.py), [wrapper](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/release_control_to_dv500.sh).
+
 ## Detailed Interfaces
 
 - [Python Low-level API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.md)

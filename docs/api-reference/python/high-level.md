@@ -73,26 +73,9 @@ finally:
 | `setConnectCallback` | `set_connect_callback(cb)` or decorator `@client.on_connect`; signature `(state, error)` |
 | `setEventCallback` | `set_event_callback(cb)` or decorator `@client.on_event`; signature `(topic: str, payload_json: str)` |
 
-**MediaBus client (`sdk.MediaBusClient`, corresponding to `IMediaBusClient` and returned by `create_media_bus_client()`):**
+**MediaBus client and media frame types**
 
-| Capability / native name | Python API |
-|---|---|
-| `setup / shutdown` | `setup()` / `shutdown()` |
-| `getMediaLayout` | `get_media_layout()`; return `sdk.MediaLayout` or `None` |
-| `startRawVideoFrame / stopRawVideoFrame` | `start_raw_video_frame(channel, callback)` / `stop_raw_video_frame(channel)`; callback signature `(channel: int, frame: sdk.VideoFrame)` |
-| `startRawAudioFrame / stopRawAudioFrame` | `start_raw_audio_frame(channel, callback)` / `stop_raw_audio_frame(channel)`; callback signature `(channel: int, frame: sdk.AudioFrame)` |
-| `startEncodedVideoFrame / stopEncodedVideoFrame` | `start_encoded_video_frame(channel, callback)` / `stop_encoded_video_frame(channel)`; callback signature `(channel: int, frame: sdk.EncodedVideoFrame)` |
-
-**Media frame types**
-
-| Python types | Corresponding C++ types | Common fields/methods |
-|---|---|---|
-| `sdk.AudioFrame` | `Uface::Media::AudioFrame` | `frame.data()`, `frame.size()`, `frame.get_fd()`, `frame.frame_info.sample_rate/sample_format/channel_count/timestamp/sequence` |
-| `sdk.VideoFrame` | `Uface::Media::VideoFrame` | `frame.data()`, `frame.size()`, `frame.get_fd()`, `frame.frame_info.width/height/pixel_format/stride/timestamp/sequence`, `frame.plane_view(plane)` |
-| `sdk.EncodedVideoFrame` | `Uface::Stream::CMediaFrame` | `frame.data()`, `frame.size()`, `frame.frame_type`, `frame.pts`, `frame.utc`, `frame.sequence`, `frame.frame_info`, `frame.video_info` |
-| `sdk.VideoFramePlaneView` | Video plane read-only view | `rows`, `row_bytes`, `row_view(row)`, used to read non-contiguous/original video with stride by row |
-
-The Python API does not expose a separate MediaBus package; the Motion SDK provides the frame wrappers directly. Encoded frames use `EncodedVideoFrame`, with no public Python `VideoPacket` type. `sdk.CMediaFrame` remains as a Low-level compatibility alias.
+Create a client with `client.create_media_bus_client()`. For setup parameters (including remote `host`), subscriptions, PCM RawBack playback, and frame types, see the [MediaBus Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.md). The example below illustrates the local lifecycle.
 
 ### 2.1 `query_system_status()` return schema
 
@@ -351,7 +334,6 @@ finally:
 > In Python, `frame.data()` returns a `bytes` copy. For raw NVIDIA video frames, use `frame.plane_view(plane).row_view(row)` for row-wise access; the example implements the complete save path.
 
 ---
-
 
 ## 5. Important Considerations
 

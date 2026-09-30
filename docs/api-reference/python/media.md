@@ -10,15 +10,28 @@ Python module: `robot_motion_sdk`
 
 ## 1. API Overview
 
-| Capability | Python API |
+Check whether bindings are enabled with `sdk.MEDIA_ENABLED`.
+
+**MediaBus client (`sdk.MediaBusClient`, corresponding to `IMediaBusClient` and returned by `create_media_bus_client()`):**
+
+| Capability / native name | Python API |
 |---|---|
-| Check bindings | `sdk.MEDIA_ENABLED` |
-| Create client | `client.create_media_bus_client()` |
-| Start / stop | `media.setup(host="")` / `media.shutdown()` |
-| Query layout | `media.get_media_layout()` |
-| Raw video | `start_raw_video_frame()` / `stop_raw_video_frame()` |
-| Raw audio | `start_raw_audio_frame()` / `stop_raw_audio_frame()` |
-| Encoded video | `start_encoded_video_frame()` / `stop_encoded_video_frame()` |
+| `setup / shutdown` | `setup(host="")` / `shutdown()` |
+| `getMediaLayout` | `get_media_layout()`; return `sdk.MediaLayout` or `None` |
+| `startRawVideoFrame / stopRawVideoFrame` | `start_raw_video_frame(channel, callback)` / `stop_raw_video_frame(channel)`; callback signature `(channel: int, frame: sdk.VideoFrame)` |
+| `startRawAudioFrame / stopRawAudioFrame` | `start_raw_audio_frame(channel, callback)` / `stop_raw_audio_frame(channel)`; callback signature `(channel: int, frame: sdk.AudioFrame)` |
+| `startEncodedVideoFrame / stopEncodedVideoFrame` | `start_encoded_video_frame(channel, callback)` / `stop_encoded_video_frame(channel)`; callback signature `(channel: int, frame: sdk.EncodedVideoFrame)` |
+
+**Media frame types**
+
+| Python types | Corresponding C++ types | Common fields/methods |
+|---|---|---|
+| `sdk.AudioFrame` | `Uface::Media::AudioFrame` | `frame.data()`, `frame.size()`, `frame.get_fd()`, `frame.frame_info.sample_rate/sample_format/channel_count/timestamp/sequence` |
+| `sdk.VideoFrame` | `Uface::Media::VideoFrame` | `frame.data()`, `frame.size()`, `frame.get_fd()`, `frame.frame_info.width/height/pixel_format/stride/timestamp/sequence`, `frame.plane_view(plane)` |
+| `sdk.EncodedVideoFrame` | `Uface::Stream::CMediaFrame` | `frame.data()`, `frame.size()`, `frame.frame_type`, `frame.pts`, `frame.utc`, `frame.sequence`, `frame.frame_info`, `frame.video_info` |
+| `sdk.VideoFramePlaneView` | Video plane read-only view | `rows`, `row_bytes`, `row_view(row)`, used to read non-contiguous/original video with stride by row |
+
+The Python API does not expose a separate MediaBus package; the Motion SDK provides the frame wrappers directly. Encoded frames use `EncodedVideoFrame`, with no public Python `VideoPacket` type. `sdk.CMediaFrame` remains as a compatibility alias.
 
 ## 2. Local video example
 
@@ -98,7 +111,7 @@ The callback receives a `VideoFrame`, `AudioFrame`, or `EncodedVideoFrame` wrapp
 
 - **Frame pointer lifetime is limited to the callback:** zero-copy buffers are recycled after the callback returns. Copy data within the callback if it must be retained.
 - **Callbacks run on the SDK media thread:** do not block or perform expensive work in a callback. Hand off time-consuming processing to an application queue or worker thread.
-- **Read raw video by plane:** as described in §4.1, do not assume that `data()` contains one contiguous image.
+- **Read raw video by plane:** as described in Frame Data Access, do not assume that `data()` contains one contiguous image.
 - **Call `shutdown()` before exit:** otherwise subscription threads may remain active and deadlock with garbage collection or destruction. Use `with` or `try/finally` for explicit cleanup.
 
 ## PCM audio / RawBack

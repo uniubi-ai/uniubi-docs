@@ -10,15 +10,28 @@ Python 模块：`robot_motion_sdk`
 
 ## 一、API 一览
 
-| 功能 | Python API |
+检查 binding 是否启用：`sdk.MEDIA_ENABLED`。
+
+**MediaBus client（`sdk.MediaBusClient` —— 对应 `IMediaBusClient`，由 `create_media_bus_client()` 工厂分配）：**
+
+| 功能 / native 名称 | Python API |
 |---|---|
-| 检查 binding | `sdk.MEDIA_ENABLED` |
-| 创建客户端 | `client.create_media_bus_client()` |
-| 启动 / 关闭 | `media.setup(host="")` / `media.shutdown()` |
-| 查询布局 | `media.get_media_layout()` |
-| 原始视频 | `start_raw_video_frame()` / `stop_raw_video_frame()` |
-| 原始音频 | `start_raw_audio_frame()` / `stop_raw_audio_frame()` |
-| 编码视频 | `start_encoded_video_frame()` / `stop_encoded_video_frame()` |
+| `setup / shutdown` | `setup(host="")` / `shutdown()` |
+| `getMediaLayout` | `get_media_layout()`；返回 `sdk.MediaLayout` 或 `None` |
+| `startRawVideoFrame / stopRawVideoFrame` | `start_raw_video_frame(channel, callback)` / `stop_raw_video_frame(channel)`；回调签名 `(channel: int, frame: sdk.VideoFrame)` |
+| `startRawAudioFrame / stopRawAudioFrame` | `start_raw_audio_frame(channel, callback)` / `stop_raw_audio_frame(channel)`；回调签名 `(channel: int, frame: sdk.AudioFrame)` |
+| `startEncodedVideoFrame / stopEncodedVideoFrame` | `start_encoded_video_frame(channel, callback)` / `stop_encoded_video_frame(channel)`；回调签名 `(channel: int, frame: sdk.EncodedVideoFrame)` |
+
+**媒体帧类型**
+
+| Python 类型 | 对应 C++ 类型 | 常用字段 / 方法 |
+|---|---|---|
+| `sdk.AudioFrame` | `Uface::Media::AudioFrame` | `frame.data()`、`frame.size()`、`frame.get_fd()`、`frame.frame_info.sample_rate/sample_format/channel_count/timestamp/sequence` |
+| `sdk.VideoFrame` | `Uface::Media::VideoFrame` | `frame.data()`、`frame.size()`、`frame.get_fd()`、`frame.frame_info.width/height/pixel_format/stride/timestamp/sequence`、`frame.plane_view(plane)` |
+| `sdk.EncodedVideoFrame` | `Uface::Stream::CMediaFrame` | `frame.data()`、`frame.size()`、`frame.frame_type`、`frame.pts`、`frame.utc`、`frame.sequence`、`frame.frame_info`、`frame.video_info` |
+| `sdk.VideoFramePlaneView` | 视频平面只读视图 | `rows`、`row_bytes`、`row_view(row)`，用于按行读取非连续 / 带 stride 的原始视频 |
+
+Python API 不暴露 MediaBus Python 包，帧格式由 Motion SDK 自身封装；编码帧使用 `EncodedVideoFrame`，没有 `VideoPacket` Python 公共类型。`sdk.CMediaFrame` 保留为底层兼容别名。
 
 ## 二、使用示例
 
@@ -98,7 +111,7 @@ Python native binding 使用 `UNIUBI_SDK_ENABLE_MEDIA` 控制媒体帧绑定。�
 
 - **帧指针生命周期仅限回调内**：零拷贝设计，回调返回后底层缓冲即回收；需要留存请在回调里 `memcpy` 出来。
 - **回调在 SDK 媒体线程触发**：回调里不要做重活 / 阻塞，避免拖累后续帧；耗时处理转交自己的队列 / 线程。
-- **原始视频按平面读**：见 §4.1，勿把 `data()` 当连续整图。
+- **原始视频按平面读**：见“帧数据访问”，勿把 `data()` 当连续整图。
 - **退出务必 `shutdown()`**：否则订阅线程不退，且与 GC / 析构争用可能死锁（使用 `with` 或 `try/finally` 显式清理）。
 
 

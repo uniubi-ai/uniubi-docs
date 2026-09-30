@@ -2,6 +2,10 @@
 
 [English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.md) | **简体中文**
 
+构建前先完成[版本选择与升级](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/version-selection.zh-CN.md)：确定固件对应的 SDK 引用，记录各仓库 commit，并选择匹配的运行库与 binding。
+
+遇到问题时，从[按症状排查](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/troubleshooting.zh-CN.md)选择检查入口。
+
 本指南覆盖 C++ SDK、Python SDK、ROS 2 消息包和 ROS 2 示例包的分仓构建方式。C++ SDK 与 Python SDK 分别构建；`uniubi_robot_sdk` 不再把 Python binding 作为子目录一起编译。
 
 相关文档：
@@ -536,4 +540,4 @@ file ~/uniubi_robot_sdk_py/robot_motion_sdk/_uniubi_robot_motion_py_native.*.so 
 
 ### 9.6 Python 程序退出时卡住 / 死锁
 
-未显式 `disconnect()` + `service.shutdown()`，靠 GC 析构会与 SDK 内部线程发生 GIL 死锁。两份手册的 §6.2 有详细规避做法 —— **必须 try/finally 显式释放**。
+未显式 `disconnect()` + `service.shutdown()`，靠 GC 析构会与 SDK 内部线程发生 GIL 死锁。参见 [High-level Python 退出说明](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.zh-CN.md#三退出死锁规避必读) 和 [Low-level Python 退出说明](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.zh-CN.md#三退出死锁规避必读) —— **必须 try/finally 显式释放**。

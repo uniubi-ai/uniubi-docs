@@ -6,9 +6,22 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 
 > 二次开发申请、设备绑定等操作指南请统一查阅[应用开发文档](https://help.uni-ubi.com/docs/cyvet/app-development/)，并按文档指引完成相关准备。
 
-## 机器人版本要求
+## 固件—SDK 兼容表
 
-机器人软件版本要求：Cyvet-V1.00.000 及以上。
+适用于 C++ SDK、Python SDK 和 ROS 2：
+
+| 固件版本 | SDK 版本 |
+| --- | --- |
+| `Cyvet-V1.00.002` 及以上 | `main` |
+| 低于 `Cyvet-V1.00.002` | tag `Cyvet-V1.00.001` |
+
+消息定义（`uniubi_robot_msgs`）：
+
+| 固件版本 | SDK 版本 |
+| --- | --- |
+| `Cyvet-V1.00.000` 及以上 | `main` |
+
+安装前请按[版本选择与升级](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/version-selection.zh-CN.md)确认各仓库引用与运行库来源。
 
 <a id="quick-start"></a>
 ## 快速开始

@@ -2,7 +2,7 @@
 
 [English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/sdk-first-use.md) | **简体中文**
 
-> 本文不是控制模式选择页。请先从 [How-to 入口](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/README.zh-CN.md) 选择 High-level 或 Low-level，再回到本文准备 SDK。
+> 本文是 High-level 与 Low-level 共用的 SDK 准备与只读验证页。按下表选择部署位置，完成本页后进入对应控制指南。
 
 ## 目标
 
@@ -67,6 +67,35 @@ python3 -c "import robot_motion_sdk as sdk; print(sdk.MotionHighLevelClient)"
 ## 3. 只读验证
 
 先验证导入、连接和观测数据；不要把首次运行直接扩展成 walking、跳跃或低级力矩控制。
+
+先按 [构建指南](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.zh-CN.md) 准备目标架构对应的 SDK 运行库与动态库搜索环境，再执行下面的命令。
+
+使用现有 High-level CLI 完成只读验证；Low-level 开发者在这一步也不需要创建 Low-level client 或取得关节控制权。以下路径相对于工作区，两种语言任选一种；外部主机先替换网卡与 SN。
+
+```bash
+# 此工作区包含 uniubi_robot_sdk 与 uniubi_robot_sdk_py
+cd /path/to/workspace
+
+# 外部 Linux 主机：C++ 或 Python，任选一种
+./uniubi_robot_sdk/build/examples/example_highlevel --iface ROBOT_FACING_IFACE --device-id ROBOT_SN --read-only
+python3 uniubi_robot_sdk_py/examples/example_highlevel.py --iface ROBOT_FACING_IFACE --device-id ROBOT_SN --read-only
+
+# 机器人大脑：C++ 或 Python，任选一种，不传 SN
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./uniubi_robot_sdk/build/examples/example_highlevel --iface eth0.100 --read-only
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" python3 uniubi_robot_sdk_py/examples/example_highlevel.py --iface eth0.100 --read-only
+```
+
+尚未获得 SN 时，先用相同 CLI 的 `--iface ROBOT_FACING_IFACE --discover-only` 发现设备，明确选择目标 SN 后重新运行只读命令。发现成功不能代替连接验证。进入交互提示后执行：
+
+```text
+highlevel> capabilities
+highlevel> system
+highlevel> state
+highlevel> sensor 5
+highlevel> quit
+```
+
+保持 `--read-only`，不要输入 `take` 或动作命令。能力、系统和状态查询应成功；无活动动作时 `{}` 是有效状态。传感器统计应显示 `SensorObserved frames` 大于 0，并观察连续更新；一直显示 `[WAIT]` 或查询失败不算通过。这验证通信与观测，不证明电机就绪或真实运动。
 
 成功标准：
 

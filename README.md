@@ -6,9 +6,22 @@ Uniubi Docs is the central documentation site for developing with Uniubi robots.
 
 > For secondary-development access applications, device binding, and related setup guides, see the [Application Development documentation](https://help.uni-ubi.com/docs/cyvet/app-development/) and follow the instructions to complete the required preparations.
 
-## Robot Version Requirement
+## Firmware–SDK Compatibility
 
-Required robot software version: Cyvet-V1.00.000 or newer.
+For the C++ SDK, Python SDK, and ROS 2:
+
+| Firmware version | SDK version |
+| --- | --- |
+| `Cyvet-V1.00.002` or newer | `main` |
+| Earlier than `Cyvet-V1.00.002` | tag `Cyvet-V1.00.001` |
+
+Message definitions (`uniubi_robot_msgs`):
+
+| Firmware version | SDK version |
+| --- | --- |
+| `Cyvet-V1.00.000` or newer | `main` |
+
+Before installation, follow [Version Selection and Upgrades](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/version-selection.md) to confirm repository revisions and runtime-library provenance.
 
 ## Quick Start
 

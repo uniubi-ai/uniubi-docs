@@ -14,6 +14,52 @@
 - 使用机器人已有的行走、转向和速度控制能力；
 - 在 ROS 2 中编写调用机器人运动能力的业务节点。
 
+## 先选择应用部署位置
+
+High-level 真机应用支持两种部署模式。两种模式下，内置运动服务都继续运行在机器人端；变化的只是业务应用与 SDK 客户端的位置。
+
+| 部署模式 | 应用位置 | 网络与目标选择 |
+|---|---|---|
+| 外部主机 | Linux PC 或工控机 | 选择实际连接机器人网络的主机网卡，再用目标设备 ID（SN）创建客户端。SN 可在 Uniubi App 的“基础信息”页面查看，也可通过 SDK discovery 获取。 |
+| 板内 | 机器人大脑 | 不需要设备 ID，使用板内单设备客户端重载。 |
+
+外部主机使用 discovery 时，按以下顺序执行：
+
+1. 先注册发现回调，并设置实际连接机器人网络的网卡。
+2. 再初始化 SDK service。
+3. 发起发现。`true` 只表示请求已发出；设备响应通过回调异步到达。
+4. 5 秒内没有任何回调时，检查网卡和机器人状态后重试发现。
+5. 按 SN 去重，并由应用或操作员明确选择目标机器人；不要静默自动选择第一台。若已知机器人 IP，可将它与回调 `info` 中 `network.ether.ipv4Addr`、`network.wlan.ipv4Addr`、`network.hotspot.ipv4Addr`、`network.mobile.ipv4Addr` 比对，筛出对应 SN。
+
+IP 只用于网络可达性和筛选发现结果；创建 High-level 客户端时仍传入设备 ID（SN），不能把 IP 当作 `device_id`。
+
+Low-level 真机的部署边界不同：关节控制应用仍运行在板内。具体见 Low-level 文档。
+
+## 真机取权前：先断开遥控器
+
+申请 High-level 控制权前，关闭遥控器，或长按遥控器 `M` 键切换，直到听到“遥控器连接已断开”
+的语音提示。遥控器仍连接时，High-level 无法取得控制权；只读检查不要求断开遥控器。
+
+High-level 控制过程中如遇紧急情况，可再次按 `M` 键，直到听到“遥控器已连接”的语音提示，
+再开始使用遥控器接管。
+
+![遥控器按键示意图，M 键位于手柄正面下方中央](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/how-to/images/remote-controller-buttons.png)
+
+_此图只用于定位遥控器按键；High-level 取权以本节文字说明的断连前置条件为准。_
+
+## 从准备到首次动作
+
+1. 先完成 [SDK 通用准备](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/sdk-first-use.zh-CN.md) 的构建/导入与只读 CLI 检查；ROS 2 用户先完成 Motion bridge 验证。
+2. 按上节断开遥控器，确认场地、急停和人工接管条件。在已验证的 `--read-only` CLI 输入 `take`；它只申请控制权，不启动动作。取权失败时先排查，不继续发动作。
+3. 除 `laying` 外，先启动下面的零速 `walking`，用 `state` 确认实际 `action` 为 `walking`，再选择目标动作。RPC 成功不代表姿态已经到位。
+4. 收尾先 `stop`，再 `start laying`；查询 `state` 至 `{}` 或 `action: laying`，结合观测确认安全姿态后 `release`、`quit`。
+
+```text
+highlevel> take
+highlevel> start walking {"lineVelocityX":0.0,"lineVelocityY":0.0,"velocity":0.0}
+highlevel> state
+```
+
 ## 常见 High-level 动作
 
 不同产品型号和软件版本开放的动作可能不同。下表根据当前 `motionCapacity` 提供常见动作索引；
@@ -70,27 +116,6 @@ highlevel> state
 `set` 只修改当前动作参数，
 不会切换动作；部分服务端版本的状态查询不回传档位名称，不能只靠状态 JSON 验证档位。
 
-## 先选择应用部署位置
-
-High-level 真机应用支持两种部署模式。两种模式下，内置运动服务都继续运行在机器人端；变化的只是业务应用与 SDK 客户端的位置。
-
-| 部署模式 | 应用位置 | 网络与目标选择 |
-|---|---|---|
-| 外部主机 | Linux PC 或工控机 | 选择实际连接机器人网络的主机网卡，再用目标设备 ID（SN）创建客户端。SN 可在 Uniubi App 的“基础信息”页面查看，也可通过 SDK discovery 获取。 |
-| 板内 | 机器人大脑 | 不需要设备 ID，使用板内单设备客户端重载。 |
-
-外部主机使用 discovery 时，按以下顺序执行：
-
-1. 先注册发现回调，并设置实际连接机器人网络的网卡。
-2. 再初始化 SDK service。
-3. 发起发现。`true` 只表示请求已发出；设备响应通过回调异步到达。
-4. 5 秒内没有任何回调时，检查网卡和机器人状态后重试发现。
-5. 按 SN 去重，并由应用或操作员明确选择目标机器人；不要静默自动选择第一台。若已知机器人 IP，可将它与回调 `info` 中 `network.ether.ipv4Addr`、`network.wlan.ipv4Addr`、`network.hotspot.ipv4Addr`、`network.mobile.ipv4Addr` 比对，筛出对应 SN。
-
-IP 只用于网络可达性和筛选发现结果；创建 High-level 客户端时仍传入设备 ID（SN），不能把 IP 当作 `device_id`。
-
-Low-level 真机的部署边界不同：关节控制应用仍运行在板内。具体见 Low-level 文档。
-
 ## 这条路径不解决什么问题
 
 如果你要自己训练或运行控制策略，并直接输出每个关节的位置或扭矩，请转到 [Low-level：自定义关节控制策略](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/low-level-control.zh-CN.md)。
@@ -111,18 +136,6 @@ Low-level 真机的部署边界不同：关节控制应用仍运行在板内。�
 - ROS 2 接口和 bridge：[`uniubi_robot_msgs`](https://github.com/uniubi-ai/uniubi_robot_msgs) → [`uniubi_ros2`](https://github.com/uniubi-ai/uniubi_ros2)
 
 `uniubi_robot_msgs` 是 ROS 2 构建依赖和接口来源，不是普通业务开发的修改入口。
-
-## 真机取权前：先断开遥控器
-
-申请 High-level 控制权前，关闭遥控器，或长按遥控器 `M` 键切换，直到听到“遥控器连接已断开”
-的语音提示。遥控器仍连接时，High-level 无法取得控制权；只读检查不要求断开遥控器。
-
-High-level 控制过程中如遇紧急情况，可再次按 `M` 键，直到听到“遥控器已连接”的语音提示，
-再开始使用遥控器接管。
-
-![遥控器按键示意图，M 键位于手柄正面下方中央](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/how-to/images/remote-controller-buttons.png)
-
-_此图只用于定位遥控器按键；High-level 取权以本节文字说明的断连前置条件为准。_
 
 ## 最小成功标准
 

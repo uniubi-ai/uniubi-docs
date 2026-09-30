@@ -73,26 +73,9 @@ finally:
 | `setConnectCallback` | `set_connect_callback(cb)` 或装饰器 `@client.on_connect`；签名 `(state, error)` |
 | `setEventCallback` | `set_event_callback(cb)` 或装饰器 `@client.on_event`；签名 `(topic: str, payload_json: str)` |
 
-**MediaBus client（`sdk.MediaBusClient` —— 对应 `IMediaBusClient`，由 `create_media_bus_client()` 工厂分配）：**
+**MediaBus client 与媒体帧类型**
 
-| 功能 / native 名称 | Python API |
-|---|---|
-| `setup / shutdown` | `setup()` / `shutdown()` |
-| `getMediaLayout` | `get_media_layout()`；返回 `sdk.MediaLayout` 或 `None` |
-| `startRawVideoFrame / stopRawVideoFrame` | `start_raw_video_frame(channel, callback)` / `stop_raw_video_frame(channel)`；回调签名 `(channel: int, frame: sdk.VideoFrame)` |
-| `startRawAudioFrame / stopRawAudioFrame` | `start_raw_audio_frame(channel, callback)` / `stop_raw_audio_frame(channel)`；回调签名 `(channel: int, frame: sdk.AudioFrame)` |
-| `startEncodedVideoFrame / stopEncodedVideoFrame` | `start_encoded_video_frame(channel, callback)` / `stop_encoded_video_frame(channel)`；回调签名 `(channel: int, frame: sdk.EncodedVideoFrame)` |
-
-**媒体帧类型**
-
-| Python 类型 | 对应 C++ 类型 | 常用字段 / 方法 |
-|---|---|---|
-| `sdk.AudioFrame` | `Uface::Media::AudioFrame` | `frame.data()`、`frame.size()`、`frame.get_fd()`、`frame.frame_info.sample_rate/sample_format/channel_count/timestamp/sequence` |
-| `sdk.VideoFrame` | `Uface::Media::VideoFrame` | `frame.data()`、`frame.size()`、`frame.get_fd()`、`frame.frame_info.width/height/pixel_format/stride/timestamp/sequence`、`frame.plane_view(plane)` |
-| `sdk.EncodedVideoFrame` | `Uface::Stream::CMediaFrame` | `frame.data()`、`frame.size()`、`frame.frame_type`、`frame.pts`、`frame.utc`、`frame.sequence`、`frame.frame_info`、`frame.video_info` |
-| `sdk.VideoFramePlaneView` | 视频平面只读视图 | `rows`、`row_bytes`、`row_view(row)`，用于按行读取非连续 / 带 stride 的原始视频 |
-
-Python API 不暴露 MediaBus Python 包，帧格式由 Motion SDK 自身封装；编码帧使用 `EncodedVideoFrame`，没有 `VideoPacket` Python 公共类型。`sdk.CMediaFrame` 保留为底层兼容别名。
+通过 `client.create_media_bus_client()` 创建客户端。启动参数（含远端 `host`）、订阅接口、PCM RawBack 播放和帧类型统一见 [MediaBus Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.zh-CN.md)。本页下方示例展示本机生命周期。
 
 ### 2.1 `query_system_status()` 返回结构
 
@@ -353,7 +336,6 @@ finally:
 > Python 中 `frame.data()` 返回 `bytes` 拷贝；处理 NVIDIA 原始视频帧时推荐使用 `frame.plane_view(plane).row_view(row)` 按行读取，示例程序已实现保存逻辑。
 
 ---
-
 
 ## 五、注意事项
 

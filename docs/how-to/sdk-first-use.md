@@ -2,7 +2,7 @@
 
 **English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/sdk-first-use.zh-CN.md)
 
-> This page does not choose a control mode. Select High-level or Low-level from the [How-to entry point](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/README.md), then return here to prepare the SDK.
+> This is the shared SDK preparation and read-only validation page for High-level and Low-level. Choose a deployment location below, complete this page, then continue to the relevant control guide.
 
 ## Goal
 
@@ -69,6 +69,35 @@ If runtime libraries, architecture, or media libraries do not match, return to t
 ## 3. Complete Read-only Validation
 
 Validate import, connection, and observations first. Do not turn the first run into a walking, jumping, or joint-torque test.
+
+Prepare the SDK runtime libraries for the target architecture and the dynamic-library search environment as described in the [Build Guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.md) before running the commands below.
+
+Use the existing High-level CLI for read-only validation. Low-level developers also need no Low-level client or joint-control ownership at this stage. Paths are relative to the workspace; choose one language and replace the external interface and SN placeholders.
+
+```bash
+# This workspace contains uniubi_robot_sdk and uniubi_robot_sdk_py
+cd /path/to/workspace
+
+# External Linux host: choose C++ or Python
+./uniubi_robot_sdk/build/examples/example_highlevel --iface ROBOT_FACING_IFACE --device-id ROBOT_SN --read-only
+python3 uniubi_robot_sdk_py/examples/example_highlevel.py --iface ROBOT_FACING_IFACE --device-id ROBOT_SN --read-only
+
+# Onboard: choose C++ or Python, without an SN
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./uniubi_robot_sdk/build/examples/example_highlevel --iface eth0.100 --read-only
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" python3 uniubi_robot_sdk_py/examples/example_highlevel.py --iface eth0.100 --read-only
+```
+
+If the SN is unknown, first discover with the same CLI using `--iface ROBOT_FACING_IFACE --discover-only`, explicitly select the intended SN, then rerun read-only. Discovery alone does not validate a connection. At the interactive prompt run:
+
+```text
+highlevel> capabilities
+highlevel> system
+highlevel> state
+highlevel> sensor 5
+highlevel> quit
+```
+
+Keep `--read-only`; do not enter `take` or action commands. Capability, system and state queries must succeed; `{}` is valid when no action is active. Require `SensorObserved frames` greater than zero and continuously updating observations. Persistent `[WAIT]` or failed queries do not pass. This validates communication and observations, not motor readiness or physical motion.
 
 Success criteria:
 

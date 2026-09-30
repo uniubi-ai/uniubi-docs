@@ -83,6 +83,23 @@ Low-level 程序要接入遥控器输入时，遥控器必须处于已连接状�
 再按 `stand` → `walk` → `stop` → `lay` 的顺序验证策略行走。不要在四脚腾空时执行
 `walk`；两个阶段都必须保持急停可触达并由专人值守。
 
+## 结束 Low-level 并交还内置运控
+
+按需恢复 DV500/小脑内置运控时，先由原控制程序到达安全姿态（通常为 laying），持续读取观测确认关节位置接近目标；停止发送控制帧，调用 `set_motion_enable(False)`（C++：`setMotionEnable(false)`），等待实际状态回到 `kConnected`。请求返回成功只表示受理；失败或超时不能跳过状态检查。
+
+在原进程内恢复时，在 `kConnected` 后调用并检查 `restore_motion_control_mode()`（C++：`restoreMotionControlMode()`），再 disconnect、shutdown service 并结束进程。使用独立恢复脚本时，必须先正常结束原 Low-level 进程并确认完全退出，再在大脑运行：
+
+```bash
+cd /path/to/uniubi_robot_sdk_py/examples
+sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" ./release_control_to_dv500.sh
+```
+
+脚本不会停止其他控制进程，也不负责验证安全姿态。它等待 `kConnected` 或 `kPrepared`；若为 `kPrepared`，先 disable 并等待 `kConnected`，随后恢复内置运控，最后 disconnect 和 shutdown。成功标准是恢复调用成功并输出 `[PASS] built-in/DV500 motion control restored`；失败后保留日志、检查状态，不继续动作。
+
+退出、`disconnect()`、急停或按 `M` 不等于恢复内置主控。交还后若需要遥控器输入，按 `M` 至“遥控器已连接”；这只确认连接，人工接管仍需现场验证。
+
+时序依据：[SDK 故障排查](https://github.com/uniubi-ai/uniubi_robot_sdk/blob/main/docs/troubleshooting.zh-CN.md)、[恢复脚本](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/release_control_to_dv500.py)、[wrapper](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/release_control_to_dv500.sh)。
+
 ## 详细接口
 
 - [Python Low-level API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.zh-CN.md)

@@ -6,6 +6,8 @@ Each guide addresses a specific development task. It defines the goal and prereq
 
 > If you have not yet chosen a control mode, application runtime, or implementation, begin with the [Quick Start](https://github.com/uniubi-ai/uniubi-docs/blob/main/README.md#quick-start).
 
+Start with [Version Selection and Upgrades](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/version-selection.md); for an existing failure, use [Troubleshooting by Symptom](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/troubleshooting.md).
+
 ## Environment and Device Access
 
 | Task | Guide | When to use it |
@@ -31,6 +33,7 @@ Each guide addresses a specific development task. It defines the goal and prereq
 | Read GPS, UWB, motors, IMU, power, and Walk odometry | [Read sensor and motion observations](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/read-sensor-data.md) | GPS/UWB are available in both clients; Walk odometry is High-level only |
 | Query device, battery, and network status | [Query device status](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/query-device-status.md) | Complete status is High-level only; Low-level exposes lightweight power observations |
 | Use voice, camera lights, video, and microphone data | [Use voice, lights, and media frames](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/use-media-and-device-io.md) | Voice/lights are High-level only; either client can create MediaBus |
+| Capture and play PCM audio | [PCM audio guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/stream-pcm-audio.md) | Local capture/playback; see MediaBus API for remote support |
 
 ## Training and Validation
 
@@ -38,5 +41,3 @@ Each guide addresses a specific development task. It defines the goal and prereq
 |---|---|---|
 | Train, export, and replay a policy | [Policy training and replay](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/train-export-replay.md) | During Low-level policy development |
 | Validate the SDK path without hardware | [Mock / Sim2Sim](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/mock-sim2sim.md) | Before real-robot SDK testing |
-
-- [Onboard PCM audio capture and playback](stream-pcm-audio.md)
