@@ -1,8 +1,8 @@
 # Uniubi Robot High-level Python API Reference
 
-**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.zh-CN.md)
+**English** | [简体中文](high-level.zh-CN.md)
 
-[API Reference](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.md) · [C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.md)
+[API Reference](../README.md) · [C++ API](../cpp/high-level.md)
 
 Python module: `robot_motion_sdk`
 Primary client: `sdk.MotionHighLevelClient`
@@ -75,7 +75,7 @@ finally:
 
 **MediaBus client and media frame types**
 
-Create a client with `client.create_media_bus_client()`. For setup parameters (including remote `host`), subscriptions, PCM RawBack playback, and frame types, see the [MediaBus Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.md). The example below illustrates the local lifecycle.
+Create a client with `client.create_media_bus_client()`. For setup parameters (including remote `host`), subscriptions, PCM RawBack playback, and frame types, see the [MediaBus Python API](media.md). The example below illustrates the local lifecycle.
 
 ### 2.1 `query_system_status()` return schema
 
@@ -341,7 +341,7 @@ finally:
 - `robot_motion_sdk`, its native binding, and `librobotMotionSdk.so` must come from the same SDK version and target architecture.
 - Every exit path must call `disconnect()` explicitly, followed by `sdk.service.shutdown()`.
 - Onboard High-level must select `eth0.100` before initialization. An external host must select the interface that actually reaches the robot and create the client with the target Device ID (SN).
-- **When an external host is cabled straight into the robot Ethernet port**, call `set_network_config` before `initial` with `dont_route` enabled. It is required when the robot Wi-Fi is also on (otherwise DDS may pick the unreachable Wi-Fi address) and optional otherwise. See [Connect Peripherals](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.md) for the network setup.
+- **When an external host is cabled straight into the robot Ethernet port**, call `set_network_config` before `initial` with `dont_route` enabled. It is required when the robot Wi-Fi is also on (otherwise DDS may pick the unreachable Wi-Fi address) and optional otherwise. See [Connect Peripherals](../../how-to/connect-peripherals.md) for the network setup.
 
 ## 6. Troubleshooting
 

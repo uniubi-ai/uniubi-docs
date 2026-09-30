@@ -1,8 +1,8 @@
 # 宇泛机器人 MediaBus Python API 参考
 
-[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.md) | **简体中文**
+[English](media.md) | **简体中文**
 
-[返回 API 参考](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.zh-CN.md) · [查看 C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/media.zh-CN.md)
+[返回 API 参考](../README.zh-CN.md) · [查看 C++ API](../cpp/media.zh-CN.md)
 
 Python 模块：`robot_motion_sdk`
 
@@ -121,4 +121,4 @@ Python native binding 使用 `UNIUBI_SDK_ENABLE_MEDIA` 控制媒体帧绑定。�
 
 `setup()` 成功只表示初始化或连接启动；通过实际回调统计验证采集，通过设备输出验证播放。采集回调可以保留 AudioFrame；停止订阅及关闭请在业务控制线程调用。
 
-[PCM audio guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/stream-pcm-audio.zh-CN.md).
+[PCM audio guide](../../how-to/stream-pcm-audio.zh-CN.md).

@@ -1,8 +1,8 @@
 # 宇泛机器人 MediaBus C++ API 参考
 
-[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/media.md) | **简体中文**
+[English](media.md) | **简体中文**
 
-[返回 API 参考](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.zh-CN.md) · [查看 Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.zh-CN.md)
+[返回 API 参考](../README.zh-CN.md) · [查看 Python API](../python/media.zh-CN.md)
 
 媒体总线（`IMediaBusClient`）提供机器人摄像头 / 麦克风的**帧级订阅**，统一三类流：
 
@@ -15,9 +15,9 @@
 > x86_64、i386、aarch64、aarch64_host 默认开启 MediaBus。Orin 本机模式支持视频、音频和布局查询；远端模式通过 `media.setup(host)` 支持 PCM 采集和 RawBack 播放。远端视频订阅和布局查询返回 `kNotSupported`。SDK 头文件、运行库、Python 扩展与设备软件必须版本匹配。
 
 相关文档：
-- **高级接口手册**：[High-level C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.zh-CN.md)
-- **低级接口手册**：[Low-level C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/low-level.zh-CN.md)
-- **构建说明**：[构建说明](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.zh-CN.md)
+- **高级接口手册**：[High-level C++ API](high-level.zh-CN.md)
+- **低级接口手册**：[Low-level C++ API](low-level.zh-CN.md)
+- **构建说明**：[构建说明](../../BUILD.zh-CN.md)
 
 ---
 
@@ -231,4 +231,4 @@ service->shutdown();
 
 `setup()` 成功只表示初始化或连接启动；通过实际回调统计验证采集，通过设备输出验证播放。采集回调可以保留 AudioFrame；停止订阅及关闭请在业务控制线程调用。
 
-[PCM audio guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/stream-pcm-audio.zh-CN.md).
+[PCM audio guide](../../how-to/stream-pcm-audio.zh-CN.md).

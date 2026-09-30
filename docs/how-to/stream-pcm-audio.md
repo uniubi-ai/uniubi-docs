@@ -27,7 +27,7 @@ Omit `--host` and `--device-id` locally. Omit `--capture-channel` for playback o
 
 Use the Python SDK [example_audio_capture.py](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_audio_capture.py). It keeps sources **0, 1, 2, and 3** subscribed on one MediaBus client and saves each source independently. It captures audio without acquiring motion control or playing sound. All four sources must be configured and enabled on the device; source indices do not represent four channels interleaved in one audio frame.
 
-Install the platform-matched C++ runtime and Python SDK using the [build guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.md). Run these commands from the Python SDK repository root, with `UNIUBI_SDK_ROOT` pointing to the matching C++ SDK repository. Choose a new output directory for every run; existing directories are never overwritten.
+Install the platform-matched C++ runtime and Python SDK using the [build guide](../BUILD.md). Run these commands from the Python SDK repository root, with `UNIUBI_SDK_ROOT` pointing to the matching C++ SDK repository. Choose a new output directory for every run; existing directories are never overwritten.
 
 ### Brain local mode (`aarch64`)
 

@@ -1,8 +1,8 @@
 # Uniubi Robot MediaBus C++ API Reference
 
-**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/media.zh-CN.md)
+**English** | [简体中文](media.zh-CN.md)
 
-[API Reference](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.md) · [Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.md)
+[API Reference](../README.md) · [Python API](../python/media.md)
 
 The media bus (`IMediaBusClient`) provides **frame-level subscriptions** to the robot's cameras and microphones through three stream types:
 
@@ -15,9 +15,9 @@ Media subscriptions are independent of motion control ownership. A connected Hig
 > MediaBus is enabled by default on x86_64, i386, aarch64, and aarch64_host. Local Orin deployment supports video, audio, and layout queries; remote deployment supports PCM capture and RawBack playback via `media.setup(host)`. Remote video subscriptions and layout queries return `kNotSupported`. SDK headers, runtime libraries, Python extensions, and device software must use matching versions.
 
 Related documents:
-- **High-level API reference:** [High-level C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.md)
-- **Low-level API reference:** [Low-level C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/low-level.md)
-- **Build instructions:** [Build guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.md)
+- **High-level API reference:** [High-level C++ API](high-level.md)
+- **Low-level API reference:** [Low-level C++ API](low-level.md)
+- **Build instructions:** [Build guide](../../BUILD.md)
 
 ---
 
@@ -230,4 +230,4 @@ Call `media.setup(host)` (omit host locally), then `createAudioRawBack()` to obt
 
 Successful setup indicates initialization or connection startup; verify capture by counting actual frames and playback at the device output. AudioFrame objects may be retained after capture callbacks. Stop subscriptions and shut down on the application control thread.
 
-[PCM audio guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/stream-pcm-audio.md).
+[PCM audio guide](../../how-to/stream-pcm-audio.md).

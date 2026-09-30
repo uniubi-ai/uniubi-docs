@@ -1,18 +1,18 @@
 # Uniubi Robot Motion SDK Build Guide
 
-**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.zh-CN.md)
+**English** | [简体中文](BUILD.zh-CN.md)
 
-Before building, complete [Version Selection and Upgrades](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/version-selection.md): select SDK revisions for the firmware, record repository commits, and match runtime libraries with the binding.
+Before building, complete [Version Selection and Upgrades](how-to/version-selection.md): select SDK revisions for the firmware, record repository commits, and match runtime libraries with the binding.
 
-For failures, use [Troubleshooting by Symptom](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/troubleshooting.md) to find the relevant checks.
+For failures, use [Troubleshooting by Symptom](how-to/troubleshooting.md) to find the relevant checks.
 
 This guide covers the C++ SDK, Python SDK, ROS 2 message package, and ROS 2 examples. The C++ and Python SDKs are built separately; `uniubi_robot_sdk` no longer builds the Python binding as a subdirectory.
 
 Related documents:
-- **High-level API:** [Python](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.md) · [C++](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.md)
-- **Low-level API:** [Python](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.md) · [C++](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/low-level.md)
-- **MediaBus API:** [Python](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.md) · [C++](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/media.md)
-- **Direct DDS / ROS 2 API**: [`uniubi_robot_dds_api.md`](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/uniubi_robot_dds_api.md) — device protocol contracts and project templates for direct OMG DDS or ROS 2 integration without the SDK
+- **High-level API:** [Python](api-reference/python/high-level.md) · [C++](api-reference/cpp/high-level.md)
+- **Low-level API:** [Python](api-reference/python/low-level.md) · [C++](api-reference/cpp/low-level.md)
+- **MediaBus API:** [Python](api-reference/python/media.md) · [C++](api-reference/cpp/media.md)
+- **Direct DDS / ROS 2 API**: [`uniubi_robot_dds_api.md`](uniubi_robot_dds_api.md) — device protocol contracts and project templates for direct OMG DDS or ROS 2 integration without the SDK
 
 ---
 
@@ -523,4 +523,4 @@ Or rebuild and reinstall it: `cd ~/uniubi_robot_sdk_py && UNIUBI_SDK_ROOT=$SDK_R
 
 ### 9.6 Python program gets stuck/deadlocked when exiting
 
-If the application does not explicitly call `disconnect()` and `service.shutdown()`, garbage collection can deadlock the GIL against an internal SDK thread. Follow [High-level Python shutdown guidance](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.md#3-exit-deadlock-avoidance) or [Low-level Python shutdown guidance](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/low-level.md#3-exit-deadlock-avoidance) and **release resources explicitly in `try/finally`**.
+If the application does not explicitly call `disconnect()` and `service.shutdown()`, garbage collection can deadlock the GIL against an internal SDK thread. Follow [High-level Python shutdown guidance](api-reference/python/high-level.md#3-exit-deadlock-avoidance) or [Low-level Python shutdown guidance](api-reference/python/low-level.md#3-exit-deadlock-avoidance) and **release resources explicitly in `try/finally`**.

@@ -27,7 +27,7 @@ sudo env LD_LIBRARY_PATH="$LD_LIBRARY_PATH" python3 examples/example_audio_rawba
 
 使用 Python SDK 的 [example_audio_capture.py](https://github.com/uniubi-ai/uniubi_robot_sdk_py/blob/main/examples/example_audio_capture.py)，在同一个 MediaBus client 上同时保持通道 **0、1、2、3** 的订阅，每路独立保存。示例只采集音频，不申请运动控制权，也不播放声音。设备必须已配置并启用这四个音源；通道编号不是一个音频帧中的四个声道。
 
-先按[构建指南](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.zh-CN.md)安装对应平台的 C++ 运行库和 Python SDK。以下命令在 Python SDK 仓库根目录执行，`UNIUBI_SDK_ROOT` 指向配套 C++ SDK 仓库。每次使用新的输出目录；示例不会覆盖已有目录。
+先按[构建指南](../BUILD.zh-CN.md)安装对应平台的 C++ 运行库和 Python SDK。以下命令在 Python SDK 仓库根目录执行，`UNIUBI_SDK_ROOT` 指向配套 C++ SDK 仓库。每次使用新的输出目录；示例不会覆盖已有目录。
 
 ### 大脑本地（`aarch64`）
 

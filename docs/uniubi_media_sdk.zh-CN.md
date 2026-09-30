@@ -2,14 +2,14 @@
 
 普通 ARM64 外部主机请选择 `aarch64_host`：构建传入 `-DPLATFORM=aarch64_host`（Python 为 `-Ccmake.define.PLATFORM=aarch64_host`），运行时使用 `lib/aarch64_host/`。其媒体能力与 x86 远端模式相同，仅支持远程音频；Orin 本地视频/布局示例仍使用 `aarch64`。
 
-[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/uniubi_media_sdk.md) | **简体中文**
+[English](uniubi_media_sdk.md) | **简体中文**
 
 MediaBus API 参考已按语言拆分：
 
-- [Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.zh-CN.md)：面向使用 `robot_motion_sdk` 订阅媒体帧的开发者。
-- [C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/media.zh-CN.md)：面向使用 `IMediaBusClient` 的 native 应用。
+- [Python API](api-reference/python/media.zh-CN.md)：面向使用 `robot_motion_sdk` 订阅媒体帧的开发者。
+- [C++ API](api-reference/cpp/media.zh-CN.md)：面向使用 `IMediaBusClient` 的 native 应用。
 
-[返回 API 参考](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.zh-CN.md)
+[返回 API 参考](api-reference/README.zh-CN.md)
 
 ## NV21 与四路 PCM 采集示例
 

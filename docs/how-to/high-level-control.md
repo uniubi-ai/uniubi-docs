@@ -1,8 +1,8 @@
 # High-level: Use Built-in Robot Actions
 
-**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/high-level-control.zh-CN.md)
+**English** | [简体中文](high-level-control.zh-CN.md)
 
-![High-level dual-deployment topology](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/core-concepts/images/high-level-dual-deployment.en.png)
+![High-level dual-deployment topology](../core-concepts/images/high-level-dual-deployment.en.png)
 
 ## Goal
 
@@ -41,13 +41,13 @@ Before requesting High-level control, either power off the remote controller, or
 
 In an emergency during High-level control, press `M` again and wait until the robot announces “遥控器已连接” (remote controller connected). Only then use the remote controller to take over.
 
-![Remote controller button layout; the M button is at the lower center](https://raw.githubusercontent.com/uniubi-ai/uniubi-docs/main/docs/how-to/images/remote-controller-buttons.png)
+![Remote controller button layout; the M button is at the lower center](images/remote-controller-buttons.png)
 
 _This figure is only for locating the controller buttons. Follow the disconnect prerequisite above for High-level ownership._
 
 ## From Preparation to the First Action
 
-1. Complete build/import and read-only CLI checks in [SDK First Use](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/sdk-first-use.md); ROS 2 users first validate Motion Bridge.
+1. Complete build/import and read-only CLI checks in [SDK First Use](sdk-first-use.md); ROS 2 users first validate Motion Bridge.
 2. Disconnect the remote controller as described above and confirm the site, emergency stop and manual takeover conditions. Enter `take` in the validated `--read-only` CLI; it requests ownership without starting an action. Resolve ownership failures before sending actions.
 3. Before any action other than `laying`, start zero-velocity `walking` below and query `state` until the effective `action` is `walking`, then select the target action. RPC success does not confirm that a posture has been reached.
 4. To finish, enter `stop`, then `start laying`; query `state` until `{}` or `action: laying`, confirm a safe posture through observations, then enter `release` and `quit`.
@@ -118,7 +118,7 @@ versions do not return the profile name in motion-state JSON, so state output al
 
 ## Out of Scope
 
-If your application runs its own policy and directly outputs joint position or torque targets, follow [Low-level: Run a Custom Joint-control Policy](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/low-level-control.md).
+If your application runs its own policy and directly outputs joint position or torque targets, follow [Low-level: Run a Custom Joint-control Policy](low-level-control.md).
 
 ## Choose an Implementation
 
@@ -127,7 +127,7 @@ If your application runs its own policy and directly outputs joint position or t
 | C++ / Python SDK | `MotionHighLevelClient` | Developing a control or observation application directly against the SDK |
 | ROS 2 | `uniubi_motion_bridge` | Developing a ROS 2 application with standard topics and services |
 
-For SDK development, first complete [SDK First Use](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/sdk-first-use.md). For ROS 2, follow [Start and Validate ROS 2 Motion Bridge](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/ros2-motion-bridge.md).
+For SDK development, first complete [SDK First Use](sdk-first-use.md). For ROS 2, follow [Start and Validate ROS 2 Motion Bridge](ros2-motion-bridge.md).
 
 ## Repositories
 
@@ -144,7 +144,7 @@ For SDK development, first complete [SDK First Use](https://github.com/uniubi-ai
 3. Before triggering any action other than `laying`, start `walking` with all three velocities set to zero and use the state query to confirm that the effective action is `walking`; only then trigger the target action. `laying` does not require this preliminary transition.
 4. With the emergency stop reachable and an operator ready to intervene, validate low-risk actions such as standing and lying down before low-speed locomotion.
 
-See the High-level [Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.md), [C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.md), and [ROS 2 Motion Bridge guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/ros2-motion-bridge.md) for lifecycle and safety details.
+See the High-level [Python API](../api-reference/python/high-level.md), [C++ API](../api-reference/cpp/high-level.md), and [ROS 2 Motion Bridge guide](ros2-motion-bridge.md) for lifecycle and safety details.
 
 The external-host High-level C++ SDK, Python SDK, and ROS 2 paths have all been validated on a real robot. Each path must select the network interface that actually reaches the robot and pass the target Device ID (SN).
 

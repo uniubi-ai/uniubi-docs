@@ -1,6 +1,6 @@
 # Configure a Static IP on the Robot Brain Ethernet Port
 
-**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/orin-static-ip.zh-CN.md)
+**English** | [简体中文](orin-static-ip.zh-CN.md)
 
 ## Goal and Scope
 
@@ -8,7 +8,7 @@ Configure a persistent static IPv4 address on the Orin brain's external Ethernet
 
 This guide applies to delivered systems that manage `eth0` through `/data/config/robotBrainConfig`. The fields and activation procedure follow the RobotBrain static IP configuration instructions. Confirm that the current device uses this configuration method; follow the corresponding delivery instructions for other systems.
 
-For wiring and power, see [Connect Peripherals](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.md). This procedure configures external interface `eth0`. Do not modify the brain-to-cerebellum interface `eth0.100`.
+For wiring and power, see [Connect Peripherals](connect-peripherals.md). This procedure configures external interface `eth0`. Do not modify the brain-to-cerebellum interface `eth0.100`.
 
 ## 1. Log In and Check the Network
 
@@ -123,5 +123,5 @@ Check the LiDAR's own IP, subnet mask, destination host IP, data port, and drive
 
 ## Related Guides
 
-- [Connect Peripherals](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.md)
-- [Robot Network Access](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/device-network.md)
+- [Connect Peripherals](connect-peripherals.md)
+- [Robot Network Access](../core-concepts/device-network.md)

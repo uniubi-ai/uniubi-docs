@@ -1,8 +1,8 @@
 # Uniubi Robot High-level C++ API Reference
 
-**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/high-level.zh-CN.md)
+**English** | [简体中文](high-level.zh-CN.md)
 
-[API Reference](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.md) · [Python API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/high-level.md)
+[API Reference](../README.md) · [Python API](../python/high-level.md)
 
 > SDK entry class: `uniubi::RobotSdk::IMotionHighLevelClient`
 > C++ header file: `include/uniubi/robot_sdk/MotionHighLevelClient.h`
@@ -124,7 +124,7 @@ The following example demonstrates the complete external-host C++ SDK connection
 
 This minimal project template can be copied as a starting point for an application.
 
-> For complete build instructions (including cross-compilation/wheel packaging/Troubleshooting), see [`BUILD.md`](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/BUILD.md).
+> For complete build instructions (including cross-compilation/wheel packaging/Troubleshooting), see [`BUILD.md`](../../BUILD.md).
 
 ### Dependencies
 
@@ -389,7 +389,7 @@ svc->setNetworkConfig(R"({"iface":"eth0","dont_route":true})");
 - if the robot Wi-Fi is also on, set `dont_route` to `true` so DDS will not pick the unreachable Wi-Fi address;
 - if the robot Wi-Fi is off, the default (`false`) is fine, and `true` is also acceptable.
 
-For the network setup, see [Connect Peripherals](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.md).
+For the network setup, see [Connect Peripherals](../../how-to/connect-peripherals.md).
 
 ##### How to query the available network cards of this machine
 

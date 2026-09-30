@@ -1,6 +1,6 @@
 # 大脑网口静态 IP 配置
 
-[English](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/orin-static-ip.md) | **简体中文**
+[English](orin-static-ip.md) | **简体中文**
 
 ## 目标与适用范围
 
@@ -8,7 +8,7 @@
 
 本文适用于通过 `/data/config/robotBrainConfig` 管理 `eth0` 的交付系统，配置字段和生效步骤依据 RobotBrain 静态 IP 配置说明。操作前确认当前设备使用这一配置方式；其他交付系统应遵循对应的网络配置说明。
 
-外设接线和供电见[连接外设](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.zh-CN.md)。本文配置对外接口 `eth0`，不要修改大小脑通信接口 `eth0.100`。
+外设接线和供电见[连接外设](connect-peripherals.zh-CN.md)。本文配置对外接口 `eth0`，不要修改大小脑通信接口 `eth0.100`。
 
 ## 1. 登录并确认网络
 
@@ -123,5 +123,5 @@ ping -c 3 <外设IP>
 
 ## 相关文档
 
-- [连接外设](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/connect-peripherals.zh-CN.md)
-- [机器人网络接入](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/core-concepts/device-network.zh-CN.md)
+- [连接外设](connect-peripherals.zh-CN.md)
+- [机器人网络接入](../core-concepts/device-network.zh-CN.md)

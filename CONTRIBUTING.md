@@ -52,3 +52,13 @@ record the actual validation evidence in the pull request.
 离线检查只验证本仓库链接目标和文档结构；中英文文件配对不代表翻译语义
 一致，也不代表示例已执行或真机验证通过。请在 PR 中记录对应的人工审阅
 与实际验证证据。
+
+## Documentation links
+
+Use relative paths for documents and images in this repository, preserving
+section anchors. Links then follow the branch being viewed and work in local
+checkouts. Use absolute GitHub URLs for other repositories and keep external
+website URLs unchanged.
+
+同仓库文档和图片使用相对路径，并保留章节锚点，使链接跟随当前分支且支持
+本地阅读。跨仓库链接使用 GitHub 绝对地址，外部网站链接保持原地址。

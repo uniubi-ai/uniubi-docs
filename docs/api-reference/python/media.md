@@ -1,8 +1,8 @@
 # Uniubi Robot MediaBus Python API Reference
 
-**English** | [简体中文](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/python/media.zh-CN.md)
+**English** | [简体中文](media.zh-CN.md)
 
-[API Reference](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/README.md) · [C++ API](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/api-reference/cpp/media.md)
+[API Reference](../README.md) · [C++ API](../cpp/media.md)
 
 Python module: `robot_motion_sdk`
 
@@ -120,4 +120,4 @@ Call `media.setup(host)` (omit host locally), then `create_audio_raw_back()` to 
 
 Successful setup indicates initialization or connection startup; verify capture by counting actual frames and playback at the device output. AudioFrame objects may be retained after capture callbacks. Stop subscriptions and shut down on the application control thread.
 
-[PCM audio guide](https://github.com/uniubi-ai/uniubi-docs/blob/main/docs/how-to/stream-pcm-audio.md).
+[PCM audio guide](../../how-to/stream-pcm-audio.md).
