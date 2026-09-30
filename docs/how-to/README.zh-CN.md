@@ -8,6 +8,8 @@
 
 先完成[版本选择与升级](version-selection.zh-CN.md)；已有报错时进入[按症状排查](troubleshooting.zh-CN.md)。
 
+使用 [AI 辅助开发 skills](ai-assisted-development.zh-CN.md)，开展 SDK、ROS 2、RL 及跨项目开发。
+
 ## 环境与设备接入
 
 | 任务 | 导读 | 适用阶段 |

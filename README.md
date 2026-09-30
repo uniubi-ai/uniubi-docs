@@ -57,6 +57,7 @@ Joint-level Low-level control uses the SDK. ROS 2 Motion Bridge does not provide
 
 ### 4. Continue with your task
 
+- [Develop with AI skills](docs/how-to/ai-assisted-development.md): use focused guidance for SDK, ROS 2, RL and cross-project development.
 - [Build and install the SDK](docs/BUILD.md): prepare a native, on-board, or cross-compilation environment for C++ and Python development.
 - [Use High-level control](docs/how-to/high-level-control.md): use High-level interfaces from an external computer or the robot's compute module to read state and invoke built-in actions; target Mock / Sim2Sim or a real robot.
 - [Use ROS 2 Motion Bridge](docs/how-to/ros2-motion-bridge.md): access High-level capabilities from ROS 2.

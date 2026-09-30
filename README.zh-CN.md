@@ -60,6 +60,7 @@ Uniubi 开源开发文档中心，帮助你从具体任务开始，经过导读�
 
 确定控制模式和实现方式后，直接进入当前要完成的任务：
 
+- [使用 AI 辅助开发](docs/how-to/ai-assisted-development.zh-CN.md)：使用 SDK、ROS 2、RL 专项 skill 和跨项目统一入口。
 - [构建和安装 SDK](docs/BUILD.zh-CN.md)：准备本机或板端的 C++ / Python 开发环境。
 - [使用 High-level 控制](docs/how-to/high-level-control.zh-CN.md)：通过外部电脑或机器人“大脑”使用 High-level 接口，读取状态并调用内置动作；目标可为 Mock / Sim2Sim 或真实机器人。
 - [使用 ROS 2 Motion Bridge](docs/how-to/ros2-motion-bridge.zh-CN.md)：通过 ROS 2 接入 High-level 能力。

@@ -8,6 +8,8 @@ Each guide addresses a specific development task. It defines the goal and prereq
 
 Start with [Version Selection and Upgrades](version-selection.md); for an existing failure, use [Troubleshooting by Symptom](troubleshooting.md).
 
+Develop across the SDK, ROS 2 and RL projects with [AI-assisted development skills](ai-assisted-development.md).
+
 ## Environment and Device Access
 
 | Task | Guide | When to use it |
